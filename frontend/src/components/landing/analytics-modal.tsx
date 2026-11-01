@@ -79,7 +79,7 @@ export function AnalyticsModal({
     timers.current.push(
       window.setTimeout(() => {
         setRunning(false);
-        onToast("Dual SAT/CP Engines benchmarked: 0.034s — 0 conflicts");
+        onToast("Illustrative preview only — run the real solve after sign-in");
       }, 5 * 350 + 1200)
     );
   }
@@ -103,8 +103,8 @@ export function AnalyticsModal({
             <div>
               <h3 className="text-lg font-extrabold text-slate-900">{ROLE_TITLE[persona]}</h3>
               <p className="text-xs font-medium text-slate-500">
-                Active Term:{" "}
-                <span className="font-bold text-slate-700">Fall 2026 Campus Schedule Generation</span>
+                Illustrative preview —{" "}
+                <span className="font-bold text-slate-700">sign in for the live solver and model</span>
               </p>
             </div>
           </div>
@@ -120,27 +120,27 @@ export function AnalyticsModal({
 
         <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs font-medium sm:grid-cols-5">
           <div>
-            <div className="text-slate-500">Solver Engine Status</div>
+            <div className="text-slate-500">Sample Engine Status</div>
             <div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-emerald-600">
-              <span className="pulse-live h-2 w-2 rounded-full bg-emerald-500" />
-              100% Constraints Met
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Hard constraints enforced
             </div>
           </div>
           <div>
-            <div className="text-slate-500">Sections Scheduled</div>
-            <div className="mt-0.5 font-mono text-sm font-bold text-slate-900">361 / 361 Verified</div>
+            <div className="text-slate-500">Sample Sections</div>
+            <div className="mt-0.5 font-mono text-sm font-bold text-slate-900">101 / 101</div>
           </div>
           <div>
-            <div className="text-slate-500">Faculty Workload Target</div>
-            <div className="mt-0.5 font-mono text-sm font-bold text-emerald-600">100% (48/48)</div>
+            <div className="text-slate-500">Sample Faculty</div>
+            <div className="mt-0.5 font-mono text-sm font-bold text-emerald-600">68 / 68 within cap</div>
           </div>
           <div>
-            <div className="text-slate-500">Faculty Preference Match</div>
-            <div className="mt-0.5 font-mono text-sm font-bold text-purple-600">98.4% Index</div>
+            <div className="text-slate-500">Preference match</div>
+            <div className="mt-0.5 font-mono text-sm font-bold text-purple-600">shown after solve</div>
           </div>
           <div>
-            <div className="text-slate-500">Facility Utilization</div>
-            <div className="mt-0.5 font-mono text-sm font-bold text-blue-600">88.6% Peak</div>
+            <div className="text-slate-500">Peak building utilization</div>
+            <div className="mt-0.5 font-mono text-sm font-bold text-blue-600">shown after solve</div>
           </div>
         </div>
 
@@ -148,10 +148,10 @@ export function AnalyticsModal({
           <div className="flex items-center justify-between gap-2 text-xs font-bold text-slate-900">
             <span className="flex items-center gap-1.5">
               <BarChart2 className="h-4 w-4 text-blue-600" />
-              <span>Live Engine Performance &amp; Distribution Analytics</span>
+              <span>Illustrative engine &amp; distribution analytics</span>
             </span>
             <span className="hidden font-mono text-[11px] text-blue-700 sm:inline">
-              ECharts Interactive Telemetry
+              sample data — live after sign-in
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -168,10 +168,10 @@ export function AnalyticsModal({
           <div className="flex items-center justify-between gap-2 text-xs font-bold text-blue-900">
             <span className="flex items-center gap-1.5">
               <Sliders className="h-4 w-4 text-blue-600" />
-              <span>Live Dynamic Constraint Tuning Controls</span>
+              <span>Illustrative constraint tuning controls</span>
             </span>
             <span className="hidden font-mono text-[11px] text-blue-700 sm:inline">
-              Updates Z3 SMT hard bounds
+              preview only — not connected
             </span>
           </div>
 
@@ -192,7 +192,7 @@ export function AnalyticsModal({
                   const value = Number(e.target.value);
                   setTransit(value);
                   onToast(
-                    `Walking transit constraint bound adjusted to ${value} mins. SMT Kernel recalculated in 0.029s`
+                    `Preview only — this control is not connected to the solver (${value} min)`
                   );
                 }}
                 className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-blue-200 accent-blue-600"
@@ -232,7 +232,7 @@ export function AnalyticsModal({
             <div className="flex items-center justify-between font-mono text-xs">
               <span className="flex items-center gap-2 font-bold text-blue-300">
                 <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-                <span>Racing Z3 SMT vs OR-Tools CP-SAT Kernel...</span>
+                <span>Illustrative benchmark animation (no solver call)...</span>
               </span>
               <span className="font-bold text-emerald-400">{progress}%</span>
             </div>

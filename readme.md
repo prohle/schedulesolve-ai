@@ -147,7 +147,7 @@ Honest accounting — the rented parts are named, not hidden:
 | Any-format ingestion (PDF/DOCX/XLSX/CSV/JSON/TXT/MD/ZIP → typed scenario) + deterministic completeness check | |
 | Multi-user product: role-filtered schedules, verified change requests, Express/Full UI, audit ledger | |
 
-Boundaries we don't cross are listed just as plainly: [docs/limitations.md](./docs/limitations.md).
+Boundaries we don't cross are listed just as plainly: [docs/limitations.md](./docs/limitations.md). A claim-by-claim audit of what is real, synthetic or illustrative is in [docs/truthfulness.md](./docs/truthfulness.md).
 
 ## Meta AI tooling at runtime
 

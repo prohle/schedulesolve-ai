@@ -5,7 +5,8 @@
 // master extract, faculty preference/load detail and a cohort degree plan.
 //
 // Data: /api/scenario + the published timetable (or a fresh solve) +
-// /api/intelligence/{utilization,margins}. Nothing here is mocked.
+// /api/intelligence/{utilization,margins}. The numbers are computed from the
+// current institution model; the shipped model itself is synthetic demo data.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EChartsOption } from "echarts";
@@ -547,7 +548,7 @@ export function DeliverablesView({
           <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900">What each role receives</h2>
           <p className="text-xs text-slate-500">
             Every number below is computed from {placements.length} placed sections, {scenario.instructors.length} faculty and{" "}
-            {scenario.rooms.length} rooms — not a mock.
+            {scenario.rooms.length} rooms in the current model (synthetic demo data unless you imported your own).
           </p>
         </div>
 

@@ -365,7 +365,6 @@ export function TermSetupView({
   const [holiday, setHoliday] = useState({ day: 0, period: "", label: "Holiday" });
   const [engine, setEngine] = useState("cpsat");
   const [objective, setObjective] = useState("preference");
-  const [autoPublish, setAutoPublish] = useState(false);
   const [termStart, setTermStart] = useState("");
   const [termEnd, setTermEnd] = useState("");
   const [uploadText, setUploadText] = useState("");
@@ -394,7 +393,6 @@ export function TermSetupView({
       const options = (w.options ?? {}) as Record<string, unknown>;
       setEngine(typeof options.engine === "string" ? options.engine : "cpsat");
       setObjective(typeof options.objective === "string" ? options.objective : "preference");
-      setAutoPublish(Boolean(options.auto_publish));
       setTermStart(typeof options.start_date === "string" ? isoForInput(options.start_date) : "");
       setTermEnd(typeof options.end_date === "string" ? isoForInput(options.end_date) : "");
 
@@ -628,7 +626,6 @@ export function TermSetupView({
           options: {
             engine,
             objective,
-            auto_publish: autoPublish,
             start_date: termStart ? new Date(termStart).toISOString() : null,
             end_date: termEnd ? new Date(termEnd).toISOString() : null,
           },
@@ -711,6 +708,9 @@ export function TermSetupView({
             </span>
             <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
               {window.weeks} weeks
+            </span>
+            <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              Demo institution
             </span>
           </div>
           <h2 className="mt-1 text-xl font-black tracking-tight text-slate-900">{window.term}</h2>
@@ -2062,15 +2062,6 @@ export function TermSetupView({
               Term end
               <input type="datetime-local" value={termEnd} onChange={(e) => setTermEnd(e.target.value)} className={cn(FIELD, "mt-1")} />
             </label>
-            <label className="mt-5 inline-flex items-center gap-2 text-[11px] font-bold text-slate-700">
-              <input
-                type="checkbox"
-                checked={autoPublish}
-                onChange={(e) => setAutoPublish(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300"
-              />
-              Auto-publish after solve
-            </label>
           </div>
           <button
             onClick={() => void saveOptions()}
@@ -2082,8 +2073,8 @@ export function TermSetupView({
           </button>
           <p className="mt-2 text-[11px] text-slate-500">
             Saved: engine <strong>{String((window.options ?? {}).engine ?? "cpsat")}</strong>,
-            objective <strong>{String((window.options ?? {}).objective ?? "preference")}</strong>,
-            auto-publish <strong>{String(Boolean((window.options ?? {}).auto_publish))}</strong>.
+            objective <strong>{String((window.options ?? {}).objective ?? "preference")}</strong>.
+            These are applied by the Schedule draft solve and Publish.
           </p>
         </Section>
       )}

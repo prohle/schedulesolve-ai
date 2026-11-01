@@ -243,19 +243,17 @@ export const modalCapacityOption: EChartsOption = {
   ],
 };
 
+// Engine timings are deliberately not shown in the public preview: measured
+// values depend on the instance and the signed-in solve, and a fabricated
+// number would be worse than no number.
 export const modalSpeedOption: EChartsOption = {
-  title: { text: "Parallel Kernel Race Speed (s)", textStyle: { fontSize: 11, color: "#334155" } },
-  grid: { top: 30, bottom: 20, left: 80, right: 20 },
-  xAxis: { type: "value", max: 0.05, axisLabel: { fontSize: 9 } },
-  yAxis: { type: "category", data: ["OR-Tools", "Z3 SMT"], axisLabel: { fontSize: 9 } },
-  series: [
-    {
-      type: "bar",
-      data: [0.038, 0.034],
-      itemStyle: { color: "#7c3aed", borderRadius: [0, 4, 4, 0] },
-      barWidth: "35%",
-    },
-  ],
+  title: {
+    text: "Engine comparison runs after sign-in",
+    textStyle: { fontSize: 11, color: "#334155" },
+  },
+  xAxis: { show: false, type: "category", data: ["CP-SAT", "Native"] },
+  yAxis: { show: false, type: "value" },
+  series: [{ type: "bar", data: [], silent: true }],
 };
 
 // --- Campus matrix analytics (calendar-matrix-campus design) ----------------

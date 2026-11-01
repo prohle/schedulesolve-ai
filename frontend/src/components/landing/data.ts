@@ -333,9 +333,9 @@ export const CSV_CONTENT = [
 ].join("\n");
 
 export const SOLVER_LOGS = [
-  "Initializing Z3 SMT Solver & OR-Tools CP-SAT Kernel...",
-  "Parsing 3,420 hard constraints (room sizes, transit buffers, teaching loads)...",
-  "Evaluating 12,800 soft preference optimization weights...",
-  "Parallel Race: Z3 SMT finished in 0.034s | CP-SAT in 0.038s",
-  "OPTIMAL SOLUTION FOUND — 0 Conflicts, 100% Constraints Satisfied.",
+  "Illustrative log — the real solver runs after sign-in.",
+  "OR-Tools CP-SAT and the ScheduleSolve native search share one contract.",
+  "Hard constraints: capacity, room type, equipment, blackouts, closures, loads, prep caps, cohort conflicts, walk limits.",
+  "Soft preferences: day/period wishes and course wishes become objective penalties.",
+  "Status is reported as optimal / feasible / infeasible / unknown — never fabricated.",
 ];

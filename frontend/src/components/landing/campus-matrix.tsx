@@ -676,7 +676,7 @@ export function CampusMatrix({
                   Live Campus Analytics &amp; Load Profiles
                 </h3>
                 <p className="text-[10px] font-medium text-slate-500">
-                  Real-time occupancy curves &amp; quad utilization telemetry
+                  {live ? "Occupancy from the current placed term" : "Sample occupancy curves (design preview)"}
                 </p>
               </div>
             </div>
@@ -685,7 +685,7 @@ export function CampusMatrix({
               {analyticsOpen && (
                 <span className="hidden items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 sm:inline-flex">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                  Live Telemetry Active
+                  {live ? "Live Telemetry Active" : "Sample telemetry"}
                 </span>
               )}
               <button

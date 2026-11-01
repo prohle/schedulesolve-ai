@@ -4,6 +4,26 @@ What ScheduleSolve AI does **not** do, stated plainly. Each item names the
 code that bounds it, so a judge can verify the boundary instead of taking
 our word for it. Scoped claims are stronger than broad ones.
 
+## Data truthfulness
+
+- **The shipped institution is synthetic.** "Northgate University" (7 campus
+  quads, 8 buildings, 32 rooms, 68 faculty, 101 courses/sections, 15 majors +
+  8 minors, 50 cohorts) is generated demo data, not a real registrar extract.
+  The app labels it **Demo institution** and the first-page preview labels
+  itself **Illustrative sample**. Real institutions replace it through
+  Import / Settings → Update institution data.
+- **Simulated faculty feedback is simulated.** The "Simulate all" buttons
+  generate randomized hard blackouts and soft preferences, stored with the
+  note "Simulated faculty feedback (demo)." They are useful for walking the
+  full flow; they are not real staff input. Real input comes from each
+  signed-in professor before the deadline.
+- **Two real solvers, not a SAT/SMT race.** The engines are OR-Tools CP-SAT
+  and the ScheduleSolve native C++ search (plus a greedy first-descent). There
+  is no Z3/SMT engine; earlier landing copy that implied one has been removed.
+- **No fabricated timings in the public preview.** Engine timings and
+  utilization values are shown after a real signed-in solve. The preview's
+  charts are explicitly sample data.
+
 ## Input
 
 - **No OCR.** Image files (`.png/.jpg/.webp/.gif/.bmp/.tiff`) are marked
@@ -95,7 +115,7 @@ our word for it. Scoped claims are stronger than broad ones.
   sized for a hackathon demo and a single coordinator office — not an
   institutional SSO story. Demo accounts ship with password `demo1234`
   and are labeled as such on the login screen.
-- **Persistence is SQLite (Modal volume) or Postgres 18 (Compose).**
+- **Persistence is Postgres 18 in Docker (required; no SQLite mode).**
   The audit ledger is append-only by design; resetting a scenario
   returns the term to seed but keeps the provenance history.
 - **The audit trail records submissions and change events**, not

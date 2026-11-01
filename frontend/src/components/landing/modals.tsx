@@ -24,14 +24,14 @@ const INSPECTOR: Record<
     title: "Facility Utilization Mathematical Proof",
     icon: Building2,
     tone: "blue",
-    formulaLabel: "Z3 SMT Objective Formula:",
+    formulaLabel: "CP-SAT objective (sample institution):",
     formula:
-      "Maximize Σ (Capacity_Utilized_i / Room_Capacity_i) where Section_Count = 361",
+      "Minimize the busiest simultaneous building occupancy / building capacity",
     body: (
       <>
-        <strong className="text-slate-900">Verified Result:</strong> Peak campus capacity utilization achieved{" "}
-        <strong>88.6%</strong> across Science Center (91%), Engineering Hall (86%), and Humanities Annex (88%)
-        without exceeding safe structural occupancy limits.
+        <strong className="text-slate-900">Sample:</strong> the shipped demo institution has 101 sections
+        across 8 buildings. Live peak utilization is computed from the published term after sign-in —
+        the preview does not fabricate a number.
       </>
     ),
   },
@@ -43,8 +43,8 @@ const INSPECTOR: Record<
     formula: "∀ f ∈ Faculty, Sum(Credits_Assigned(f)) == Required_Load(f) [12.0 Credits]",
     body: (
       <>
-        <strong className="text-slate-900">Proof Status:</strong> 100% satisfied. All 48 faculty members meet
-        required teaching credit allocations with zero under-allocation or over-time violations.
+        <strong className="text-slate-900">Proof Status:</strong> hard load and prep caps are enforced for
+        all 68 faculty in the shipped sample. Soft preferences are optimized, not guaranteed.
       </>
     ),
   },
@@ -53,7 +53,7 @@ const INSPECTOR: Record<
     icon: Sliders,
     tone: "purple",
     formulaLabel: "Soft Constraint Objective Function:",
-    formula: "Maximize Σ (Weight_p * Preference_Satisfied_p) = 98.4% Optimal Index",
+    formula: "Minimize Σ (Weight_p * Preference_Violated_p) — objective value shown after solve",
     body: (
       <>
         <strong className="text-slate-900">Verified Result:</strong> High-satisfaction alignment achieved for
@@ -84,7 +84,7 @@ const INSPECTOR: Record<
       "Time_Start(Section_k+1) - Time_End(Section_k) ≥ Distance_Matrix(Zone_k, Zone_k+1) [≥12 mins]",
     body: (
       <>
-        <strong className="text-slate-900">Enforcement:</strong> Strictly enforces minimum 12-minute travel
+        <strong className="text-slate-900">Enforcement:</strong> Strictly enforces the configured walk limit (10 minutes in the shipped sample)
         windows between Science, Engineering, and Business buildings for both students and instructors.
       </>
     ),
@@ -181,7 +181,7 @@ export function InspectorModal({ topic, onClose }: { topic: string; onClose: () 
     icon: BookOpen,
     tone: "emerald",
     formulaLabel: "Degree Catalog Validation:",
-    formula: "All 361 scheduled sections cross-referenced against 2026 graduation degree roadmaps.",
+    formula: "All 101 scheduled sections in the sample cross-referenced against the degree roadmaps.",
     body: (
       <>
         <strong className="text-slate-900">Status:</strong> 100% Roadmap Fit verified without catalog sequence
@@ -236,16 +236,16 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
     >
       <div className="space-y-3 text-xs leading-relaxed text-slate-600">
         <p>
-          <strong className="text-slate-900">Dual SAT/CP Solver Kernel Architecture:</strong> Parallel race
-          execution between Z3 SMT and Google OR-Tools CP-SAT finding mathematically optimal room/time
-          assignments in 0.038 seconds.
+          <strong className="text-slate-900">Two real engines, one contract:</strong> Google OR-Tools
+          CP-SAT and the ScheduleSolve native C++ search. Timings depend on the instance; the signed-in
+          Build step shows the measured values instead of a fabricated number.
         </p>
         <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-[11px]">
           <div className="font-bold text-slate-900">6 Enterprise Guarantees Evaluated:</div>
           <ul className="space-y-1 text-slate-600">
             <li>
               <span className="font-bold text-emerald-600">•</span> <strong>Building Walk Times:</strong>{" "}
-              Minimum 12-min protected transit windows between cross-campus zones.
+              Configurable walk limit between cross-campus zones (10 min in the sample).
             </li>
             <li>
               <span className="font-bold text-emerald-600">•</span> <strong>Faculty Workload:</strong> 100%

@@ -83,7 +83,7 @@ const SLOT_BADGE: Record<string, string> = {
 
 const PROOF_CARDS: { key: string; label: string; value: string; tone: string; labelTone?: string }[] = [
   { key: "utilization", label: "Facility Peak", value: "88.6% Peak", tone: "text-slate-900" },
-  { key: "load", label: "Faculty Load", value: "100% (48/48)", tone: "text-emerald-600" },
+  { key: "load", label: "Faculty Load", value: "68/68 within cap", tone: "text-emerald-600" },
   { key: "pref", label: "Faculty Prefs", value: "100.00% Match", tone: "text-purple-700", labelTone: "text-purple-700" },
   { key: "cohort", label: "4-Year Cohort", value: "0 Deadlocks", tone: "text-blue-600" },
   { key: "walk", label: "Walk Transit", value: "≥12m Buffer", tone: "text-slate-900" },
@@ -162,7 +162,7 @@ function CoordinatorView({
       <div className="grid grid-cols-1 gap-3 pt-1 md:grid-cols-2">
         <ChartCard
           title="Campus Zone Utilization (%)"
-          badge="88.6% Peak"
+          badge="sample peak"
           badgeClass="bg-blue-50 text-blue-600"
           borderClass="border-slate-200/90 bg-slate-50/80 hover:border-blue-400"
         >
@@ -181,7 +181,7 @@ function CoordinatorView({
 
         <ChartCard
           title="Faculty Teaching Load Compliance"
-          badge="100% Assigned (48/48)"
+          badge="sample load"
           badgeClass="bg-emerald-50 text-emerald-600"
           borderClass="border-slate-200/90 bg-slate-50/80 hover:border-emerald-400"
           delay={160}
@@ -561,8 +561,7 @@ export function PreviewColumn({
           <span className="gradient-text">every campus role.</span>
         </h1>
         <p className="pt-0.5 text-xs font-medium text-slate-500">
-          ✦ Interact with the demo environment below to preview the zero-conflict outputs your institution
-          receives after logging in.
+          ✦ Illustrative sample — sign in for the live institution model and solver results.
         </p>
       </div>
 
@@ -582,7 +581,7 @@ export function PreviewColumn({
           <div className="hidden items-center gap-2 sm:flex">
             <span className="flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
-              Interactive Future Preview
+              Illustrative sample preview
             </span>
           </div>
         </div>
@@ -662,7 +661,7 @@ export function PreviewColumn({
                   <strong className="font-mono text-slate-800">
                     {mode === "calendar"
                       ? `4 Quads • ${CAMPUS_TOTALS.buildings} Buildings • ${CAMPUS_TOTALS.rooms} Rooms • ${CAMPUS_TOTALS.seats.toLocaleString()} Seats`
-                      : "361 Sections Conflict-Free • All Enterprise Constraints Satisfied"}
+                      : "101 Sections Conflict-Free (sample) • hard constraints enforced"}
                   </strong>
                 </div>
               )}
@@ -683,8 +682,8 @@ export function PreviewColumn({
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { value: "361", tone: "group-hover:text-blue-600", label: "Sections proven at university scale" },
-          { value: "2", tone: "text-blue-600", label: "Raced SAT/CP dual engines" },
+          { value: "101", tone: "group-hover:text-blue-600", label: "Sections in the sample institution" },
+          { value: "2", tone: "text-blue-600", label: "CP-SAT + native engines" },
           { value: "100%", tone: "text-emerald-600", label: "Cohort 4-course safety guarantee" },
         ].map((stat) => (
           <button

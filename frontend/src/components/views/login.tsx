@@ -155,7 +155,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            onClick={() => onToast("ScheduleSolve AI Engine v4.2 Z3 SMT Active", "info")}
+            onClick={() => onToast("ScheduleSolve AI · CP-SAT solver ready", "info")}
             className="group flex items-center gap-3 text-left"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -406,7 +406,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                       )}
                       <span>
                         {busy
-                          ? "Authenticating with SMT Kernel..."
+                          ? "Signing in..."
                           : registering
                             ? "Create account"
                             : "Sign in to Workspace"}
