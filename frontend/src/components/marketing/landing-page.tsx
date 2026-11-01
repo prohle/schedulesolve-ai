@@ -328,7 +328,6 @@ export function LandingPage() {
                     className="h-full w-full scale-[1.01] object-cover object-center transition-transform duration-700 group-hover/hero:scale-105"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/50" />
                   <div
                     className={`heatmap-grid pointer-events-none absolute inset-0 transition-opacity duration-500 ${
                       heatmapOn ? "opacity-60" : "opacity-0"

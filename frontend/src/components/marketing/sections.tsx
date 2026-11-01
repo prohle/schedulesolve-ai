@@ -28,9 +28,8 @@ import {
   FACILITIES,
   FACILITY_TABS,
   PROOFS,
-  calculatorGains,
   facultyRadarOption,
-  roiGains,
+  institutionalImpact,
   trafficOption,
   type FacilityCategory,
   type ProofKey,
@@ -148,7 +147,7 @@ export function FacilitiesSection() {
               Institutional Asset Intelligence
             </span>
             <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-              CAMPUS FACILITY &amp; CLASSROOM MATRIX
+              CAMPUS FACILITY &amp; CLASSROOM UTILIZATION
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
               Illustrative demo campus — the signed-in app uses your institution&apos;s rooms.
@@ -289,8 +288,8 @@ const RANGE = "h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200
 export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
   const [students, setStudents] = useState(18500);
   const [sections, setSections] = useState(650);
-  const [buildings, setBuildings] = useState(16);
-  const gains = calculatorGains(students, sections, buildings);
+  const [rooms, setRooms] = useState(250);
+  const gains = institutionalImpact({ students, sections, rooms });
 
   return (
     <section
@@ -362,21 +361,21 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <label htmlFor="calc-buildings" className="text-slate-800">
-                    Physical Academic Facilities:
+                  <label htmlFor="calc-rooms" className="text-slate-800">
+                    Physical Rooms &amp; Labs:
                   </label>
                   <span className="text-sm font-black text-teal-brand-700">
-                    {buildings} Buildings
+                    {rooms} Rooms
                   </span>
                 </div>
                 <input
-                  id="calc-buildings"
+                  id="calc-rooms"
                   type="range"
-                  min={5}
-                  max={40}
-                  step={1}
-                  value={buildings}
-                  onChange={(event) => setBuildings(Number(event.target.value))}
+                  min={40}
+                  max={800}
+                  step={10}
+                  value={rooms}
+                  onChange={(event) => setRooms(Number(event.target.value))}
                   className={RANGE}
                 />
               </div>
@@ -394,11 +393,13 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="rounded-xl border border-editorial-border bg-white p-4">
                 <div className="text-[10px] font-extrabold uppercase text-slate-500">
-                  Scheduling Time
+                  Coordinator Hours Saved
                 </div>
-                <div className="mt-1 text-2xl font-black text-teal-brand-700">Weeks → seconds</div>
+                <div className="mt-1 text-2xl font-black text-teal-brand-700">
+                  {gains.hoursSaved} hrs
+                </div>
                 <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
-                  Automated Resolution
+                  Per Academic Year
                 </div>
               </div>
 
@@ -407,10 +408,10 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
                   Seat Capacity Gain
                 </div>
                 <div className="mt-1 text-2xl font-black text-navy-900">
-                  +{gains.capacityPercent}%
+                  +{gains.capacityLiftPercent}%
                 </div>
                 <div className="mt-0.5 text-[10px] font-bold text-emerald-700">
-                  +{gains.capacityGained.toLocaleString()} Seats Unlocked
+                  +{gains.seatsUnlocked.toLocaleString()} Seats Unlocked
                 </div>
               </div>
 
@@ -429,7 +430,7 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
                   Budget Reclaimed
                 </div>
                 <div className="mt-1 text-2xl font-black text-teal-brand-700">
-                  ${gains.budget.toLocaleString()}
+                  ${gains.budgetReclaimed.toLocaleString()}
                 </div>
                 <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
                   Per Academic Year
@@ -609,8 +610,9 @@ export function StrategySection({
   onSignIn: () => void;
 }) {
   const [students, setStudents] = useState(18500);
+  const [sections, setSections] = useState(650);
   const [rooms, setRooms] = useState(250);
-  const gains = roiGains(students, rooms);
+  const gains = institutionalImpact({ students, sections, rooms });
 
   return (
     <section id="pricing" className="relative bg-white py-16 lg:py-28">
@@ -650,6 +652,25 @@ export function StrategySection({
 
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold text-slate-700">
+                <label htmlFor="roi-sections">Course Sections Per Term:</label>
+                <span className="font-black text-sky-600">
+                  {sections.toLocaleString()} Sections
+                </span>
+              </div>
+              <input
+                id="roi-sections"
+                type="range"
+                min={200}
+                max={2500}
+                step={50}
+                value={sections}
+                onChange={(event) => setSections(Number(event.target.value))}
+                className={`${RANGE} accent-sky-600`}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold text-slate-700">
                 <label htmlFor="roi-rooms">Physical Rooms &amp; Labs:</label>
                 <span className="font-black text-sky-600">{rooms} Rooms</span>
               </div>
@@ -668,32 +689,31 @@ export function StrategySection({
             <div className="grid grid-cols-3 gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-center font-bold">
               <div>
                 <div className="text-xs uppercase text-slate-400">Hours Saved</div>
-                <div className="mt-1 text-xl font-black text-slate-900">{gains.hours} hrs</div>
+                <div className="mt-1 text-xl font-black text-slate-900">{gains.hoursSaved} hrs</div>
               </div>
               <div>
-                <div className="text-xs uppercase text-slate-400">Cost Reduction</div>
+                <div className="text-xs uppercase text-slate-400">Budget Reclaimed</div>
                 <div className="mt-1 text-xl font-black text-emerald-600">
-                  ${gains.savings.toLocaleString()}
+                  ${gains.budgetReclaimed.toLocaleString()}
                 </div>
               </div>
               <div>
                 <div className="text-xs uppercase text-slate-400">Capacity Lift</div>
-                <div className="mt-1 text-xl font-black text-sky-600">+{gains.lift}%</div>
+                <div className="mt-1 text-xl font-black text-sky-600">
+                  +{gains.capacityLiftPercent}%
+                </div>
               </div>
             </div>
           </div>
 
           <div className="space-y-6 lg:col-span-6">
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                Executive Consultation
-              </span>
-              <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-900">
-                BOOK A CAMPUS STRATEGY SESSION
+              <h2 className="text-3xl font-black tracking-tight text-slate-900">
+                SCHEDULE A DEMO
               </h2>
-              <p className="text-sm font-medium text-slate-600">
-                Request a tailored matrix benchmark using your university&apos;s course catalog and
-                room capacity requirements.
+              <p className="mt-1 text-sm font-medium text-slate-600">
+                Request a tailored demo using your university&apos;s course catalog and room
+                capacity requirements.
               </p>
             </div>
 
@@ -702,7 +722,7 @@ export function StrategySection({
               onSubmit={(event) => {
                 event.preventDefault();
                 event.currentTarget.reset();
-                onToast("Campus benchmark session requested — our team will follow up.");
+                onToast("Demo requested — our team will follow up.");
               }}
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -772,7 +792,7 @@ export function StrategySection({
                 type="submit"
                 className="w-full rounded-xl bg-sky-600 py-3.5 text-xs font-black tracking-wide text-white shadow-md shadow-sky-600/20 transition-all hover:bg-sky-700 active:scale-95"
               >
-                REQUEST CAMPUS BENCHMARK SESSION
+                SCHEDULE A DEMO
               </button>
             </form>
 

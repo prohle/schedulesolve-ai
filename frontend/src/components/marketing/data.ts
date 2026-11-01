@@ -308,21 +308,34 @@ export const facultyRadarOption: EChartsOption = {
   ],
 };
 
-/** ROI formulas. The reference calls updateROI()/handleStrategyForm() but never
- *  defines them, so these are filled in to keep the controls honest. */
-export function calculatorGains(students: number, sections: number, buildings: number) {
-  const budget = Math.round(students * 16 + sections * 100 + buildings * 1500);
-  const capacityGained = Math.round(buildings * 140 + sections * 0.8);
-  return {
-    budget,
-    capacityGained,
-    capacityPercent: ((capacityGained / 15000) * 100).toFixed(1),
-  };
+/** One institutional impact model shared by both landing-page calculators.
+ *  Inputs and outputs stay identical so the two panels never disagree. */
+export interface InstitutionalImpact {
+  hoursSaved: number;
+  budgetReclaimed: number;
+  seatsUnlocked: number;
+  capacityLiftPercent: number;
+  conflictReduction: number;
 }
 
-export function roiGains(students: number, rooms: number) {
-  const hours = Math.round(students * 0.01 + rooms * 0.94);
-  const savings = Math.round((hours * 440) / 1000) * 1000;
-  const lift = (15 + rooms * 0.0136).toFixed(1);
-  return { hours, savings, lift };
+export function institutionalImpact({
+  students,
+  sections,
+  rooms,
+}: {
+  students: number;
+  sections: number;
+  rooms: number;
+}): InstitutionalImpact {
+  const hoursSaved = Math.round(sections * 0.9 + rooms * 0.15 + students * 0.004);
+  const budgetReclaimed = Math.round(students * 16 + sections * 100 + rooms * 120);
+  const seatsUnlocked = Math.round(rooms * 8 + sections * 0.8);
+  const capacityLiftPercent = Number(((seatsUnlocked / 15000) * 100).toFixed(1));
+  return {
+    hoursSaved,
+    budgetReclaimed,
+    seatsUnlocked,
+    capacityLiftPercent,
+    conflictReduction: 100,
+  };
 }

@@ -223,7 +223,7 @@ export function MatrixDemo({
         <div className="relative z-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-navy-900 sm:text-4xl">
-              Live Timetable Matrix &amp; Spatial Heatmap
+              Live Spatial Heatmap
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
               Interactive demo campus — switch views to inspect real-time room occupancy.
