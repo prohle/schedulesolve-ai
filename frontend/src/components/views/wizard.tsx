@@ -271,26 +271,34 @@ export function WizardView({ onToast }: WizardViewProps) {
   };
 
   const applyConflict = (conflict: InstitutionConflict, optionKey: string) => {
+    // Elect by record identity (matched against the pristine parse), never
+    // by live array index: resolving one conflict drops records, which
+    // would shift the indices every later conflict still points at.
+    const original = ingest?.parsed;
     setEdited((prev) => {
-      if (!prev) return prev;
+      if (!prev || !original) return prev;
+      const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
       const entity = conflict.entity as keyof InstitutionData;
       const keep = optionKey.match(/^keep_(\d+)$/);
       if (keep) {
-        const winner = Number(keep[1]);
+        const winner = (original[entity] as unknown[])[Number(keep[1])];
+        const group = conflict.indices.map((i) => (original[entity] as unknown[])[i]);
         const arr = (prev[entity] as unknown[]).filter(
-          (_, i) => !conflict.indices.includes(i) || i === winner);
+          (item) => same(item, winner) || !group.some((g) => same(g, item)));
         return { ...prev, [entity]: arr };
       }
       if (optionKey === "drop_requirement") {
+        const group = conflict.indices.map((i) => original.degree_map[i]);
         return {
           ...prev,
-          degree_map: prev.degree_map.filter((_, i) => !conflict.indices.includes(i)),
+          degree_map: prev.degree_map.filter((item) => !group.some((g) => same(g, item))),
         };
       }
       if (optionKey === "drop_cohort") {
+        const group = conflict.indices.map((i) => original.cohorts[i]);
         return {
           ...prev,
-          cohorts: prev.cohorts.filter((_, i) => !conflict.indices.includes(i)),
+          cohorts: prev.cohorts.filter((item) => !group.some((g) => same(g, item))),
         };
       }
       return prev; // keep_requirement / keep_cohort: leave the record in place
@@ -336,9 +344,21 @@ export function WizardView({ onToast }: WizardViewProps) {
   const goToStep = async (idx: number) => {
     if (idx === currentIndex || idx < 0 || idx >= stepOrder.length) return;
     if (step === "import" && idx > currentIndex && edited) {
+      // No silent winners: every detected conflict needs an elected option
+      // before the solver is allowed to build from this data.
+      const unresolved = (ingest?.conflicts ?? []).filter((c) => !resolvedConflicts[c.id]);
+      if (unresolved.length > 0) {
+        onToast(
+          `Resolve ${unresolved.length} data conflict${unresolved.length === 1 ? "" : "s"} first — pick a winner for each under "Data conflicts".`,
+          "warning");
+        return;
+      }
       setIngestBusy(true);
       try {
-        const r: IngestResponse = await post("/api/ingest/apply", { data: edited });
+        const r: IngestResponse = await post("/api/ingest/apply", {
+          data: edited,
+          resolutions: resolvedConflicts,
+        });
         setIngest(r);
         setResolvedConflicts({});
         if (r.changes?.summary) {
@@ -652,7 +672,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                 {ingest.conflicts && ingest.conflicts.length > 0 && (
                   <Section
                     title="Data conflicts — choose the winner"
-                    hint="Muse Spark found records that disagree. Each option names the source it came from; the losing copy is dropped from the model."
+                    hint="Records that disagree, each with the source it came from. Pick a winner for every conflict to continue; the losing copy is dropped from the model."
                     icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
                     tone="amber"
                   >

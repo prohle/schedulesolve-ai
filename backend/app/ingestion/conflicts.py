@@ -220,6 +220,51 @@ def detect_conflicts(data: InstitutionData) -> list[InstitutionConflict]:
     return conflicts
 
 
+def resolve_conflicts(
+    data: InstitutionData, resolutions: dict[str, str]
+) -> InstitutionData:
+    """Apply the user's elected winners to an extraction, in one pass.
+
+    `resolutions` maps conflict id -> option key, exactly as returned by
+    `detect_conflicts` for *this* data. All losing indices are collected
+    first and dropped in a single filter per entity, so electing one winner
+    can never shift the indices of the next conflict. Unknown conflict ids
+    (e.g. a data set that was already resolved) are ignored; an unknown
+    option key for a live conflict raises ValueError.
+    """
+    if not resolutions:
+        return data
+    live = {c.id: c for c in detect_conflicts(data)}
+    drop: dict[str, set[int]] = {}
+    for conflict_id, option_key in resolutions.items():
+        conflict = live.get(conflict_id)
+        if conflict is None:
+            continue
+        valid = {o.key for o in conflict.options}
+        if option_key not in valid:
+            raise ValueError(
+                f"option {option_key!r} is not a choice for conflict "
+                f"{conflict_id!r} (choose one of {sorted(valid)})")
+        keep = re.fullmatch(r"keep_(\d+)", option_key)
+        if keep:
+            winner = int(keep.group(1))
+            drop.setdefault(conflict.entity, set()).update(
+                i for i in conflict.indices if i != winner)
+        elif option_key == "drop_requirement":
+            drop.setdefault("degree_map", set()).update(conflict.indices)
+        elif option_key == "drop_cohort":
+            drop.setdefault("cohorts", set()).update(conflict.indices)
+        # keep_requirement / keep_cohort: the record stays; nothing to drop.
+    if not drop:
+        return data
+    resolved = data.model_copy(deep=True)
+    for entity, indices in drop.items():
+        kept = [item for i, item in enumerate(getattr(resolved, entity))
+                if i not in indices]
+        setattr(resolved, entity, kept)
+    return resolved
+
+
 # --- change report ----------------------------------------------------------
 
 

@@ -20,7 +20,7 @@ from app import config
 from app.data.realism import audit_scenario
 from app.db import init_db
 from app.ingestion import check_completeness, ingest
-from app.ingestion.conflicts import detect_conflicts, diff_data
+from app.ingestion.conflicts import detect_conflicts, diff_data, resolve_conflicts
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
 from app.intelligence import analyze, build_matrices, compute_utilization, run_tightener, whatif
@@ -240,6 +240,11 @@ class IngestRequest(BaseModel):
 
 class ApplyRequest(BaseModel):
     data: InstitutionData
+    # Optional elected conflict winners: conflict id -> option key, exactly
+    # as proposed in the ingest response. Applied deterministically (see
+    # resolve_conflicts) before the scenario is built, so the winner the
+    # user picked is the record the solver sees.
+    resolutions: dict[str, str] = {}
 
 
 class IngestResponse(BaseModel):
@@ -325,17 +330,22 @@ def ingest_apply(req: ApplyRequest) -> IngestResponse:
     (keep/changed) entities and make it current. The frontend sends back the
     user-edited InstitutionData after the review panel."""
     global _current_scenario, _last_ingested_data
-    scenario = build_scenario(req.data)
-    changes = diff_data(_last_ingested_data, req.data)
-    conflicts = detect_conflicts(req.data)
-    _last_ingested_data = req.data
+    try:
+        data = resolve_conflicts(req.data, req.resolutions)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    scenario = build_scenario(data)
+    changes = diff_data(_last_ingested_data, data)
+    conflicts = detect_conflicts(data)
+    _last_ingested_data = data
     _set_current_scenario(scenario)
     audit.record_event("ingest-apply",
-                       f"Applied edited data: {len(req.data.courses)} courses, "
-                       f"{len(req.data.instructors)} instructors, {len(req.data.cohorts)} cohorts",
-                       {"conflicts": len(conflicts), "changes": len(changes.changes)})
-    return IngestResponse(scenario=scenario, parsed=req.data, parser_mode="reviewed",
-                          completeness=check_completeness(req.data),
+                       f"Applied edited data: {len(data.courses)} courses, "
+                       f"{len(data.instructors)} instructors, {len(data.cohorts)} cohorts",
+                       {"conflicts": len(conflicts), "changes": len(changes.changes),
+                        "resolutions": len(req.resolutions)})
+    return IngestResponse(scenario=scenario, parsed=data, parser_mode="reviewed",
+                          completeness=check_completeness(data),
                           conflicts=conflicts, changes=changes)
 
 

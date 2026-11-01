@@ -7,7 +7,9 @@ changed.
 
 from __future__ import annotations
 
-from app.ingestion.conflicts import detect_conflicts, diff_data
+import pytest
+
+from app.ingestion.conflicts import detect_conflicts, diff_data, resolve_conflicts
 from app.models.ingestion import (
     ExtractedCohort,
     ExtractedCourse,
@@ -87,6 +89,57 @@ def test_conflicts_name_sources_and_offer_a_winner():
     distance = next(c for c in conflicts if c.entity == "distances")
     assert "8 min" in " ".join(distance.sources)
     assert "12 min" in " ".join(distance.sources)
+
+
+def test_elected_winner_is_the_record_that_survives():
+    data = _data()
+    course = next(c for c in detect_conflicts(data) if c.entity == "courses")
+    resolved = resolve_conflicts(data, {course.id: "keep_1"})
+    survivors = [c for c in resolved.courses if c.code == "CS 101"]
+    assert len(survivors) == 1
+    assert survivors[0].title == "Programming I"
+    assert survivors[0].source == "2-degree-maps.docx"
+    assert not [c for c in detect_conflicts(resolved) if c.entity == "courses"]
+    # The original extraction is untouched.
+    assert len([c for c in data.courses if c.code == "CS 101"]) == 2
+
+
+def test_resolving_one_conflict_never_shifts_the_next():
+    # Two duplicate courses: electing a winner in the first group must not
+    # renumber the second group's records (the stale-index failure mode).
+    data = _data()
+    data.courses.append(ExtractedCourse(code="CS 201", title="Data Structures II",
+                                        pattern="TTh", seats=99, source="late-add.txt"))
+    courses = [c for c in detect_conflicts(data) if c.entity == "courses"]
+    assert len(courses) == 2
+    resolutions = {
+        c.id: next(o.key for o in c.options
+                   if ("2-degree-maps.docx" in o.label or "late-add.txt" in o.label))
+        for c in courses
+    }
+    resolved = resolve_conflicts(data, resolutions)
+    by_code = {c.code: c for c in resolved.courses}
+    assert by_code["CS 101"].title == "Programming I"
+    assert by_code["CS 201"].title == "Data Structures II"
+    assert by_code["CS 201"].source == "late-add.txt"
+
+
+def test_drop_options_and_invalid_option():
+    data = _data()
+    conflicts = detect_conflicts(data)
+    missing = next(c for c in conflicts if c.kind == "missing-course")
+    cohort = next(c for c in conflicts if c.kind == "missing-degree-map")
+    distance = next(c for c in conflicts if c.entity == "distances")
+    resolved = resolve_conflicts(data, {
+        missing.id: "drop_requirement",
+        cohort.id: "drop_cohort",
+        distance.id: "keep_0",
+    })
+    assert all(r.course != "CS 499" for r in resolved.degree_map)
+    assert all(c.name != "BSc Data" for c in resolved.cohorts)
+    assert len(resolved.distances) == 1 and resolved.distances[0].minutes == 8
+    with pytest.raises(ValueError):
+        resolve_conflicts(data, {missing.id: "keep_9"})
 
 
 def test_change_report_says_no_change_and_names_real_changes():
