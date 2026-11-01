@@ -449,10 +449,21 @@ _COMP_SUBJECTS = [
     ("ENV", "Environmental Science", "BSc", "Science"),
     ("ME", "Mechanical Engineering", "BSc", "Engineering"),
     ("EE", "Electrical Engineering", "BSc", "Engineering"),
+    ("HIS", "History", "BA", "Humanities"),
+    ("PHIL", "Philosophy", "BA", "Humanities"),
+    ("SOC", "Sociology", "BA", "Social Sciences"),
+    ("POL", "Political Science", "BA", "Social Sciences"),
+    ("COM", "Communication", "BA", "Arts"),
+    ("EDU", "Education", "BEd", "Education"),
+    ("GEO", "Geography", "BSc", "Social Sciences"),
+    ("ANT", "Anthropology", "BA", "Social Sciences"),
+    ("MUS", "Music", "BM", "Arts"),
+    ("KIN", "Kinesiology", "BSc", "Health Sciences"),
 ]
 
 _COMP_TITLES = [
-    "Foundations", "Methods", "Systems", "Analysis", "Advanced Topics", "Capstone",
+    "Foundations", "Methods", "Systems", "Analysis",
+    "Advanced Topics", "Applications", "Research Seminar", "Capstone",
 ]
 
 _COMP_CAMPUSES = {
@@ -471,6 +482,12 @@ _COMP_BUILDINGS = [
     ("H", "Health Sciences Center", "Health Sciences"),
     ("M", "Mathematics & Statistics", "Science Quad"),
     ("D", "Design & Media Studio", "Design Quarter"),
+    ("C", "Communication & Media", "Arts & Humanities"),
+    ("S2", "Social Sciences Building", "Social Sciences"),
+    ("E2", "Education Building", "Education"),
+    ("A2", "Arts & Music Hall", "Arts & Humanities"),
+    ("K", "Kinesiology Center", "Health Sciences"),
+    ("G", "Geography & Environment", "Science Quad"),
 ]
 
 _COMP_ROOMS = [
@@ -490,6 +507,37 @@ _COMP_ROOMS = [
     ("D", "Design Studio B", 30, "lab", ["computers"]),
     ("D", "Crit Space", 28, "seminar", ["video-conf"]),
     ("D", "Media Lab", 26, "lab", ["computers", "video-conf"]),
+    ("C", "Studio C1", 40, "lab", ["computers", "video-conf"]),
+    ("C", "Studio C2", 30, "seminar", ["video-conf"]),
+    ("C", "Lecture C3", 70, "lecture", ["projector", "mic"]),
+    ("S2", "Lecture S2-1", 60, "lecture", ["projector"]),
+    ("S2", "Seminar S2-2", 26, "seminar", ["video-conf"]),
+    ("S2", "Lecture S2-3", 45, "lecture", ["projector"]),
+    ("E2", "Teaching Lab", 32, "lab", ["computers"]),
+    ("E2", "Lecture E2-1", 55, "lecture", ["projector"]),
+    ("E2", "Seminar E2-2", 24, "seminar", ["whiteboard"]),
+    ("A2", "Music Hall", 90, "lecture", ["projector", "mic"]),
+    ("A2", "Practice Room", 20, "seminar", ["whiteboard"]),
+    ("A2", "Art Studio", 30, "lab", ["computers"]),
+    ("K", "Kin Lab", 35, "lab", ["computers"]),
+    ("K", "Lecture K1", 65, "lecture", ["projector"]),
+    ("K", "Seminar K2", 25, "seminar", ["video-conf"]),
+    ("G", "Geo Lab", 30, "lab", ["computers"]),
+    ("G", "Lecture G1", 50, "lecture", ["projector"]),
+    ("G", "Seminar G2", 22, "seminar", ["whiteboard"]),
+    # High-demand rooms for a realistic term (large labs/seminars/lectures).
+    ("B", "Lecture 120", 120, "lecture", ["projector", "mic"]),
+    ("B", "Lecture 90", 90, "lecture", ["projector", "mic"]),
+    ("H", "Lab 40 A", 40, "lab", ["computers"]),
+    ("H", "Lab 40 B", 40, "lab", ["computers"]),
+    ("M", "Lab 40", 40, "lab", ["computers"]),
+    ("C", "Lab 40", 40, "lab", ["computers"]),
+    ("S2", "Seminar 36 A", 36, "seminar", ["video-conf"]),
+    ("S2", "Seminar 36 B", 36, "seminar", ["video-conf"]),
+    ("E2", "Seminar 36", 36, "seminar", ["video-conf"]),
+    ("A2", "Seminar 36", 36, "seminar", ["video-conf"]),
+    ("K", "Lab 40", 40, "lab", ["computers"]),
+    ("G", "Lab 40", 40, "lab", ["computers"]),
 ]
 
 _COMP_MINORS = [
@@ -521,7 +569,9 @@ def build_comprehensive_scenario(seed: Scenario) -> Scenario:
         sc.buildings.append(Building(id=bid, name=bname, campus=campus))
         sc.distances[bid] = {}
         for other in [b.id for b in sc.buildings]:
-            walk = 0 if other == bid else 8 + (abs(ord(bid) - ord(other)) % 5)
+            walk = 0 if other == bid else 8 + (
+                abs(sum(ord(char) for char in bid) - sum(ord(char) for char in other)) % 5
+            )
             sc.distances[bid][other] = walk
             if other != bid:
                 sc.distances.setdefault(other, {})[bid] = walk
@@ -568,7 +618,7 @@ def build_comprehensive_scenario(seed: Scenario) -> Scenario:
                 "5": [_req(courses[4].id), _req(courses[5].id)],
             },
         ))
-        for offset, size in enumerate((34, 30, 26)):
+        for offset, size in enumerate((42, 38, 34, 30)):
             year = 2026 - offset
             sc.cohorts.append(Cohort(
                 id=f"{prefix}{year}",
@@ -579,13 +629,13 @@ def build_comprehensive_scenario(seed: Scenario) -> Scenario:
                 current_term=1 + offset * 2,
                 size=size,
             ))
-        for faculty_index in range(3):
+        for faculty_index in range(4):
             sc.instructors.append(Instructor(
                 id=f"{prefix}-f{faculty_index}",
                 name=f"Prof. {_FULL_SURNAMES[(len(sc.instructors) + faculty_index) % len(_FULL_SURNAMES)]}",
                 qualified_courses=[
                     courses[faculty_index].id,
-                    courses[faculty_index + 3].id,
+                    courses[faculty_index + 4].id,
                 ],
                 max_sections=2,
                 max_preps=2,

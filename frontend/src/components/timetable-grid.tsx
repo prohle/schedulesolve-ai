@@ -107,7 +107,7 @@ export function TimetableGrid({ placements, changed, compact }: {
           className="grid min-w-[430px] gap-px overflow-hidden rounded-2xl bg-border p-px sm:min-w-[520px]"
           style={{
             gridTemplateColumns: "44px repeat(5, minmax(0, 1fr))",
-            gridTemplateRows: `28px repeat(4, ${compact ? "60px" : "84px"})`,
+            gridTemplateRows: `28px repeat(${PERIOD_NAMES.length}, ${compact ? "60px" : "84px"})`,
           }}
         >
           <div className="bg-slate-100" style={{ gridColumn: 1, gridRow: 1 }} />

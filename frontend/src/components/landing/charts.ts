@@ -332,7 +332,7 @@ export function campusTrafficFromSeries(
       borderColor: "#cbd5e1",
       textStyle: { color: "#0f172a", fontSize: 10 },
     },
-    legend: { bottom: 0, textStyle: { fontSize: 9, color: "#475569" } },
+    legend: { type: "scroll", bottom: 0, textStyle: { fontSize: 9, color: "#475569" } },
     grid: { top: 15, bottom: 34, left: 42, right: 12 },
     xAxis: { type: "category", data: labels, ...interAxis },
     yAxis: {
@@ -358,7 +358,14 @@ export function campusQuadFromRows(rows: { name: string; percent: number }[]): E
   return {
     backgroundColor: "transparent",
     tooltip: { trigger: "axis", formatter: "{b}: {c}%", textStyle: { fontSize: 10 } },
-    grid: { top: 10, bottom: 15, left: 104, right: 24 },
+    grid: { top: 10, bottom: 15, left: 104, right: rows.length > 8 ? 34 : 24 },
+    dataZoom:
+      rows.length > 8
+        ? [
+            { type: "inside", yAxisIndex: 0 },
+            { type: "slider", yAxisIndex: 0, width: 8, right: 2, showDetail: false },
+          ]
+        : undefined,
     xAxis: {
       type: "value",
       max: 100,

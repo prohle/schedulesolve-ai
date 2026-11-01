@@ -27,7 +27,7 @@ code or by calling the API.
 
 | Item | What it really is | Where it is labelled |
 |---|---|---|
-| Northgate University (68 faculty, 101 courses, 50 cohorts, 7 campuses) | Generated demo data, not a real registrar extract | **Demo institution** badge; `docs/limitations.md` |
+| Northgate University (118 faculty, 201 courses, 100 cohorts, 14 buildings, 9 campuses) | Generated demo data, not a real registrar extract | **Demo institution** badge; `docs/limitations.md` |
 | Faculty feedback from "Simulate all" | Randomised constraints/preferences, deterministic per professor | Note "Simulated faculty feedback (demo)." |
 | First-page preview charts (88.6%, 361 sections, 48 faculty) | Design-reference sample data, not the live model | **Illustrative sample** badge + subtitle |
 | Analytics modal "benchmark" | Animation only; no solver call | "Illustrative preview — sign in for the live solver" |
@@ -37,8 +37,8 @@ code or by calling the API.
 
 | Area | Boundary |
 |---|---|
-| Weeks / holidays | The timetable is a weekly pattern. A holiday is "no Friday" or "Thursday period 2", not "October 14". True dated calendars are out of scope. |
-| University calendar dates | Derived from the intake deadline + week count; not an official registrar calendar. |
+| Weeks / holidays | The solver assigns a weekly pattern. The University Calendar layer stores real dated holidays and day swaps ("Friday follows Tuesday"), maps each date to the effective pattern and audits meeting shortfalls. It is not an official registrar calendar. |
+| University calendar dates | Term start is set by the coordinator; end = start + weeks. Holidays/swaps are real dates; the default demo calendar starts empty. |
 | "Map" | Campus/building cards grouped by quad, not a geographic map. |
 | Degree maps | Synthetic programs/cohorts; they drive demand and cohort conflicts, but they are not real accreditation records. |
 | Minors | First-class programs for catalog/degree-map display; they do not create cohorts or demand on their own. |

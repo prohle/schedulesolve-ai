@@ -97,7 +97,7 @@ COURSES THE STUDENT MAY TAKE THIS TERM (use exact ids — never invent):
 
 ENCODING
 - day: 0-4 = {", ".join(f"{i}={d}" for i, d in enumerate(DAY_NAMES))}
-- period: 0-3 = {", ".join(f"{i}={p}" for i, p in enumerate(PERIOD_NAMES))}
+- period: 0-{len(PERIOD_NAMES)-1} = {", ".join(f"{i}={p}" for i, p in enumerate(PERIOD_NAMES))}
 
 RULES
 - must_course_ids: courses the student says they need/must take this term.

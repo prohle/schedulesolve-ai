@@ -39,11 +39,13 @@ DATABASE_URL = os.getenv(
     "postgresql://schedulesolve:schedulesolve@localhost:5433/schedulesolve",
 )
 
-SOLVER_TIME_LIMIT_S = float(os.getenv("SOLVER_TIME_LIMIT_S", "10"))
+# Generous by default (no artificial 10 s cap). Set 0 to remove the cap
+# entirely, or a smaller value for a budgeted benchmark.
+SOLVER_TIME_LIMIT_S = float(os.getenv("SOLVER_TIME_LIMIT_S", "60"))
 
 # ScheduleSolve home solver (pure-Python competitor to CP-SAT): wall-clock
 # budget per run before it returns its best incumbent as "feasible".
-HOME_SOLVER_TIME_LIMIT_S = float(os.getenv("HOME_SOLVER_TIME_LIMIT_S", "5"))
+HOME_SOLVER_TIME_LIMIT_S = float(os.getenv("HOME_SOLVER_TIME_LIMIT_S", "30"))
 
 # C39: full-time offering guarantee — every cohort must be able to assemble
 # at least this many distinct, non-overlapping courses toward graduation.

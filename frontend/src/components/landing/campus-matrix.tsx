@@ -101,7 +101,7 @@ export function CampusMatrix({
   const trafficOption = useMemo(() => {
     if (!live) return campusTrafficOption;
     const palette = ["#2563eb", "#10b981", "#8b5cf6", "#f59e0b"];
-    const series = list.slice(0, 4).map((item, index) => ({
+    const series = list.map((item, index) => ({
       name: item.building.name.split("(")[0].trim(),
       color: palette[index % palette.length],
       data: slots.map(
@@ -115,7 +115,7 @@ export function CampusMatrix({
     () =>
       live
         ? campusQuadFromRows(
-            summary.rows.slice(0, 6).map((row) => ({
+            summary.rows.map((row) => ({
               name: row.item.building.name.split("(")[0].trim(),
               percent: row.average,
             }))

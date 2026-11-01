@@ -106,7 +106,7 @@ function IntakePanel({ user, load, busy, onSend }: {
     for (const p of load.preferences) {
       const v = p.kind === "avoid" ? 2 : 1;
       if (p.period != null && p.day != null) next[`${p.day}-${p.period}`] = v;
-      else if (p.day != null) for (let per = 0; per < 4; per++) next[`${p.day}-${per}`] ||= v;
+      else if (p.day != null) for (let per = 0; per < PERIOD_NAMES.length; per++) next[`${p.day}-${per}`] ||= v;
       else if (p.period != null) for (let d = 0; d < 5; d++) next[`${d}-${p.period}`] ||= v;
     }
     setCells(next);
@@ -168,7 +168,7 @@ function IntakePanel({ user, load, busy, onSend }: {
         </button>
       </div>
 
-      <div className="grid grid-cols-[2.2rem_repeat(4,minmax(0,1fr))] gap-1">
+      <div className="grid gap-1" style={{ gridTemplateColumns: `2.2rem repeat(${PERIOD_NAMES.length}, minmax(0, 1fr))` }}>
         <span />
         {PERIOD_NAMES.map((p) => (
           <span key={p} className="pb-0.5 text-center text-[10px] font-bold text-muted-foreground">{p}</span>

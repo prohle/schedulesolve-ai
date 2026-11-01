@@ -18,6 +18,7 @@ from app.models.scenario import (
     Instructor,
     InstructorPreference,
     PATTERN_DURATION,
+    PERIOD_COUNT,
     Program,
     RoadmapRequirement,
     Room,
@@ -68,7 +69,7 @@ def _availability(text: str) -> tuple[list[SlotRef], list[InstructorPreference]]
             if not re.search(rf"\b{word}\b", clause):
                 continue
             if is_hard:
-                hard.extend(SlotRef(day=day, period=p) for p in range(4))
+                hard.extend(SlotRef(day=day, period=p) for p in range(PERIOD_COUNT))
             else:
                 prefs.append(InstructorPreference(kind="prefer", day=day))
 

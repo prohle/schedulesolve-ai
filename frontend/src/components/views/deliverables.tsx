@@ -138,7 +138,14 @@ function cohortOption(margins: MarginsReport | null): EChartsOption {
   const rows = margins?.cohorts ?? [];
   return {
     tooltip: { trigger: "axis", formatter: "{b}: {c} courses" },
-    grid: { top: 15, bottom: 15, left: 74, right: 34 },
+    grid: { top: 15, bottom: 15, left: 74, right: rows.length > 10 ? 44 : 34 },
+    dataZoom:
+      rows.length > 10
+        ? [
+            { type: "inside", yAxisIndex: 0 },
+            { type: "slider", yAxisIndex: 0, width: 8, right: 2, showDetail: false },
+          ]
+        : undefined,
     xAxis: { type: "value", max: Math.max(margins?.min_courses ?? 4, 6), axisLabel: { fontSize: 8, color: "#94a3b8" } },
     yAxis: {
       type: "category",
@@ -163,7 +170,14 @@ function cohortOption(margins: MarginsReport | null): EChartsOption {
 function facultyLoadOption(faculty: UtilizationReport["faculty"]): EChartsOption {
   return {
     tooltip: { trigger: "axis", formatter: "{b}: {c}% of contract" },
-    grid: { top: 15, bottom: 15, left: 84, right: 34 },
+    grid: { top: 15, bottom: 15, left: 84, right: faculty.length > 12 ? 44 : 34 },
+    dataZoom:
+      faculty.length > 12
+        ? [
+            { type: "inside", yAxisIndex: 0 },
+            { type: "slider", yAxisIndex: 0, width: 8, right: 2, showDetail: false },
+          ]
+        : undefined,
     xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%", fontSize: 8, color: "#94a3b8" } },
     yAxis: {
       type: "category",

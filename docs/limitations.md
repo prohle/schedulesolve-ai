@@ -6,9 +6,9 @@ our word for it. Scoped claims are stronger than broad ones.
 
 ## Data truthfulness
 
-- **The shipped institution is synthetic.** "Northgate University" (7 campus
-  quads, 8 buildings, 32 rooms, 68 faculty, 101 courses/sections, 15 majors +
-  8 minors, 50 cohorts) is generated demo data, not a real registrar extract.
+- **The shipped institution is synthetic.** "Northgate University" (9 campus
+  quads, 14 buildings, 62 rooms, 118 faculty, 201 courses/sections, 25 majors +
+  8 minors, 100 cohorts) is generated demo data, not a real registrar extract.
   The app labels it **Demo institution** and the first-page preview labels
   itself **Illustrative sample**. Real institutions replace it through
   Import / Settings → Update institution data.
@@ -91,11 +91,13 @@ our word for it. Scoped claims are stronger than broad ones.
   (2/4 cohorts) — it is the tightener's demo world. Department and
   university scales hold 12/12 and 20/20 (README benchmark table).
 
-- **Closures are weekday-shaped.** The timetable is a weekly pattern, so
-  a holiday is "no Mondays" or "Thursday period 2", not "October 14th".
-  Dated, one-off leave (a conference week) is expressed as the
-  professor's Off pattern on those weekdays via structured intake; true
-  calendar-dated scheduling is out of scope for the pattern model.
+- **The solver assigns a weekly pattern; the calendar layer adds real dates.**
+  The University Calendar stores dated holidays and day swaps ("Friday
+  follows Tuesday"), maps each date to the effective weekday pattern, and
+  audits actual meetings against the nominal pattern. A swap reuses the
+  solver's weekly assignment, so it introduces no new conflicts. A holiday
+  that is not made up by a swap shows a meeting shortfall in the audit
+  rather than silently disappearing.
 
 ## Voice
 

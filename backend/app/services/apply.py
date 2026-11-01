@@ -18,6 +18,7 @@ from app.models.scenario import (
     Scenario,
     SlotRef,
     TermClosure,
+    PERIOD_COUNT,
 )
 
 
@@ -26,7 +27,7 @@ def _slots(day: int | None, period: int | None) -> list[SlotRef]:
     if day is not None and period is not None:
         return [SlotRef(day=day, period=period)]
     if day is not None:
-        return [SlotRef(day=day, period=p) for p in range(4)]
+        return [SlotRef(day=day, period=p) for p in range(PERIOD_COUNT)]
     if period is not None:
         return [SlotRef(day=d, period=period) for d in range(5)]
     return []

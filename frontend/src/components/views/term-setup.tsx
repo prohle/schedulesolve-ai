@@ -208,6 +208,43 @@ interface Overview {
   counts: Record<string, number>;
 }
 
+interface CalendarDay {
+  date: string;
+  weekday: number;
+  effective_weekday: number | null;
+  status: "class" | "holiday" | "swap";
+  label: string;
+}
+
+interface CalendarAuditRow {
+  section_id: string;
+  course_code: string;
+  course_title: string;
+  expected: number;
+  actual: number;
+  shortfall: number;
+  extra: number;
+}
+
+interface TermCalendar {
+  term: string;
+  weeks: number;
+  start_date: string;
+  end_date: string;
+  days: CalendarDay[];
+  holidays: { date: string; label: string }[];
+  swaps: { date: string; follows: number; label: string }[];
+  audit: CalendarAuditRow[];
+  published: boolean;
+  totals: {
+    teaching_days: number;
+    holidays: number;
+    swaps: number;
+    sections_short: number;
+    sections_extra: number;
+  };
+}
+
 type EditState =
   | { kind: "building"; id: string; name: string }
   | { kind: "room"; id: string; name: string; capacity: number; room_type: string; building_id: string; equipment: string }
@@ -349,6 +386,7 @@ export function TermSetupView({
 }) {
   const [window, setWindow] = useState<TermWindow | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [calendar, setCalendar] = useState<TermCalendar | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -363,6 +401,9 @@ export function TermSetupView({
   const [note, setNote] = useState("");
   const [coursePrefs, setCoursePrefs] = useState<Preference[]>([]);
   const [holiday, setHoliday] = useState({ day: 0, period: "", label: "Holiday" });
+  const [datedHoliday, setDatedHoliday] = useState({ date: "", label: "Holiday" });
+  const [swap, setSwap] = useState({ date: "", follows: "1", label: "" });
+  const [calendarStart, setCalendarStart] = useState("");
   const [engine, setEngine] = useState("cpsat");
   const [objective, setObjective] = useState("preference");
   const [termStart, setTermStart] = useState("");
@@ -376,16 +417,22 @@ export function TermSetupView({
     setLoading(true);
     setError(null);
     try {
-      const [wRes, oRes] = await Promise.all([
+      const [wRes, oRes, cRes] = await Promise.all([
         authFetch("/api/term/window"),
         authFetch("/api/institution/overview"),
+        authFetch("/api/term/calendar"),
       ]);
       const w: TermWindow = await wRes.json();
       const o: Overview = await oRes.json();
+      const c: TermCalendar = await cRes.json();
       if (!wRes.ok) throw new Error((w as unknown as { detail?: string }).detail || "Could not load the intake window.");
       if (!oRes.ok) throw new Error((o as unknown as { detail?: string }).detail || "Could not load the institution model.");
       setWindow(w);
       setOverview(o);
+      if (cRes.ok) {
+        setCalendar(c);
+        setCalendarStart(c.start_date);
+      }
       setTerm(w.term);
       setOpensAt(isoForInput(w.opens_at));
       setDeadline(isoForInput(w.deadline));
@@ -406,7 +453,7 @@ export function TermSetupView({
           if (pref.course_id) return;
           if (pref.day === undefined || pref.day === null) return;
           if (pref.period === undefined || pref.period === null) {
-            for (let p = 0; p < 4; p++) next[`${pref.day}-${p}`] = pref.kind === "prefer" ? 1 : 2;
+            for (let p = 0; p < PERIOD_NAMES.length; p++) next[`${pref.day}-${p}`] = pref.kind === "prefer" ? 1 : 2;
           } else {
             next[`${pref.day}-${pref.period}`] = pref.kind === "prefer" ? 1 : 2;
           }
@@ -589,6 +636,36 @@ export function TermSetupView({
       onToast("Holiday added to campus-wide constraints", "success");
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Could not add holiday.", "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const persistCalendar = async (patch: {
+    start_date?: string;
+    weeks?: number;
+    holidays?: { date: string; label: string }[];
+    swaps?: { date: string; follows: number; label: string }[];
+  }) => {
+    if (!calendar) return;
+    setBusy("calendar");
+    try {
+      const res = await authFetch("/api/term/calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start_date: patch.start_date ?? calendar.start_date,
+          weeks: patch.weeks ?? calendar.weeks,
+          holidays: patch.holidays ?? calendar.holidays,
+          swaps: patch.swaps ?? calendar.swaps,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Could not save the calendar.");
+      setCalendar(data);
+      onToast("University calendar saved", "success");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Could not save the calendar.", "error");
     } finally {
       setBusy(null);
     }
@@ -1824,139 +1901,343 @@ export function TermSetupView({
       {section === "holidays" && (
         <Section
           title="Holidays & campus closures"
-          hint="A closure removes a weekday (or one period) from the timetable everywhere."
+          hint="Dated holidays, not just weekday patterns. A holiday removes that specific date from the term."
           icon={<CalendarDays className="h-4 w-4 text-amber-600" />}
         >
           <div className="space-y-1.5">
-            {overview.holidays.map((entry, index) => (
+            {calendar?.holidays.map((entry, index) => (
               <div
-                key={`${entry.day}-${entry.period ?? "all"}-${index}`}
+                key={`${entry.date}-${index}`}
                 className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs"
               >
                 <div>
                   <strong className="text-slate-900">{entry.label}</strong>{" "}
                   <span className="font-mono text-[10px] text-slate-500">
-                    {DAY_NAMES[entry.day]}
-                    {entry.period !== undefined && entry.period !== null ? ` ${PERIOD_NAMES[entry.period]}` : " (all day)"}
+                    {new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <IconButton
-                    label={`Edit ${entry.label}`}
-                    onClick={() =>
-                      setEdit({
-                        kind: "closure",
-                        id: String(index),
-                        label: entry.label,
-                        day: entry.day,
-                        period: entry.period === undefined || entry.period === null ? "" : String(entry.period),
-                      })
-                    }
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </IconButton>
-                  <IconButton
-                    label={`Remove ${entry.label}`}
-                    tone="rose"
-                    onClick={() => void removeEntity("closure", String(index), entry.label)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </IconButton>
-                </div>
+                <IconButton
+                  label={`Remove ${entry.label}`}
+                  tone="rose"
+                  onClick={() =>
+                    void persistCalendar({
+                      holidays: (calendar?.holidays ?? []).filter((_, i) => i !== index),
+                    })
+                  }
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </IconButton>
               </div>
             ))}
-            {overview.holidays.length === 0 && (
-              <p className="text-[11px] text-slate-500">No holidays or closures recorded.</p>
+            {calendar && calendar.holidays.length === 0 && (
+              <p className="text-[11px] text-slate-500">No dated holidays recorded.</p>
             )}
           </div>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Label
+              Date
               <input
-                value={holiday.label}
-                onChange={(e) => setHoliday((h) => ({ ...h, label: e.target.value }))}
+                type="date"
+                value={datedHoliday.date}
+                onChange={(e) => setDatedHoliday((h) => ({ ...h, date: e.target.value }))}
                 className={cn(FIELD, "mt-1")}
               />
             </label>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Day
-              <select
-                value={holiday.day}
-                onChange={(e) => setHoliday((h) => ({ ...h, day: Number(e.target.value) }))}
+              Label
+              <input
+                value={datedHoliday.label}
+                onChange={(e) => setDatedHoliday((h) => ({ ...h, label: e.target.value }))}
                 className={cn(FIELD, "mt-1")}
-              >
-                {DAY_NAMES.map((day, index) => (
-                  <option key={day} value={index}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Period
-              <select
-                value={holiday.period}
-                onChange={(e) => setHoliday((h) => ({ ...h, period: e.target.value }))}
-                className={cn(FIELD, "mt-1")}
-              >
-                <option value="">All day</option>
-                {PERIOD_NAMES.map((period, index) => (
-                  <option key={period} value={index}>
-                    {period}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
             <button
-              onClick={() => void addHoliday()}
+              onClick={() => {
+                if (!datedHoliday.date || !calendar) {
+                  onToast("Pick a date first", "warning");
+                  return;
+                }
+                void persistCalendar({
+                  holidays: [
+                    ...calendar.holidays,
+                    { date: datedHoliday.date, label: datedHoliday.label || "Holiday" },
+                  ],
+                });
+                setDatedHoliday({ date: "", label: "Holiday" });
+              }}
               disabled={busy !== null}
               className="mt-5 inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-700 hover:bg-amber-100 disabled:opacity-50"
             >
-              <Plus className="h-3.5 w-3.5" /> Add
+              <Plus className="h-3.5 w-3.5" /> Add holiday
             </button>
           </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Use the <strong>Calendar</strong> tab to add a day swap such as
+            “Friday follows Tuesday” and see the meeting audit.
+          </p>
         </Section>
       )}
 
-      {section === "calendar" && (
-        <Section
-          title="University calendar"
-          hint="The term timeline the solver plans against."
-          icon={<CalendarRange className="h-4 w-4 text-blue-600" />}
-        >
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Faculty deadline", overview.term.deadline, "All constraints and preferences due"],
-              ["Term start", overview.term.start_date, "Teaching begins"],
-              ["Exam week", overview.term.exam_week_start, "Final assessment window"],
-              ["Term end", overview.term.end_date, `${overview.term.weeks} weeks total`],
-            ].map(([label, value, hint]) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
-                <div className="mt-0.5 font-mono text-sm font-bold text-slate-900">
-                  {value ? new Date(value).toLocaleDateString() : "—"}
-                </div>
-                <div className="text-[10px] text-slate-500">{hint}</div>
+      {section === "calendar" && calendar && (
+        <div className="space-y-3">
+          <Section
+            title="University calendar"
+            hint="Real dates: holidays remove that date; a day swap makes a date follow another weekday's schedule (e.g. Friday follows Tuesday)."
+            icon={<CalendarRange className="h-4 w-4 text-blue-600" />}
+            action={
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                  Term start
+                  <input
+                    type="date"
+                    value={calendarStart}
+                    onChange={(e) => setCalendarStart(e.target.value)}
+                    className={cn(FIELD, "mt-0.5")}
+                  />
+                </label>
+                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                  Weeks
+                  <input
+                    type="number"
+                    min={1}
+                    max={52}
+                    value={calendar.weeks}
+                    onChange={(e) =>
+                      void persistCalendar({ weeks: Number(e.target.value) })
+                    }
+                    className={cn(FIELD, "mt-0.5 w-20")}
+                  />
+                </label>
+                <button
+                  onClick={() => void persistCalendar({ start_date: calendarStart })}
+                  className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700"
+                >
+                  Save dates
+                </button>
               </div>
-            ))}
-          </div>
-          <div className="mt-3 space-y-1">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Closures in this term</div>
-            {overview.holidays.length === 0 ? (
-              <p className="text-[11px] text-slate-500">None.</p>
-            ) : (
-              overview.holidays.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px]">
-                  <span className="font-bold text-slate-900">{entry.label}</span>
-                  <span className="font-mono text-slate-500">
-                    {DAY_NAMES[entry.day]}
-                    {entry.period !== undefined && entry.period !== null ? ` ${PERIOD_NAMES[entry.period]}` : " (all day)"}
-                  </span>
+            }
+          >
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {[
+                ["Teaching days", calendar.totals.teaching_days],
+                ["Holidays", calendar.totals.holidays],
+                ["Day swaps", calendar.totals.swaps],
+                ["Sections short", calendar.totals.sections_short],
+                ["Sections extra", calendar.totals.sections_extra],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
+                  <div className="font-mono text-lg font-black text-slate-900">{value}</div>
                 </div>
-              ))
-            )}
-          </div>
-        </Section>
+              ))}
+            </div>
+
+            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+              <div className="min-w-[640px]">
+                <div className="grid grid-cols-5 gap-px bg-slate-200 p-px">
+                  {DAY_NAMES.map((day) => (
+                    <div key={day} className="bg-slate-100 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                      {day.slice(0, 3)}
+                    </div>
+                  ))}
+                </div>
+                {Array.from({ length: calendar.weeks }).map((_, weekIndex) => {
+                  const startMs = new Date(`${calendar.start_date}T00:00:00`).getTime();
+                  const weekDays = calendar.days.filter((day) => {
+                    const diff = new Date(`${day.date}T00:00:00`).getTime() - startMs;
+                    return Math.floor(diff / (7 * 86_400_000)) === weekIndex;
+                  });
+                  return (
+                    <div key={weekIndex} className="grid grid-cols-5 gap-px bg-slate-200 p-px">
+                      {DAY_NAMES.map((_, weekday) => {
+                        const day = weekDays.find((entry) => entry.weekday === weekday);
+                        if (!day) {
+                          return <div key={weekday} className="min-h-14 bg-slate-50 p-1.5" />;
+                        }
+                        return (
+                          <div
+                            key={weekday}
+                            className={cn(
+                              "min-h-14 p-1.5 text-[10px]",
+                              day.status === "holiday"
+                                ? "bg-rose-50"
+                                : day.status === "swap"
+                                  ? "bg-purple-50"
+                                  : "bg-white"
+                            )}
+                          >
+                            <div className="font-mono font-bold text-slate-800">
+                              {new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </div>
+                            {day.status === "holiday" && (
+                              <div className="mt-0.5 rounded bg-rose-100 px-1 py-0.5 font-bold text-rose-700">
+                                {day.label}
+                              </div>
+                            )}
+                            {day.status === "swap" && (
+                              <div className="mt-0.5 rounded bg-purple-100 px-1 py-0.5 font-bold text-purple-700">
+                                {DAY_NAMES[day.effective_weekday ?? 0].slice(0, 3)} schedule
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Section>
+
+          <Section
+            title="Day swaps & makeup meetings"
+            hint="A swap makes a date follow another weekday. The solver's weekly assignment is reused, so no new conflicts are introduced."
+            icon={<CalendarDays className="h-4 w-4 text-purple-600" />}
+          >
+            <div className="space-y-1.5">
+              {calendar.swaps.map((entry, index) => (
+                <div key={`${entry.date}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
+                  <div>
+                    <strong className="text-slate-900">
+                      {new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, {
+                        weekday: "long",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </strong>{" "}
+                    <span className="font-mono text-[10px] text-slate-500">
+                      follows {DAY_NAMES[entry.follows]}
+                    </span>
+                  </div>
+                  <IconButton
+                    label="Remove swap"
+                    tone="rose"
+                    onClick={() =>
+                      void persistCalendar({
+                        swaps: (calendar.swaps ?? []).filter((_, i) => i !== index),
+                      })
+                    }
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </IconButton>
+                </div>
+              ))}
+              {calendar.swaps.length === 0 && (
+                <p className="text-[11px] text-slate-500">No day swaps recorded.</p>
+              )}
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Date
+                <input
+                  type="date"
+                  value={swap.date}
+                  onChange={(e) => setSwap((s) => ({ ...s, date: e.target.value }))}
+                  className={cn(FIELD, "mt-1")}
+                />
+              </label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Follows
+                <select
+                  value={swap.follows}
+                  onChange={(e) => setSwap((s) => ({ ...s, follows: e.target.value }))}
+                  className={cn(FIELD, "mt-1")}
+                >
+                  {DAY_NAMES.map((day, index) => (
+                    <option key={day} value={index}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Label
+                <input
+                  value={swap.label}
+                  onChange={(e) => setSwap((s) => ({ ...s, label: e.target.value }))}
+                  placeholder="Friday follows Tuesday"
+                  className={cn(FIELD, "mt-1")}
+                />
+              </label>
+              <button
+                onClick={() => {
+                  if (!swap.date) {
+                    onToast("Pick a date first", "warning");
+                    return;
+                  }
+                  void persistCalendar({
+                    swaps: [
+                      ...(calendar.swaps ?? []),
+                      {
+                        date: swap.date,
+                        follows: Number(swap.follows),
+                        label: swap.label || `Follows ${DAY_NAMES[Number(swap.follows)]}`,
+                      },
+                    ],
+                  });
+                  setSwap({ date: "", follows: "1", label: "" });
+                }}
+                disabled={busy !== null}
+                className="mt-5 inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3 text-xs font-bold text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add swap
+              </button>
+            </div>
+          </Section>
+
+          <Section
+            title="Meeting audit"
+            hint={calendar.published ? "Actual meetings vs the nominal weekly pattern for the published term." : "Publish a term to audit actual meetings; the nominal pattern is shown meanwhile."}
+            icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
+          >
+            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+              <table className="w-full min-w-[560px] text-left text-xs">
+                <thead className="sticky top-0 bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  <tr>
+                    <th className="p-2">Course</th>
+                    <th className="p-2">Expected</th>
+                    <th className="p-2">Actual</th>
+                    <th className="p-2">Short</th>
+                    <th className="p-2">Extra</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {calendar.audit.map((row) => (
+                    <tr key={row.section_id} className={row.shortfall > 0 ? "bg-amber-50/60" : undefined}>
+                      <td className="p-2">
+                        <span className="font-bold text-slate-900">{row.course_code}</span>{" "}
+                        <span className="text-slate-500">{row.course_title}</span>
+                      </td>
+                      <td className="p-2 font-mono">{row.expected}</td>
+                      <td className="p-2 font-mono">{row.actual}</td>
+                      <td className={cn("p-2 font-mono font-bold", row.shortfall > 0 ? "text-amber-700" : "text-slate-400")}>
+                        {row.shortfall}
+                      </td>
+                      <td className={cn("p-2 font-mono font-bold", row.extra > 0 ? "text-purple-700" : "text-slate-400")}>
+                        {row.extra}
+                      </td>
+                    </tr>
+                  ))}
+                  {calendar.audit.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-[11px] text-emerald-700">
+                        Every section meets its nominal weekly pattern.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+        </div>
       )}
 
       {section === "settings" && (

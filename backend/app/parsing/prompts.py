@@ -58,7 +58,7 @@ Buildings (walk minutes): {buildings}
 
 ENCODING
 - day: 0-4 = {", ".join(f"{i}={d}" for i, d in enumerate(DAY_NAMES))}
-- period: 0-3 = {", ".join(f"{i}={p}" for i, p in enumerate(PERIOD_NAMES))}
+- period: 0-{len(PERIOD_NAMES)-1} = {", ".join(f"{i}={p}" for i, p in enumerate(PERIOD_NAMES))}
 
 OPERATIONS (emit as few as capture the request fully)
 1. add_instructor_unavailability — hard: instructor can't teach. Needs

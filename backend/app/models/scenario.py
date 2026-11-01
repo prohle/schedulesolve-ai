@@ -24,6 +24,7 @@ DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 # A 1.5h course occupies one slot; a 3h course occupies two consecutive slots
 # (the weekly "block" occupies periods 2 and 3 = 11:00–14:00).
 PERIOD_NAMES = ["8:00", "9:30", "11:00", "12:30"]
+PERIOD_COUNT = len(PERIOD_NAMES)
 
 # A weekly 3h block occupies two consecutive afternoon slots, on one of these days.
 BLOCK_DAYS = [1, 2, 3]
@@ -69,18 +70,18 @@ class Room(BaseModel):
 class RoomBlackout(BaseModel):
     room_id: str
     day: int = Field(ge=0, le=4)
-    period: Optional[int] = Field(default=None, ge=0, le=3)  # None = whole day
+    period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)  # None = whole day
 
 
 class SlotRef(BaseModel):
     day: int = Field(ge=0, le=4)
-    period: int = Field(ge=0, le=3)
+    period: int = Field(ge=0, le=PERIOD_COUNT - 1)
 
 
 class InstructorPreference(BaseModel):
     kind: Literal["prefer", "avoid"]
     day: Optional[int] = Field(default=None, ge=0, le=4)
-    period: Optional[int] = Field(default=None, ge=0, le=3)
+    period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)
     course_id: Optional[str] = None
     weight: int = 10
 
@@ -152,7 +153,7 @@ class TermClosure(BaseModel):
     weekly pattern, so closures are weekday-shaped by construction."""
 
     day: int = Field(ge=0, le=4)
-    period: Optional[int] = Field(default=None, ge=0, le=3)  # None = all day
+    period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)  # None = all day
     label: str = "Closure"
 
 
@@ -269,7 +270,7 @@ class Operation(BaseModel):
     room_id: Optional[str] = None
     course_id: Optional[str] = None  # course preference
     day: Optional[int] = Field(default=None, ge=0, le=4)
-    period: Optional[int] = Field(default=None, ge=0, le=3)
+    period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)
     kind: Optional[Literal["prefer", "avoid"]] = None
     weight: Optional[int] = None
     value: Optional[int] = None  # update_enrollment / set_*_cap: new number

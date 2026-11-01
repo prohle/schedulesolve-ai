@@ -566,6 +566,13 @@ class SimulateIntakeIn(BaseModel):
     only_missing: bool = False
 
 
+class TermCalendarIn(BaseModel):
+    start_date: Optional[str] = None
+    weeks: Optional[int] = None
+    holidays: Optional[list[dict]] = None
+    swaps: Optional[list[dict]] = None
+
+
 class DecideRequest(BaseModel):
     action: str = "apply"  # apply | reject
 
@@ -1057,6 +1064,40 @@ def term_window_submit(req: IntakeSubmitIn,
     )
     return {"submission": submission,
             "window": _window_payload(get_current_scenario(), user)}
+
+
+def _calendar_payload() -> dict:
+    latest = _latest_published()
+    placements = None
+    if latest is not None:
+        try:
+            placements = json.loads(latest.timetable_json)["placements"]
+        except (TypeError, ValueError, KeyError):
+            placements = None
+    return term_service.calendar(get_current_scenario(), placements)
+
+
+@app.get("/term/calendar")
+def term_calendar(authorization: Optional[str] = Header(None)) -> dict:
+    """Dated academic calendar: holidays, day swaps and a meeting audit."""
+    _current_user(authorization)
+    return _calendar_payload()
+
+
+@app.post("/term/calendar")
+def term_calendar_update(req: TermCalendarIn,
+                         authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    term_service.set_calendar(
+        get_current_scenario(),
+        start_date=req.start_date,
+        weeks=req.weeks,
+        holidays=req.holidays,
+        swaps=req.swaps,
+    )
+    audit.record_event("term-calendar", "Dated calendar updated", req.model_dump(exclude_none=True))
+    return _calendar_payload()
 
 
 @app.post("/term/window/simulate")

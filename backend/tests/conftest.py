@@ -9,6 +9,9 @@ from app.main import app
 def offline_muse(monkeypatch):
     """Tests must be deterministic and burn zero credits."""
     monkeypatch.setattr(config, "MUSE_API_KEY", None)
+    # Keep the suite fast; the app default is 60 s (0 disables the cap).
+    monkeypatch.setattr(config, "SOLVER_TIME_LIMIT_S", 10.0)
+    monkeypatch.setattr(config, "HOME_SOLVER_TIME_LIMIT_S", 5.0)
 
 
 @pytest.fixture()

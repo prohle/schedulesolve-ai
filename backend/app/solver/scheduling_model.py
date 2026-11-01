@@ -44,6 +44,7 @@ from app.models.scenario import (
     InstructorPreference,
     Operation,
     PATTERN_DAYS,
+    PERIOD_COUNT,
     PERIOD_NAMES,
     Scenario,
     Section,
@@ -103,7 +104,7 @@ def _options(sc: Scenario, section: Section) -> list[tuple[str, str, int, str]]:
     if course.pattern in ("MWF", "TTh"):
         days = PATTERN_DAYS[course.pattern]
         for i in insts:
-            for p in range(4):
+            for p in range(PERIOD_COUNT):
                 if any(_hard_blocked(i, d, p) for d in days):
                     continue
                 if any(_term_closed(sc, d, p) for d in days):
@@ -226,7 +227,7 @@ def solve(
     # C17 instructor busy: one thing at a time per (day, period)
     for i in sc.instructors:
         for d in range(5):
-            for p in range(4):
+            for p in range(PERIOD_COUNT):
                 covering = inst_cell.get((i.id, d, p), [])
                 if len(covering) > 1:
                     m.Add(cp_model.LinearExpr.Sum(covering) <= 1)
@@ -234,7 +235,7 @@ def solve(
     # C23 room busy: one section per room per (day, period)
     for r in sc.rooms:
         for d in range(5):
-            for p in range(4):
+            for p in range(PERIOD_COUNT):
                 covering = room_cell.get((r.id, d, p), [])
                 if len(covering) > 1:
                     m.Add(cp_model.LinearExpr.Sum(covering) <= 1)
@@ -246,7 +247,7 @@ def solve(
             sa, sb, pa, pb = sb, sa, pb, pa
         if pa in ("MWF", "TTh") and pb in ("MWF", "TTh"):
             if set(PATTERN_DAYS[pa]) & set(PATTERN_DAYS[pb]):
-                for p in range(4):
+                for p in range(PERIOD_COUNT):
                     qa = [v for k, v in vars_by_section[sa.id] if k[2] == p]
                     qb = [v for k, v in vars_by_section[sb.id] if k[2] == p]
                     if qa and qb:
@@ -482,7 +483,8 @@ def solve(
             m.Minimize(cp_model.LinearExpr.Sum(obj_terms))
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = config.SOLVER_TIME_LIMIT_S
+    if config.SOLVER_TIME_LIMIT_S > 0:
+        solver.parameters.max_time_in_seconds = config.SOLVER_TIME_LIMIT_S
     # Deterministic solves (stable demo output; ties broken the same way every run)
     solver.parameters.num_search_workers = 1
     status = solver.Solve(m)

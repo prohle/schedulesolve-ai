@@ -33,7 +33,7 @@ from app.models.results import (
     StudentPlanResponse,
     StudentProgress,
 )
-from app.models.scenario import Program, Scenario
+from app.models.scenario import PERIOD_COUNT, Program, Scenario
 from app.parsing.student import StudentPlanParser, extract_course_ids
 from app.solver.scheduling_model import solve
 
@@ -205,7 +205,7 @@ def suggest_student_plan(
     for pl in result.timetable.placements:
         by_course.setdefault(pl.course_id, []).append(pl)
 
-    forbidden = {(d, p) for d in constraints.avoid_days for p in range(4)} | \
+    forbidden = {(d, p) for d in constraints.avoid_days for p in range(PERIOD_COUNT)} | \
                 {(d, p) for d in range(5) for p in constraints.avoid_periods}
 
     eligible_courses = ready_mandatory + ready_optional + co_ready

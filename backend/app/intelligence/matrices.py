@@ -43,6 +43,7 @@ from app.models.intelligence import (
 from app.models.results import Timetable
 from app.models.scenario import (
     DAY_NAMES,
+    PERIOD_COUNT,
     PERIOD_NAMES,
     Cohort,
     Program,
@@ -51,7 +52,7 @@ from app.models.scenario import (
 )
 from app.intelligence.sparse import LabeledSparse
 
-SLOT_LABELS = [f"{DAY_NAMES[d][:3]} {PERIOD_NAMES[p]}" for d in range(5) for p in range(4)]
+SLOT_LABELS = [f"{DAY_NAMES[d][:3]} {PERIOD_NAMES[p]}" for d in range(5) for p in range(PERIOD_COUNT)]
 
 
 # --- degree depth model ------------------------------------------------------
@@ -143,7 +144,7 @@ class IntelligenceBundle:
         return MatricesReport(
             **{k: payload(k, v) for k, v in vars(self).items()
                if isinstance(v, LabeledSparse)},
-            department_capacity=[[int(capacity[d * 4 + p]) for p in range(4)]
+            department_capacity=[[int(capacity[d * PERIOD_COUNT + p]) for p in range(PERIOD_COUNT)]
                                  for d in range(5)],
             dead_zones=dead,
             depth=self.depth,
@@ -231,7 +232,7 @@ def build_matrices(scenario: Scenario) -> IntelligenceBundle:
     for pi, inst in enumerate(scenario.instructors):
         blocked = {(s.day, s.period) for s in inst.hard_unavailable}
         for d in range(5):
-            for p in range(4):
+            for p in range(PERIOD_COUNT):
                 slot = d * 4 + p
                 if (d, p) in blocked:
                     b_rows.append(pi)
@@ -247,7 +248,7 @@ def build_matrices(scenario: Scenario) -> IntelligenceBundle:
             else:
                 days = [pref.day]
             if pref.period is None:
-                periods: Iterable[int] = range(4)
+                periods: Iterable[int] = range(PERIOD_COUNT)
             else:
                 periods = [pref.period]
             for d in days:

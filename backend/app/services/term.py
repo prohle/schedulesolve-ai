@@ -15,6 +15,10 @@ from typing import Optional
 
 from app.db import SessionLocal
 from app.models.scenario import (
+    BLOCK_DAYS,
+    PATTERN_DAYS,
+    PERIOD_COUNT,
+    PERIOD_NAMES,
     InstructorPreference,
     Scenario,
     SlotRef,
@@ -23,7 +27,6 @@ from app.models.scenario import (
 from app.models.term import FacultyIntake, TermWindow
 
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-PERIOD_NAMES = ["8:00", "9:30", "11:00", "12:30"]
 
 
 def _utcnow() -> datetime:
@@ -286,7 +289,7 @@ def simulate_intake(
                 continue
 
             rng = random.Random(_stable_seed(f"{window.id}:{instructor.id}"))
-            slots = [(day, period) for day in range(5) for period in range(4)]
+            slots = [(day, period) for day in range(5) for period in range(PERIOD_COUNT)]
             hard = [
                 {"day": day, "period": period}
                 for day, period in rng.sample(slots, rng.choice([0, 1, 1, 2]))
@@ -306,7 +309,7 @@ def simulate_intake(
                     "weight": rng.choice([5, 8, 10]),
                 })
             # Period-level wishes.
-            for period in rng.sample(range(4), rng.choice([0, 1])):
+            for period in rng.sample(range(PERIOD_COUNT), rng.choice([0, 1])):
                 preferences.append({
                     "kind": rng.choice(["prefer", "avoid"]),
                     "day": None,
@@ -415,6 +418,170 @@ def accept_window(scenario: Scenario) -> tuple[Scenario, dict]:
 def _course_codes(scenario: Scenario, ids: list[str]) -> list[str]:
     by_id = {c.id: c.code for c in scenario.courses}
     return [by_id.get(course_id, course_id) for course_id in ids]
+
+
+def _date(value: Optional[str]) -> Optional[datetime]:
+    parsed = _parse(value)
+    return parsed
+
+
+def set_calendar(
+    scenario: Scenario,
+    *,
+    start_date: Optional[str] = None,
+    weeks: Optional[int] = None,
+    holidays: Optional[list[dict]] = None,
+    swaps: Optional[list[dict]] = None,
+) -> TermWindow:
+    """Persist the dated academic calendar (holidays + day swaps)."""
+    window = get_window(scenario)
+    options = _options(window)
+    if start_date:
+        options["start_date"] = start_date
+    if weeks is not None:
+        options["weeks"] = max(1, min(52, int(weeks)))
+    if holidays is not None:
+        options["holidays"] = [
+            {"date": str(entry["date"]), "label": str(entry.get("label") or "Holiday")}
+            for entry in holidays
+            if entry.get("date")
+        ]
+    if swaps is not None:
+        options["swaps"] = [
+            {
+                "date": str(entry["date"]),
+                "follows": int(entry.get("follows", 0)),
+                "label": str(entry.get("label") or "Day swap"),
+            }
+            for entry in swaps
+            if entry.get("date")
+        ]
+    with SessionLocal() as session:
+        row = _window_row(session)
+        row.options_json = json.dumps(options)
+        if weeks is not None:
+            row.weeks = max(1, min(52, int(weeks)))
+        row.updated_at = _utcnow()
+        session.commit()
+        session.refresh(row)
+        session.expunge(row)
+        return row
+
+
+def calendar(scenario: Scenario, placements: Optional[list[dict]] = None) -> dict:
+    """The dated term calendar: every teaching date, holidays, swaps and a
+    per-section meeting audit.
+
+    The solver assigns a weekly pattern; the calendar maps each date to the
+    weekday pattern that actually meets. A swap such as "Friday follows
+    Tuesday" is safe by construction: the solver already proved that the
+    Tuesday-pattern sections do not collide with each other.
+    """
+    window = get_window(scenario)
+    options = _options(window)
+    start = _parse(options.get("start_date")) or (window.deadline + timedelta(days=1))
+    weeks = int(options.get("weeks") or window.weeks or 16)
+    start_date = start.date()
+    holiday_map = {
+        str(entry["date"]): entry
+        for entry in options.get("holidays", [])
+        if entry.get("date")
+    }
+    swap_map = {
+        str(entry["date"]): entry
+        for entry in options.get("swaps", [])
+        if entry.get("date")
+    }
+
+    days: list[dict] = []
+    for offset in range(weeks * 7):
+        day = start_date + timedelta(days=offset)
+        if day.weekday() >= 5:
+            continue  # weekends are not teaching days
+        key = day.isoformat()
+        base_weekday = day.weekday()
+        if key in holiday_map:
+            days.append({
+                "date": key,
+                "weekday": base_weekday,
+                "effective_weekday": None,
+                "status": "holiday",
+                "label": holiday_map[key].get("label") or "Holiday",
+            })
+        elif key in swap_map:
+            follows = int(swap_map[key].get("follows", base_weekday))
+            days.append({
+                "date": key,
+                "weekday": base_weekday,
+                "effective_weekday": follows,
+                "status": "swap",
+                "label": swap_map[key].get("label") or f"Follows {DAY_NAMES[follows]}",
+            })
+        else:
+            days.append({
+                "date": key,
+                "weekday": base_weekday,
+                "effective_weekday": base_weekday,
+                "status": "class",
+                "label": "",
+            })
+
+    # Audit actual meetings against the weekly expectation. Use the published
+    # placements when available (a block section meets on its assigned day,
+    # not every BLOCK_DAY).
+    placement_days: dict[str, list[int]] = {}
+    for placement in placements or []:
+        placement_days[placement.get("section_id", "")] = list(placement.get("days") or [])
+    audit: list[dict] = []
+    for section in scenario.sections:
+        course = scenario.course(section.course_id)
+        base_days = placement_days.get(section.id)
+        if not base_days:
+            if course.pattern in PATTERN_DAYS:
+                base_days = PATTERN_DAYS[course.pattern]
+            elif course.pattern == "block":
+                base_days = BLOCK_DAYS
+            else:
+                base_days = []
+        # Nominal weekly pattern over the actual date range (partial first/last
+        # weeks included); holidays remove meetings, swaps move them.
+        expected = sum(1 for day in days if day["weekday"] in base_days)
+        actual = sum(
+            1
+            for day in days
+            if day["effective_weekday"] is not None
+            and day["effective_weekday"] in base_days
+        )
+        if actual != expected:
+            audit.append({
+                "section_id": section.id,
+                "course_code": course.code,
+                "course_title": course.title,
+                "expected": expected,
+                "actual": actual,
+                "shortfall": max(0, expected - actual),
+                "extra": max(0, actual - expected),
+            })
+
+    end_date = start_date + timedelta(days=weeks * 7 - 1)
+    return {
+        "term": window.term,
+        "weeks": weeks,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "days": days,
+        "holidays": list(holiday_map.values()),
+        "swaps": list(swap_map.values()),
+        "audit": audit,
+        "published": bool(placements),
+        "totals": {
+            "teaching_days": sum(1 for day in days if day["status"] != "holiday"),
+            "holidays": len(holiday_map),
+            "swaps": len(swap_map),
+            "sections_short": len([row for row in audit if row["shortfall"] > 0]),
+            "sections_extra": len([row for row in audit if row["extra"] > 0]),
+        },
+    }
 
 
 def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dict:
