@@ -208,7 +208,10 @@ export function LandingPage() {
               <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-navy-900 sm:text-6xl xl:text-7xl">
                 Perfect College Schedules{" "}
                 <span className="bg-gradient-to-r from-navy-900 via-teal-brand-600 to-cyan-brand-500 bg-clip-text text-transparent">
-                  in Under 10 Seconds.
+                  in Seconds.
+                </span>
+                <span className="block bg-gradient-to-r from-teal-brand-600 to-cyan-brand-500 bg-clip-text text-transparent">
+                  Verified Step-by-Step.
                 </span>
               </h1>
 

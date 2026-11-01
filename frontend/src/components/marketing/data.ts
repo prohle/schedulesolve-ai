@@ -172,17 +172,17 @@ export const FAQS: { question: string; answer: string }[] = [
   {
     question: "How does the dual-solver engine handle complex campus constraints?",
     answer:
-      "Traditional greedy algorithms hit deadlocks when handling 100+ room constraints. ScheduleSolve AI races two real proving engines on identical data — Google OR-Tools CP-SAT and a native C++ solver built for this problem class — and ranks them from their outputs alone. The LLM never touches the schedule; every placement is solver-proven.",
+      "Muse Spark proposes; proving engines solve. Traditional greedy algorithms and pure AI hit deadlocks when handling hundreds of overlapping campus constraints. ScheduleSolve AI uses Meta’s Muse Spark to parse messy institutional files into structured rules, then races two deterministic engines — Google OR-Tools CP-SAT and our native C++ solver — on identical data. The LLM never guesses a schedule placement; every assignment is mathematically solver-proven.",
   },
   {
     question: "Can we integrate directly with Ellucian Banner, Workday, or Canvas?",
     answer:
-      "Yes. ScheduleSolve AI features built-in bidirectional REST APIs and automated CSV export pipelines formatted specifically for Banner ERP, Workday Student, Oracle PeopleSoft, and Canvas LMS.",
+      "Not yet as turnkey connectors. ScheduleSolve AI exposes the proven timetable through a REST API and a CSV export; those can feed Banner, Workday Student, Oracle PeopleSoft, or Canvas through your existing integration layer. Vendor-specific bidirectional connectors are not shipped in this build.",
   },
   {
-    question: "How are hard constraints vs soft faculty preferences prioritized?",
+    question: "How are hard constraints vs. soft faculty preferences prioritized?",
     answer:
-      "Hard constraints (room seating capacity, double-booking prevention, cross-quad transit buffers) are strictly enforced at 100% mathematical guarantee. Soft constraints (faculty preferred teaching times, research days) are maximized via multi-objective optimization.",
+      "Hard constraints are non-negotiable assertions; soft preferences are optimization targets. Hard constraints—such as room seating limits, double-booking prevention, transit buffers, and verified faculty boundaries (e.g., religious observances, ADA accommodations, or family care windows)—are mathematically enforced at 100%. Soft constraints (e.g., preferred teaching slots, back-to-back lecture choices, or preferred research days) are weighted and maximized across the schedule using multi-objective optimization.",
   },
   {
     question: "How long does campus onboarding take?",

@@ -572,6 +572,7 @@ function StudentPlanPanel({ user, onToast }: {
       <textarea
         className="min-h-16 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
         value={message} onChange={(e) => setMessage(e.target.value)}
+        aria-label="My schedule request"
         placeholder='e.g. "I work Tue/Thu, I need CS 201, no 8:00 classes, 4 courses please."'
       />
       <button disabled={busy || (!cohortId && !programId) || !message.trim()} onClick={() => void suggest()}
