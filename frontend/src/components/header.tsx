@@ -26,9 +26,14 @@ export function Header({ user, onLogout }: { user?: AuthUser | null; onLogout?: 
     <header className="glass sticky top-0 z-40 shrink-0 border-b border-border">
       <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="shrink-0 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-violet-600 p-2 text-white shadow-md shadow-indigo-500/25">
-            <GraduationCap className="h-4 w-4" />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt=""
+            width={329}
+            height={237}
+            className="h-7 w-auto shrink-0 object-contain"
+          />
           <div className="min-w-0 leading-tight">
             <h1 className="flex items-center gap-1.5 truncate text-sm font-extrabold tracking-tight text-foreground">
               ScheduleSolve AI

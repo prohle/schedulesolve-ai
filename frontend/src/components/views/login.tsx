@@ -15,7 +15,6 @@ import {
   Calendar,
   Eye,
   EyeOff,
-  GraduationCap,
   Home,
   Info,
   Layers,
@@ -159,9 +158,14 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
             onClick={() => onToast("ScheduleSolve AI Engine v4.2 Z3 SMT Active", "info")}
             className="group flex items-center gap-3 text-left"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-blue-200 transition-transform duration-300 group-hover:scale-105">
-              <GraduationCap className="h-5 w-5" />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt=""
+              width={329}
+              height={237}
+              className="h-9 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap text-lg font-black tracking-tight text-slate-900">
