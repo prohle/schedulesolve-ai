@@ -1,21 +1,16 @@
-MIT License
+Copyright (c) 2026 Huong Le. All Rights Reserved.
 
-Copyright (c) 2026 Huong Le
+TERMS OF USE AND RESTRICTION NOTICE
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software, source code, visual designs, user interfaces, mathematical solver implementations, and associated documentation ("Software") are the sole intellectual property of the author.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. NO PERMISSION TO COPY OR DERIVE:
+No right, license, or permission is granted to any individual, team, or entity to copy, duplicate, clone, fork, modify, merge, reverse-engineer, publish, distribute, sublicense, or create derivative works from this Software, in whole or in part.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. LIMITED EVALUATION PERMISSION:
+Permission is granted strictly and exclusively to official Meta Global AI Developer Hackathon judges, organizers, and reviewers to view, inspect, download, and execute this Software solely for the purpose of scoring and evaluating this hackathon submission.
+
+3. PROHIBITION ON HACKATHON RE-SUBMISSION:
+No third party may submit, present, or claim any portion of this codebase, design system, or logic as their own work for any competition, prize, or commercial purpose.
+
+ALL OTHER RIGHTS RESERVED. ANY UNAUTHORIZED USE, REPRODUCTION, OR REDISTRIBUTION CONSTITUTES INTELLECTUAL PROPERTY INFRINGEMENT AND WILL BE REPORTED FOR DISQUALIFICATION AND REMOVAL.
