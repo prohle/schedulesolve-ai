@@ -18,7 +18,7 @@ import { useIntelligence, useScenario } from "@/hooks/use-api";
 import {
   DAY_NAMES, PERIOD_NAMES, PATTERN_DAYS,
   type Placement, type CopilotResponse, type TermChangeResponse, type IngestResponse,
-  type InstitutionData, type AgentStep, type CompareResult,
+  type InstitutionData, type InstitutionConflict, type AgentStep, type CompareResult,
 } from "@/types";
 
 interface WizardViewProps {
@@ -35,6 +35,7 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]["id"];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReviewSection = [string, keyof InstitutionData, (x: any) => string];
 
 const REVIEW_SECTIONS: ReviewSection[] = [
@@ -198,6 +199,7 @@ export function WizardView({ onToast }: WizardViewProps) {
   const [ingestBusy, setIngestBusy] = useState(false);
   const [ingest, setIngest] = useState<IngestResponse | null>(null);
   const [edited, setEdited] = useState<InstitutionData | null>(null);
+  const [resolvedConflicts, setResolvedConflicts] = useState<Record<string, string>>({});
   const [intakeMsg, setIntakeMsg] = useState("Prof. Patel can't teach Mondays — committee duty. She'd rather not teach at 8:00.");
   const [speakerId, setSpeakerId] = useState("");
   const [intakeBusy, setIntakeBusy] = useState(false);
@@ -230,8 +232,13 @@ export function WizardView({ onToast }: WizardViewProps) {
       const r: IngestResponse = await (await fetch("/api/ingest/files", { method: "POST", body: fd })).json();
       setIngest(r);
       setEdited(JSON.parse(JSON.stringify(r.parsed)));
+      setResolvedConflicts({});
       if (r.completeness.complete) onToast("All six inputs present — ready to build", "success");
       else onToast(`Missing: ${r.completeness.missing.join(", ")}`, "warning");
+      if (r.changes?.summary) {
+        onToast(r.changes.unchanged ? "No change detected — this matches the current model" : r.changes.summary,
+          r.changes.unchanged ? "info" : "success");
+      }
     } finally {
       setIngestBusy(false);
     }
@@ -243,8 +250,13 @@ export function WizardView({ onToast }: WizardViewProps) {
       const r: IngestResponse = await post("/api/ingest", { text: importText });
       setIngest(r);
       setEdited(JSON.parse(JSON.stringify(r.parsed)));
+      setResolvedConflicts({});
       if (r.completeness.complete) onToast("All six inputs present — ready to build", "success");
       else onToast(`Missing: ${r.completeness.missing.join(", ")}`, "warning");
+      if (r.changes?.summary) {
+        onToast(r.changes.unchanged ? "No change detected — this matches the current model" : r.changes.summary,
+          r.changes.unchanged ? "info" : "success");
+      }
     } finally {
       setIngestBusy(false);
     }
@@ -256,6 +268,36 @@ export function WizardView({ onToast }: WizardViewProps) {
       const arr = (prev[field] as unknown[]).filter((_, i) => i !== index);
       return { ...prev, [field]: arr };
     });
+  };
+
+  const applyConflict = (conflict: InstitutionConflict, optionKey: string) => {
+    setEdited((prev) => {
+      if (!prev) return prev;
+      const entity = conflict.entity as keyof InstitutionData;
+      const keep = optionKey.match(/^keep_(\d+)$/);
+      if (keep) {
+        const winner = Number(keep[1]);
+        const arr = (prev[entity] as unknown[]).filter(
+          (_, i) => !conflict.indices.includes(i) || i === winner);
+        return { ...prev, [entity]: arr };
+      }
+      if (optionKey === "drop_requirement") {
+        return {
+          ...prev,
+          degree_map: prev.degree_map.filter((_, i) => !conflict.indices.includes(i)),
+        };
+      }
+      if (optionKey === "drop_cohort") {
+        return {
+          ...prev,
+          cohorts: prev.cohorts.filter((_, i) => !conflict.indices.includes(i)),
+        };
+      }
+      return prev; // keep_requirement / keep_cohort: leave the record in place
+    });
+    setResolvedConflicts((prev) => ({ ...prev, [conflict.id]: optionKey }));
+    const chosen = conflict.options.find((o) => o.key === optionKey);
+    onToast(`Conflict resolved: ${chosen?.label ?? optionKey}`, "success");
   };
 
   const keepAll = () => setEdited(ingest ? JSON.parse(JSON.stringify(ingest.parsed)) : null);
@@ -298,6 +340,11 @@ export function WizardView({ onToast }: WizardViewProps) {
       try {
         const r: IngestResponse = await post("/api/ingest/apply", { data: edited });
         setIngest(r);
+        setResolvedConflicts({});
+        if (r.changes?.summary) {
+          onToast(r.changes.unchanged ? "No change detected — the model is unchanged" : r.changes.summary,
+            r.changes.unchanged ? "info" : "success");
+        }
         // The intelligence panel must reflect the world we just imported,
         // not the seed it loaded when the wizard mounted.
         await reload();
@@ -574,6 +621,86 @@ export function WizardView({ onToast }: WizardViewProps) {
                     ))}
                   </div>
                 </div>
+
+                {ingest.changes && (
+                  <div className={cn(
+                    "rounded-xl border p-3 text-xs",
+                    ingest.changes.unchanged
+                      ? "border-slate-200 bg-slate-50"
+                      : "border-sky-200 bg-sky-50",
+                  )}>
+                    <p className="font-bold text-slate-900">
+                      {ingest.changes.unchanged
+                        ? "No change detected"
+                        : ingest.changes.initial ? "Initial import" : "Recognized change"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-600">{ingest.changes.summary}</p>
+                    {ingest.changes.changes.length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-[11px] text-slate-600">
+                        {ingest.changes.changes.slice(0, 6).map((change, i) => (
+                          <li key={`${change.entity}-${change.key}-${i}`}>
+                            <strong className="capitalize">{change.kind}</strong>{" "}
+                            {change.entity} {change.key}
+                            {change.detail ? ` — ${change.detail}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {ingest.conflicts && ingest.conflicts.length > 0 && (
+                  <Section
+                    title="Data conflicts — choose the winner"
+                    hint="Muse Spark found records that disagree. Each option names the source it came from; the losing copy is dropped from the model."
+                    icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
+                    tone="amber"
+                  >
+                    <div className="space-y-3">
+                      {ingest.conflicts.map((conflict) => {
+                        const chosen = resolvedConflicts[conflict.id];
+                        return (
+                          <div key={conflict.id} className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                            <p className="text-xs font-bold text-amber-950">{conflict.summary}</p>
+                            {conflict.detail && (
+                              <p className="mt-0.5 text-[11px] text-amber-900/80">{conflict.detail}</p>
+                            )}
+                            <ul className="mt-1.5 space-y-0.5 text-[11px] text-amber-900">
+                              {conflict.sources.map((source, i) => (
+                                <li key={i}>
+                                  <span className="font-semibold">Source {i + 1}:</span> {source}
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {conflict.options.map((option) => (
+                                <button
+                                  key={option.key}
+                                  type="button"
+                                  onClick={() => applyConflict(conflict, option.key)}
+                                  className={cn(
+                                    "rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all",
+                                    chosen === option.key
+                                      ? "border-emerald-500 bg-emerald-600 text-white"
+                                      : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100",
+                                  )}
+                                  title={option.detail}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                            {chosen && (
+                              <p className="mt-1 text-[10px] font-semibold text-emerald-700">
+                                Resolved — this choice is applied when you continue.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Section>
+                )}
 
                 <Section title="Keep what looks right" hint="The solver builds only from what you keep. Tap ✕ on any row to drop it." icon={<ListChecks className="w-5 h-5 text-primary" />} tone="default">
                   <div className="flex flex-wrap items-center gap-2 mb-3">

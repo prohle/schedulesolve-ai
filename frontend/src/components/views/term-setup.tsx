@@ -663,7 +663,23 @@ export function TermSetupView({
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Could not save the calendar.");
       setCalendar(data);
-      onToast("University calendar saved", "success");
+      const addedHoliday = patch.holidays && patch.holidays.length > calendar.holidays.length
+        ? patch.holidays[patch.holidays.length - 1] : null;
+      const addedSwap = patch.swaps && patch.swaps.length > calendar.swaps.length
+        ? patch.swaps[patch.swaps.length - 1] : null;
+      if (addedHoliday) {
+        onToast(
+          `${addedHoliday.label} saved for ${addedHoliday.date} — that date is removed from the term.`,
+          "success",
+        );
+      } else if (addedSwap) {
+        onToast(
+          `${addedSwap.label || "Day swap"} saved — ${DAY_NAMES[addedSwap.follows]} classes meet on ${addedSwap.date}.`,
+          "success",
+        );
+      } else {
+        onToast("University calendar saved", "success");
+      }
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Could not save the calendar.", "error");
     } finally {

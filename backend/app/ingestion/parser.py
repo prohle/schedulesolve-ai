@@ -103,6 +103,7 @@ def _parse_course_rest(rest: str):
 def mock_ingest(text: str) -> InstitutionData:
     data = InstitutionData(summary="mock-parsed institutional dump")
     section: Optional[str] = None
+    current_source: str = ""
     program: str = ""
     course_pat = re.compile(r"^([A-Z]{2,5}\s*\d{3})\s+(.+?)\s*[—–-]\s*(.+)$")
     inst_pat = re.compile(r"^(.+?)\s+teaches\s+(.+)$")
@@ -119,6 +120,11 @@ def mock_ingest(text: str) -> InstitutionData:
         if not line:
             continue
 
+        # File headers from /ingest/files: "--- 1-catalog.pdf ---"
+        if line.startswith("---") and line.endswith("---"):
+            current_source = line.strip("- ").strip()
+            continue
+
         # Campus distance lines also contain ':' — handle them before headers.
         if section == "campus":
             dm = dist_pat.match(line)
@@ -126,7 +132,8 @@ def mock_ingest(text: str) -> InstitutionData:
                 data.distances.append(ExtractedDistance(
                     from_building=dm.group(1).strip(),
                     to_building=dm.group(2).strip(),
-                    minutes=int(dm.group(3))))
+                    minutes=int(dm.group(3)),
+                    source=current_source or "campus map"))
                 continue
 
         # Degree-term lines contain ':' but are data, not section headers.
@@ -137,7 +144,8 @@ def mock_ingest(text: str) -> InstitutionData:
                 data.degree_map.append(ExtractedRequirement(
                     program=program, term=term,
                     course=req_m.group(1).strip(),
-                    required=req_m.group(2).lower() == "required"))
+                    required=req_m.group(2).lower() == "required",
+                    source=current_source or "degree map"))
             continue
 
         if ":" in line:
@@ -156,9 +164,9 @@ def mock_ingest(text: str) -> InstitutionData:
         if m and section == "course":
             code, title, rest = m.groups()
             pattern, rtype, seats, equip = _parse_course_rest(rest)
-            data.courses.append(ExtractedCourse(code=code, title=title.strip(),
-                                                pattern=pattern, room_type=rtype,
-                                                seats=seats, equipment=equip))
+            data.courses.append(ExtractedCourse(
+                code=code, title=title.strip(), pattern=pattern, room_type=rtype,
+                seats=seats, equipment=equip, source=current_source or "course catalog"))
             continue
         m = inst_pat.match(line)
         if m and section == "instructor":
@@ -177,7 +185,8 @@ def mock_ingest(text: str) -> InstitutionData:
             quals = [c.strip("() ").strip() for c in courses.split(",") if c.strip()]
             data.instructors.append(ExtractedInstructor(
                 name=name.strip(), qualified_courses=quals,
-                max_sections=max_sections, availability=availability))
+                max_sections=max_sections, availability=availability,
+                source=current_source or "faculty roster"))
             continue
         m = cohort_pat.match(line)
         if m and section == "cohort":
@@ -185,7 +194,8 @@ def mock_ingest(text: str) -> InstitutionData:
             data.cohorts.append(ExtractedCohort(
                 name=name.strip(), program=(program or "").strip(),
                 graduation_year=int(grad), admission_year=int(grad) - 4,
-                current_term=int(term), size=int(size)))
+                current_term=int(term), size=int(size),
+                source=current_source or "student bodies"))
             continue
         m = room_pat.match(line)
         if m and section == "room":
@@ -201,7 +211,8 @@ def mock_ingest(text: str) -> InstitutionData:
                     break
             data.rooms.append(ExtractedRoom(
                 name=name.strip(), building=building, capacity=int(cap),
-                room_type=rtype.lower(), equipment=equip))
+                room_type=rtype.lower(), equipment=equip,
+                source=current_source or "facilities"))
             continue
 
     return data

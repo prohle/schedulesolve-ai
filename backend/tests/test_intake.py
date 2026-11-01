@@ -151,6 +151,32 @@ def test_faculty_individual_can_elect_constraints_before_deadline(client):
     assert denied.status_code == 409
 
 
+def test_dated_holiday_and_day_swap_are_real_calendar_days(client):
+    """A holiday removes one real date; a swap makes another date follow a
+    different weekday (e.g. Friday classes meet on a Tuesday schedule)."""
+    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    saved = client.post("/term/calendar", headers=coordinator, json={
+        "start_date": "2026-08-24",
+        "weeks": 16,
+        "holidays": [{"date": "2026-11-26", "label": "Thanksgiving"}],
+        "swaps": [{"date": "2026-11-27", "follows": 1,
+                   "label": "Friday follows Tuesday"}],
+    })
+    assert saved.status_code == 200, saved.text
+    calendar = client.get("/term/calendar", headers=coordinator).json()
+
+    holiday = next(d for d in calendar["days"] if d["date"] == "2026-11-26")
+    assert holiday["status"] == "holiday"
+    assert holiday["effective_weekday"] is None
+
+    swap = next(d for d in calendar["days"] if d["date"] == "2026-11-27")
+    assert swap["status"] == "swap"
+    assert swap["effective_weekday"] == 1  # Tuesday
+    assert swap["label"] == "Friday follows Tuesday"
+    assert calendar["totals"]["holidays"] == 1
+    assert calendar["totals"]["swaps"] == 1
+
+
 def test_term_closure_blocks_slots_in_solver(client):
     sc = load_seed_scenario()
     sc.closures = [TermClosure(day=4, label="Reading day")]  # Fridays closed

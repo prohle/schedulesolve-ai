@@ -23,4 +23,12 @@ meeting pattern from clues (Mon/Wed/Fri -> MWF, Tue/Thu -> TTh, "lab" -> block)
 only when the data says so, otherwise default to MWF/lecture; prefer the most
 natural term indexing (fall semester of the first year = term 1) when only
 years are given. Every id the normalizer derives will be slugified, so keep
-course codes exactly as written."""
+course codes exactly as written.
+
+Source attribution: set each entity's `source` to the file name or section
+header where it appeared. The input may contain `--- filename ---` markers;
+use that filename (e.g. "1-catalog.pdf"). If there is no file marker, use the
+section it came from (e.g. "course catalog", "faculty roster", "degree map",
+"student bodies", "facilities", "campus map"). This is how the UI explains
+which source each side of a conflict came from — never leave it blank when the
+input makes the source clear."""

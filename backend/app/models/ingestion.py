@@ -19,6 +19,7 @@ class ExtractedCourse(BaseModel):
     room_type: str = "lecture"  # lecture | lab | seminar
     seats: int = 30
     equipment: list[str] = []
+    source: str = ""            # file/section the record came from
 
 
 class ExtractedInstructor(BaseModel):
@@ -27,6 +28,7 @@ class ExtractedInstructor(BaseModel):
     max_sections: int = 2
     max_preps: int = 2
     availability: str = ""             # free-form ("unavailable Mondays", ...)
+    source: str = ""
 
 
 class ExtractedRoom(BaseModel):
@@ -35,6 +37,7 @@ class ExtractedRoom(BaseModel):
     capacity: int = 30
     room_type: str = "lecture"
     equipment: list[str] = []
+    source: str = ""
 
 
 class ExtractedCohort(BaseModel):
@@ -44,6 +47,7 @@ class ExtractedCohort(BaseModel):
     graduation_year: int = 2030
     current_term: int = 1
     size: int = 30
+    source: str = ""
 
 
 class ExtractedRequirement(BaseModel):
@@ -51,12 +55,14 @@ class ExtractedRequirement(BaseModel):
     term: int
     course: str     # course code
     required: bool = True
+    source: str = ""
 
 
 class ExtractedDistance(BaseModel):
     from_building: str
     to_building: str
     minutes: int
+    source: str = ""
 
 
 class InstitutionData(BaseModel):
@@ -70,6 +76,48 @@ class InstitutionData(BaseModel):
     cohorts: list[ExtractedCohort] = []
     degree_map: list[ExtractedRequirement] = []
     distances: list[ExtractedDistance] = []
+
+
+class ConflictOption(BaseModel):
+    """One way to resolve a data conflict; the user picks the winner."""
+
+    key: str
+    label: str
+    detail: str = ""
+
+
+class InstitutionConflict(BaseModel):
+    """Two or more extracted records disagree.
+
+    ``sources`` names the file/section and the competing values, so the user
+    can see where each side came from before choosing a winner.
+    """
+
+    id: str
+    kind: str
+    entity: str                 # courses | instructors | rooms | cohorts | degree_map | distances
+    summary: str
+    detail: str = ""
+    sources: list[str] = []
+    indices: list[int] = []     # indices into the entity list
+    options: list[ConflictOption] = []
+    default_option: str = ""
+
+
+class DataChange(BaseModel):
+    kind: str                   # added | removed | updated
+    entity: str                 # course | instructor | room | cohort | degree_map | building | distance
+    key: str
+    detail: str = ""
+
+
+class ChangeReport(BaseModel):
+    """What changed between the previous extraction and this one."""
+
+    changes: list[DataChange] = []
+    unchanged: bool = False
+    initial: bool = False
+    summary: str = ""
 
 
 class DataCheck(BaseModel):

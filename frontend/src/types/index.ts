@@ -370,6 +370,7 @@ export interface ExtractedCourse {
   room_type: string;
   seats: number;
   equipment: string[];
+  source?: string;
 }
 
 export interface ExtractedInstructor {
@@ -378,6 +379,7 @@ export interface ExtractedInstructor {
   max_sections: number;
   max_preps: number;
   availability: string;
+  source?: string;
 }
 
 export interface ExtractedRoom {
@@ -386,6 +388,7 @@ export interface ExtractedRoom {
   capacity: number;
   room_type: string;
   equipment: string[];
+  source?: string;
 }
 
 export interface ExtractedCohort {
@@ -395,6 +398,7 @@ export interface ExtractedCohort {
   graduation_year: number;
   current_term: number;
   size: number;
+  source?: string;
 }
 
 export interface ExtractedRequirement {
@@ -402,12 +406,14 @@ export interface ExtractedRequirement {
   term: number;
   course: string;
   required: boolean;
+  source?: string;
 }
 
 export interface ExtractedDistance {
   from_building: string;
   to_building: string;
   minutes: number;
+  source?: string;
 }
 
 export interface InstitutionData {
@@ -434,11 +440,45 @@ export interface CompletenessReport {
   complete: boolean;
 }
 
+export interface ConflictOption {
+  key: string;
+  label: string;
+  detail?: string;
+}
+
+export interface InstitutionConflict {
+  id: string;
+  kind: string;
+  entity: string;
+  summary: string;
+  detail?: string;
+  sources: string[];
+  indices: number[];
+  options: ConflictOption[];
+  default_option?: string;
+}
+
+export interface DataChange {
+  kind: string;
+  entity: string;
+  key: string;
+  detail?: string;
+}
+
+export interface ChangeReport {
+  changes: DataChange[];
+  unchanged: boolean;
+  initial?: boolean;
+  summary: string;
+}
+
 export interface IngestResponse {
   scenario: Scenario;
   parsed: InstitutionData;
-  parser_mode: "muse-spark" | "mock";
+  parser_mode: "muse-spark" | "mock" | "reviewed";
   completeness: CompletenessReport;
+  conflicts?: InstitutionConflict[];
+  changes?: ChangeReport | null;
   model?: string;
   parser_latency_ms?: number;
 }

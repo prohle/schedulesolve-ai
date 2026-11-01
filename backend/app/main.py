@@ -20,12 +20,18 @@ from app import config
 from app.data.realism import audit_scenario
 from app.db import init_db
 from app.ingestion import check_completeness, ingest
+from app.ingestion.conflicts import detect_conflicts, diff_data
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
 from app.intelligence import analyze, build_matrices, compute_utilization, run_tightener, whatif
 from app.intelligence.load import instructor_loads, suggest_load_policy
 from app.intelligence.matrices import compute_margins
-from app.models.ingestion import CompletenessReport, InstitutionData
+from app.models.ingestion import (
+    ChangeReport,
+    CompletenessReport,
+    InstitutionConflict,
+    InstitutionData,
+)
 from app.models.intelligence import (
     MarginsReport,
     MatricesReport,
@@ -241,25 +247,36 @@ class IngestResponse(BaseModel):
     parsed: InstitutionData
     parser_mode: str
     completeness: CompletenessReport
+    conflicts: list[InstitutionConflict] = []
+    changes: Optional[ChangeReport] = None
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None
 
 
+_last_ingested_data: Optional[InstitutionData] = None
+
+
 def _ingest_text(text: str) -> IngestResponse:
     """Shared ingest core: parse, assemble, store the current scenario, audit."""
-    global _current_scenario
+    global _current_scenario, _last_ingested_data
     parser = IngestionParser()
     data = parser.parse(text)
-    scenario = ingest(text)[0]
+    # Build from the parse we already have — never parse the same dump twice.
+    scenario = build_scenario(data)
+    changes = diff_data(_last_ingested_data, data)
+    conflicts = detect_conflicts(data)
+    _last_ingested_data = data
     _set_current_scenario(scenario)
     audit.record_submission(text[:500], data.summary, parser.mode)
     audit.record_event("ingest",
                        f"Ingested {len(data.courses)} courses, {len(data.instructors)} instructors, "
                        f"{len(data.cohorts)} cohorts, {len(data.rooms)} rooms",
                        {"courses": len(data.courses), "instructors": len(data.instructors),
-                        "cohorts": len(data.cohorts), "rooms": len(data.rooms)})
+                        "cohorts": len(data.cohorts), "rooms": len(data.rooms),
+                        "conflicts": len(conflicts), "changes": len(changes.changes)})
     return IngestResponse(scenario=scenario, parsed=data, parser_mode=parser.mode,
                           completeness=check_completeness(data),
+                          conflicts=conflicts, changes=changes,
                           model=parser.model, parser_latency_ms=parser.last_latency_ms)
 
 
@@ -307,14 +324,19 @@ def ingest_apply(req: ApplyRequest) -> IngestResponse:
     """Finalize an edited extraction: rebuild the scenario from the reviewed
     (keep/changed) entities and make it current. The frontend sends back the
     user-edited InstitutionData after the review panel."""
-    global _current_scenario
+    global _current_scenario, _last_ingested_data
     scenario = build_scenario(req.data)
+    changes = diff_data(_last_ingested_data, req.data)
+    conflicts = detect_conflicts(req.data)
+    _last_ingested_data = req.data
     _set_current_scenario(scenario)
     audit.record_event("ingest-apply",
                        f"Applied edited data: {len(req.data.courses)} courses, "
-                       f"{len(req.data.instructors)} instructors, {len(req.data.cohorts)} cohorts")
+                       f"{len(req.data.instructors)} instructors, {len(req.data.cohorts)} cohorts",
+                       {"conflicts": len(conflicts), "changes": len(changes.changes)})
     return IngestResponse(scenario=scenario, parsed=req.data, parser_mode="reviewed",
-                          completeness=check_completeness(req.data))
+                          completeness=check_completeness(req.data),
+                          conflicts=conflicts, changes=changes)
 
 
 @app.post("/scenario/reset", response_model=Scenario)
