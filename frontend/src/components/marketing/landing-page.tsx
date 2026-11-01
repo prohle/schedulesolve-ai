@@ -96,6 +96,7 @@ export function LandingPage() {
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const [benchmarkOpen, setBenchmarkOpen] = useState(false);
   const [proof, setProof] = useState<ProofKey | null>(null);
+  const [activeHotspot, setActiveHotspot] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
@@ -297,12 +298,12 @@ export function LandingPage() {
 
             {/* Campus backdrop + live overlay */}
             <div className="relative lg:col-span-5">
-              <div className="group relative overflow-hidden rounded-3xl border border-editorial-border bg-navy-950 shadow-editorial">
+              <div className="group/hero relative overflow-hidden rounded-3xl border border-editorial-border bg-navy-950 shadow-editorial">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/photo-1541829070764-84a7d30dd3f3.avif"
                   alt="University academic quad"
-                  className="h-[460px] w-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105"
+                  className="h-[460px] w-full object-cover opacity-50 transition-transform duration-700 group-hover/hero:scale-105"
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
@@ -311,27 +312,46 @@ export function LandingPage() {
                 {HOTSPOTS.map((hotspot) => (
                   <div
                     key={hotspot.id}
-                    className={`group absolute z-20 hover:z-30 focus-within:z-30 ${hotspot.position}`}
+                    className={`group/hotspot absolute z-20 hover:z-30 focus-within:z-30 ${hotspot.position} ${
+                      activeHotspot === hotspot.id ? "z-30" : ""
+                    }`}
                   >
                     <button
                       type="button"
-                      onClick={scrollToDemo}
+                      onClick={() =>
+                        setActiveHotspot((current) =>
+                          current === hotspot.id ? null : hotspot.id
+                        )
+                      }
                       aria-label={`Inspect ${hotspot.title}`}
+                      aria-expanded={activeHotspot === hotspot.id}
                       className="hotspot-badge peer flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[10px] font-black text-slate-950 shadow-lg"
                     >
                       {hotspot.id}
                     </button>
 
                     <div
-                      className={`pointer-events-none absolute w-52 space-y-1 rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white opacity-0 shadow-2xl backdrop-blur-md transition-opacity group-hover:opacity-100 peer-focus:opacity-100 ${
-                        HOTSPOT_PLACEMENT[hotspot.placement] ?? HOTSPOT_PLACEMENT.right
-                      }`}
+                      className={`absolute w-52 space-y-1 rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white shadow-2xl backdrop-blur-md transition-opacity group-hover/hotspot:pointer-events-auto group-hover/hotspot:opacity-100 peer-focus:pointer-events-auto peer-focus:opacity-100 ${
+                        activeHotspot === hotspot.id
+                          ? "pointer-events-auto opacity-100"
+                          : "pointer-events-none opacity-0"
+                      } ${HOTSPOT_PLACEMENT[hotspot.placement] ?? HOTSPOT_PLACEMENT.right}`}
                     >
                       <div className="font-extrabold text-amber-400">{hotspot.title}</div>
                       <div className="text-[11px] text-slate-300">{hotspot.meta}</div>
                       <div className={`text-[10px] font-bold ${hotspot.noteTone}`}>
                         {hotspot.note}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveHotspot(null);
+                          scrollToDemo();
+                        }}
+                        className="pt-0.5 text-left text-[10px] font-bold text-cyan-brand-400 underline underline-offset-2 hover:text-cyan-brand-300"
+                      >
+                        Open live matrix →
+                      </button>
                     </div>
                   </div>
                 ))}

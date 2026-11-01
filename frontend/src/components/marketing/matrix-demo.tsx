@@ -42,6 +42,69 @@ const ROLES: { key: Role; label: string }[] = [
   { key: "student", label: "Student Cohort" },
 ];
 
+// The role switcher changes the lens on the same campus model: the registrar
+// sees the whole institution, a professor sees their load/preferences and the
+// buildings they teach in, and a cohort sees its degree path and working fit.
+// Illustrative demo data, consistent with the rest of this landing page.
+const ROLE_LENS: Record<
+  Role,
+  {
+    badge: string;
+    title: string;
+    description: string;
+    metrics: [string, string][];
+    focusBuildings: string[];
+    focusSlots: number[];
+    accent: string;
+  }
+> = {
+  registrar: {
+    badge: "Registrar / Admin lens",
+    title: "Institution-wide occupancy",
+    description:
+      "Every quad, building and slot in one board — the view the registrar publishes.",
+    metrics: [
+      ["Buildings", "12"],
+      ["Rooms", "311"],
+      ["Peak seats", "15,370"],
+      ["Cohorts", "100"],
+    ],
+    focusBuildings: [],
+    focusSlots: [],
+    accent: "border-navy-900/15 bg-slate-50",
+  },
+  faculty: {
+    badge: "Faculty Professor lens",
+    title: "Prof. Chen — teaching load & preferences",
+    description:
+      "Two sections, two preps, and the Wed 14:00 senate blackout honored by the solver.",
+    metrics: [
+      ["Sections", "2 / 2"],
+      ["Preps", "2 / 2"],
+      ["Load", "Within cap"],
+      ["Preference match", "100%"],
+    ],
+    focusBuildings: ["main-soda"],
+    focusSlots: [1, 4],
+    accent: "border-purple-300 bg-purple-50/60",
+  },
+  student: {
+    badge: "Student Cohort lens",
+    title: "CS 2025 cohort — degree path & working fit",
+    description:
+      "Mandatory courses, the projected graduation term and the Tue/Thu work block in one view.",
+    metrics: [
+      ["Mandatory done", "1 / 7"],
+      ["Projected grad", "Spring 2029"],
+      ["Work days", "Tue/Thu"],
+      ["Conflicts", "0"],
+    ],
+    focusBuildings: ["main-soda", "main-evans"],
+    focusSlots: [0, 2],
+    accent: "border-teal-brand-300 bg-teal-brand-50/60",
+  },
+};
+
 const SELECT =
   "w-full bg-slate-50 border border-editorial-border rounded-xl px-3.5 py-2.5 font-bold text-navy-900 focus:ring-2 focus:ring-teal-brand-500 shadow-xs focus:outline-none";
 
@@ -131,11 +194,16 @@ export function MatrixDemo({
 
   function selectRole(next: Role) {
     setRole(next);
+    // Reset scope so the lens' focus buildings are always visible.
+    setCampus("all");
+    setBuilding("all");
+    setFloor("all");
     onToast(`Switched view scope to ${next.toUpperCase()} profile.`);
   }
 
   const target =
     building === "all" ? list[0] : list.find((item) => item.building.id === building) ?? list[0];
+  const lens = ROLE_LENS[role];
 
   const pillCampus =
     campus === "all" ? "All Quads" : CAMPUSES[campus]?.name ?? "All Quads";
@@ -179,6 +247,34 @@ export function MatrixDemo({
               >
                 {item.label}
               </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Role lens: the same campus model, framed for the selected role */}
+      <div className={`rounded-2xl border p-4 shadow-xs ${lens.accent}`}>
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {lens.badge}
+            </span>
+            <h3 className="mt-1 text-sm font-black text-navy-900">{lens.title}</h3>
+            <p className="mt-1 max-w-2xl text-xs font-medium text-slate-600">
+              {lens.description}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {lens.metrics.map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 text-center shadow-xs"
+              >
+                <div className="text-sm font-black text-navy-900">{value}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                  {label}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -306,7 +402,9 @@ export function MatrixDemo({
                   {SLOTS.map((entry, index) => (
                     <th
                       key={entry.id}
-                      className={`${SLOT_WIDTHS[index]} ${index === SLOTS.length - 1 ? "" : "border-r border-editorial-border"} p-1`}
+                      className={`${SLOT_WIDTHS[index]} ${index === SLOTS.length - 1 ? "" : "border-r border-editorial-border"} p-1 ${
+                        lens.focusSlots.includes(entry.id) ? "bg-teal-brand-100/80" : ""
+                      }`}
                     >
                       {entry.time}
                       <br />
@@ -320,13 +418,26 @@ export function MatrixDemo({
               <tbody className="divide-y divide-editorial-border">
                 {list.map((item) => {
                   const b = item.building;
+                  const focused = lens.focusBuildings.includes(b.id);
                   return (
-                    <tr key={b.id} className="transition-colors hover:bg-teal-brand-50/40">
+                    <tr
+                      key={b.id}
+                      className={`transition-colors hover:bg-teal-brand-50/40 ${
+                        focused ? "bg-teal-brand-50/50" : ""
+                      }`}
+                    >
                       <td className="border-r border-editorial-border bg-slate-50 p-2.5 text-left font-bold text-navy-900">
                         <div className="truncate text-[9px] font-extrabold uppercase tracking-wider text-teal-brand-700">
                           {item.campusName.split("(")[0]}
                         </div>
-                        <div className="truncate text-xs font-black text-navy-900">{b.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-xs font-black text-navy-900">{b.name}</span>
+                          {focused && (
+                            <span className="shrink-0 rounded bg-teal-brand-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">
+                              {role === "faculty" ? "Teaching" : "Cohort"}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[9px] font-semibold text-slate-500">
                           {b.totalRooms} Rooms • {b.totalSeats.toLocaleString()} Seats
                         </div>
