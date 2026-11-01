@@ -9,6 +9,7 @@ and the "understanding of the university" the coordinator reviews/edits.
 from __future__ import annotations
 
 import json
+import random
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -168,7 +169,12 @@ def window_state(scenario: Scenario) -> dict:
             .all()
         )
         names = {i.id: i.name for i in scenario.instructors}
-        submissions = [_submission_dict(row, names.get(row.instructor_id, "")) for row in rows]
+        valid_ids = set(names)
+        submissions = [
+            _submission_dict(row, names.get(row.instructor_id, ""))
+            for row in rows
+            if row.instructor_id in valid_ids
+        ]
 
     submitted = {s["instructor_id"] for s in submissions}
     deadline_passed = now > window.deadline
@@ -240,15 +246,129 @@ def submit_intake(
         return _submission_dict(row, instructor.name)
 
 
+def _stable_seed(text: str) -> int:
+    """Deterministic per-professor seed so the demo is reproducible."""
+    return sum((index + 1) * ord(char) for index, char in enumerate(text))
+
+
+def simulate_intake(
+    scenario: Scenario,
+    *,
+    accept: bool = True,
+    only_missing: bool = False,
+) -> tuple[Scenario, dict]:
+    """Fill faculty feedback with realistic randomized constraints.
+
+    Judges should not have to wait for 68 professors to type. This generates
+    hard blackouts, day/period preferences and course wishes per professor,
+    stores them as normal submissions, and (optionally) accepts the set so the
+    solver immediately has a complete institution model.
+    """
+    window = get_window(scenario)
+    if window.status == "accepted":
+        if not accept:
+            return scenario, {"generated": 0, "accepted": 0, "term": window.term}
+        # Re-simulation is allowed: reopen, replace the set, accept again.
+        window = set_window(scenario, status="open")
+
+    generated = 0
+    with SessionLocal() as session:
+        for instructor in scenario.instructors:
+            existing = (
+                session.query(FacultyIntake)
+                .filter(
+                    FacultyIntake.window_id == window.id,
+                    FacultyIntake.instructor_id == instructor.id,
+                )
+                .first()
+            )
+            if only_missing and existing is not None:
+                continue
+
+            rng = random.Random(_stable_seed(f"{window.id}:{instructor.id}"))
+            slots = [(day, period) for day in range(5) for period in range(4)]
+            hard = [
+                {"day": day, "period": period}
+                for day, period in rng.sample(slots, rng.choice([0, 1, 1, 2]))
+            ]
+            hard_keys = {(slot["day"], slot["period"]) for slot in hard}
+
+            preferences: list[dict] = []
+            # Day-level wishes.
+            for day in rng.sample(range(5), rng.choice([1, 2])):
+                if any(day == slot["day"] for slot in hard):
+                    continue
+                preferences.append({
+                    "kind": rng.choice(["prefer", "avoid"]),
+                    "day": day,
+                    "period": None,
+                    "course_id": None,
+                    "weight": rng.choice([5, 8, 10]),
+                })
+            # Period-level wishes.
+            for period in rng.sample(range(4), rng.choice([0, 1])):
+                preferences.append({
+                    "kind": rng.choice(["prefer", "avoid"]),
+                    "day": None,
+                    "period": period,
+                    "course_id": None,
+                    "weight": rng.choice([5, 8]),
+                })
+            # Course wishes from the professor's own qualifications.
+            if instructor.qualified_courses:
+                for course_id in rng.sample(
+                    instructor.qualified_courses,
+                    min(len(instructor.qualified_courses), rng.choice([1, 1, 2])),
+                ):
+                    preferences.append({
+                        "kind": "prefer",
+                        "day": None,
+                        "period": None,
+                        "course_id": course_id,
+                        "weight": 8,
+                    })
+            # Never contradict a hard blackout with a "prefer" on that slot.
+            preferences = [
+                pref for pref in preferences
+                if not (
+                    pref.get("day") is not None
+                    and pref.get("period") is not None
+                    and (pref["day"], pref["period"]) in hard_keys
+                    and pref["kind"] == "prefer"
+                )
+            ]
+
+            row = existing or FacultyIntake(
+                window_id=window.id, instructor_id=instructor.id
+            )
+            if existing is None:
+                session.add(row)
+            row.hard_unavailable = json.dumps(hard)
+            row.preferences = json.dumps(preferences)
+            row.note = "Simulated faculty feedback (demo)."
+            row.status = "submitted"
+            row.submitted_at = row.submitted_at or _utcnow()
+            row.updated_at = _utcnow()
+            generated += 1
+        session.commit()
+
+    if accept:
+        updated, summary = accept_window(scenario)
+        summary["generated"] = generated
+        return updated, summary
+    return scenario, {"generated": generated, "accepted": 0, "term": window.term}
+
+
 def accept_window(scenario: Scenario) -> tuple[Scenario, dict]:
     """Fold every submission into the institution model and lock the term."""
     window = get_window(scenario)
     if window.status == "accepted":
         raise ValueError("This term's intake was already accepted.")
     with SessionLocal() as session:
+        window_row = _window_row(session)
         rows = (
             session.query(FacultyIntake)
-            .filter(FacultyIntake.window_id == window.id)
+            .filter(FacultyIntake.window_id == window_row.id)
             .all()
         )
         if not rows:
@@ -274,15 +394,17 @@ def accept_window(scenario: Scenario) -> tuple[Scenario, dict]:
             row.status = "accepted"
             applied += 1
 
-        window.status = "accepted"
-        window.accepted_at = _utcnow()
-        window.updated_at = _utcnow()
+        window_row.status = "accepted"
+        window_row.accepted_at = _utcnow()
+        window_row.updated_at = _utcnow()
+        accepted_at = window_row.accepted_at
+        term = window_row.term
         session.commit()
 
     summary = {
         "accepted": applied,
-        "term": window.term,
-        "accepted_at": _iso(window.accepted_at),
+        "term": term,
+        "accepted_at": _iso(accepted_at),
     }
     return updated, summary
 

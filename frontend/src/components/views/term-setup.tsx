@@ -596,6 +596,28 @@ export function TermSetupView({
     }
   };
 
+  const simulate = async (accept: boolean, publish: boolean) => {
+    const label = publish ? "Simulate & publish" : accept ? "Simulate & accept" : "Simulate faculty";
+    setBusy(label);
+    try {
+      const res = await authFetch("/api/term/window/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept, publish }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || "Simulation failed.");
+      await load();
+      const generated = data.summary?.generated ?? 0;
+      const published = data.published ? ` · published schedule #${data.published.id}` : "";
+      onToast(`Simulated ${generated} faculty submission(s)${published}`, "success");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Simulation failed.", "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const saveOptions = async () => {
     setBusy("save-options");
     try {
@@ -790,6 +812,40 @@ export function TermSetupView({
                   {busy === "Accept all input" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                   Accept all input &amp; build model
                 </button>
+              </div>
+              <div className="col-span-full rounded-xl border border-blue-200 bg-blue-50/70 p-3">
+                <div className="text-[11px] font-bold text-blue-900">
+                  Demo: simulate the rest of the faculty
+                </div>
+                <p className="mt-0.5 text-[10.5px] text-blue-800">
+                  Generate randomized hard blackouts, day/period preferences and course wishes
+                  for all {window.total_faculty} professors — then accept and publish in one click.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => void simulate(false, false)}
+                    disabled={busy !== null}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    Simulate all
+                  </button>
+                  <button
+                    onClick={() => void simulate(true, false)}
+                    disabled={busy !== null}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {busy === "Simulate & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Simulate &amp; accept
+                  </button>
+                  <button
+                    onClick={() => void simulate(true, true)}
+                    disabled={busy !== null}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {busy === "Simulate & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Simulate, accept &amp; publish
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

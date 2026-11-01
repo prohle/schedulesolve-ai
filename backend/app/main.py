@@ -57,8 +57,13 @@ async def lifespan(_: FastAPI):
     init_db()  # create provenance tables if they don't exist (best-effort)
     try:
         from app.services.auth import seed_demo_users
-        seed_demo_users(get_current_scenario())
-    except Exception:  # noqa: BLE001 — auth seeding must never block solving
+        scenario = get_current_scenario()
+        seed_demo_users(scenario)
+        # Judges should see a full intake board immediately: seed randomized
+        # faculty feedback if none exists yet (accepting stays the
+        # coordinator's explicit action).
+        term_service.simulate_intake(scenario, accept=False, only_missing=True)
+    except Exception:  # noqa: BLE001 — demo seeding must never block solving
         pass
     yield
 
@@ -555,6 +560,12 @@ class TermOptionsIn(BaseModel):
     options: dict = {}
 
 
+class SimulateIntakeIn(BaseModel):
+    accept: bool = True
+    publish: bool = False
+    only_missing: bool = False
+
+
 class DecideRequest(BaseModel):
     action: str = "apply"  # apply | reject
 
@@ -1046,6 +1057,37 @@ def term_window_submit(req: IntakeSubmitIn,
     )
     return {"submission": submission,
             "window": _window_payload(get_current_scenario(), user)}
+
+
+@app.post("/term/window/simulate")
+def term_window_simulate(req: SimulateIntakeIn,
+                         authorization: Optional[str] = Header(None)) -> dict:
+    """Demo: fill every professor's feedback with randomized constraints."""
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated, summary = term_service.simulate_intake(
+            get_current_scenario(),
+            accept=req.accept,
+            only_missing=req.only_missing,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if req.accept:
+        _set_current_scenario(updated)
+    published = None
+    if req.publish:
+        published = _publish_current("cpsat", user.email)
+    audit.record_event(
+        "faculty-intake-simulated",
+        f"Simulated {summary.get('generated', 0)} faculty submission(s)",
+        summary,
+    )
+    return {
+        "window": _window_payload(get_current_scenario(), user),
+        "summary": summary,
+        "published": published,
+    }
 
 
 @app.post("/term/window/options")

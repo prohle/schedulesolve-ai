@@ -533,6 +533,27 @@ export function MyScheduleView({ user, onToast }: {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load().catch(() => {}); }, [load]);
 
+  async function simulateAndPublish() {
+    setBusy(true);
+    try {
+      const res = await authFetch("/api/term/window/simulate", {
+        method: "POST",
+        body: JSON.stringify({ accept: true, publish: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Simulation failed");
+      onToast(
+        `Simulated ${data.summary?.generated ?? 0} faculty submissions · published schedule #${data.published?.id ?? "—"}`,
+        "success"
+      );
+      await load();
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Simulation failed", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function publish() {
     setBusy(true);
     try {
@@ -629,6 +650,13 @@ export function MyScheduleView({ user, onToast }: {
             <button disabled={busy} onClick={publish}
                     className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50">
               <Send className="w-3.5 h-3.5" /> Publish
+            </button>
+          )}
+          {user.role === "coordinator" && unpublished && (
+            <button disabled={busy} onClick={() => void simulateAndPublish()}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-600/25 transition-all active:scale-[0.98] disabled:opacity-50">
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              Simulate faculty &amp; publish
             </button>
           )}
         </div>
