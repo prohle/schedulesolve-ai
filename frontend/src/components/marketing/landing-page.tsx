@@ -132,14 +132,14 @@ export function LandingPage() {
               className="h-10 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
             />
 
-            <div className="hidden items-center gap-2.5 sm:flex">
+            <div className="hidden flex-col items-start leading-tight sm:flex">
               <span className="whitespace-nowrap text-lg font-black tracking-tight text-navy-900">
                 SCHEDULESOLVE{" "}
                 <span className="bg-gradient-to-r from-teal-brand-600 to-cyan-brand-500 bg-clip-text font-black text-transparent">
                   AI
                 </span>
               </span>
-              <span className="hidden rounded-full border border-teal-brand-200 bg-teal-brand-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap text-teal-brand-800 2xl:inline-block">
+              <span className="text-[10px] font-semibold tracking-wide text-slate-500">
                 Powered by Meta Muse Spark
               </span>
             </div>
@@ -216,9 +216,9 @@ export function LandingPage() {
               </h1>
 
               <p className="max-w-2xl text-base font-medium leading-relaxed text-slate-600 sm:text-lg">
-                Drop in your messy school files. ScheduleSolve AI pairs deterministic math with
-                Meta’s Muse Spark to build zero-conflict timetables, keep students on track to
-                graduate on time, and honor every professor’s workload constraints.
+                Drop in messy school files. ScheduleSolve AI pairs deterministic math with Meta’s
+                Muse Spark to generate zero-conflict timetables, protect graduation paths, and
+                balance faculty workloads.
               </p>
 
               <div className="flex flex-wrap items-center gap-4 pt-2">

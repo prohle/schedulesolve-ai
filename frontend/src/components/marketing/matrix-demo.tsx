@@ -222,14 +222,11 @@ export function MatrixDemo({
         </div>
         <div className="relative z-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <span className="rounded-full border border-teal-brand-200 bg-teal-brand-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-teal-brand-900">
-              Interactive Campus Workspace
-            </span>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-navy-900 sm:text-4xl">
-              Live Campus Timetable Matrix &amp; Spatial Heatmap
+            <h2 className="text-2xl font-black tracking-tight text-navy-900 sm:text-4xl">
+              Live Timetable Matrix &amp; Spatial Heatmap
             </h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
-              Illustrative demo campus — sign in for your institution&apos;s live model.
+              Interactive demo campus — switch views to inspect real-time room occupancy.
             </p>
           </div>
 
@@ -256,10 +253,7 @@ export function MatrixDemo({
       <div className={`rounded-2xl border p-4 shadow-xs ${lens.accent}`}>
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              {lens.badge}
-            </span>
-            <h3 className="mt-1 text-sm font-black text-navy-900">{lens.title}</h3>
+            <h3 className="text-sm font-black text-navy-900">{lens.title}</h3>
             <p className="mt-1 max-w-2xl text-xs font-medium text-slate-600">
               {lens.description}
             </p>
@@ -378,15 +372,7 @@ export function MatrixDemo({
       {/* Macro matrix */}
       {view === "macro" && (
         <div className="space-y-4 rounded-2xl border border-editorial-border bg-white p-5 shadow-xs">
-          <div className="flex flex-col items-start justify-between gap-2 border-b border-editorial-border pb-3 sm:flex-row sm:items-center">
-            <div>
-              <span className="rounded border border-teal-brand-200 bg-teal-brand-50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-teal-brand-900">
-                Enterprise Matrix Table
-              </span>
-              <h3 className="mt-1 text-base font-black text-navy-900">
-                Global 12-Building Academic Occupancy Matrix
-              </h3>
-            </div>
+          <div className="flex items-center justify-end border-b border-editorial-border pb-3">
             <div className="text-[11px] font-semibold text-slate-500">
               Click any slot cell to inspect room cards in spatial grid
             </div>
