@@ -310,6 +310,39 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
     for room in scenario.rooms:
         rooms_by_building.setdefault(room.building_id, []).append(room)
 
+    # Peak *simultaneous* building occupancy (day + period), matching the
+    # solver's building_balance objective. Recomputed from whatever term is
+    # currently placed/published.
+    building_cell_load: dict[tuple[str, int, int], int] = {}
+    building_sections: dict[str, int] = {}
+    for placement in placements:
+        building_id = placement.get("building_id", "")
+        enrollment = placement.get("enrollment") or 0
+        building_sections[building_id] = building_sections.get(building_id, 0) + 1
+        days = placement.get("days") or []
+        periods = placement.get("periods")
+        if not periods:
+            period = placement.get("period")
+            periods = [period] if period is not None else []
+        for day in days:
+            for period in periods:
+                key = (building_id, int(day), int(period))
+                building_cell_load[key] = building_cell_load.get(key, 0) + enrollment
+
+    def building_utilization(building_id: str) -> dict:
+        rooms = rooms_by_building.get(building_id, [])
+        capacity = sum(room.capacity for room in rooms)
+        peak = max(
+            (seats for (bid, _day, _period), seats in building_cell_load.items() if bid == building_id),
+            default=0,
+        )
+        return {
+            "capacity": capacity,
+            "peak_seats": peak,
+            "utilization": round(100 * peak / capacity) if capacity else 0,
+            "scheduled_sections": building_sections.get(building_id, 0),
+        }
+
     buildings = [
         {
             "id": building.id,
@@ -317,8 +350,21 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
             "campus": building.campus or "Main Campus",
             "rooms": len(rooms_by_building.get(building.id, [])),
             "seats": sum(room.capacity for room in rooms_by_building.get(building.id, [])),
+            **building_utilization(building.id),
         }
         for building in scenario.buildings
+    ]
+    building_utilization_report = [
+        {
+            "id": building["id"],
+            "name": building["name"],
+            "campus": building["campus"],
+            "capacity": building["capacity"],
+            "peak_seats": building["peak_seats"],
+            "utilization": building["utilization"],
+            "scheduled_sections": building["scheduled_sections"],
+        }
+        for building in buildings
     ]
     campuses: dict[str, dict] = {}
     for building in buildings:
@@ -418,6 +464,7 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
         "cohorts": cohorts,
         "campuses": list(campuses.values()),
         "buildings": buildings,
+        "building_utilization": building_utilization_report,
         "rooms": rooms,
         "halls": [room for room in rooms if room["hall"]],
         "faculty": faculty,

@@ -641,7 +641,7 @@ export function DeliverablesView({
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Panel
               title="Campus zone utilization"
-              hint="Scheduled seats ÷ room capacity, grouped by building."
+              hint="Peak simultaneous scheduled seats ÷ building capacity."
               icon={<Building2 className="h-4 w-4 text-primary" />}
             >
               <EChart option={buildingOption(proof.facility)} className="h-40 w-full" label="Utilization by building" />

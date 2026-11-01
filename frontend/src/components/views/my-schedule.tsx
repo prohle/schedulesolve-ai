@@ -479,6 +479,7 @@ export function MyScheduleView({ user, onToast }: {
   const [view, setView] = useState<"matrix" | "timetable">(
     user.role === "coordinator" ? "matrix" : "timetable"
   );
+  const [savedOptions, setSavedOptions] = useState<{ engine?: string; objective?: string }>({});
   const { scenario } = useScenario();
   const liveCampus = useMemo(
     () => (scenario && mine ? buildLiveCampus(scenario, mine.placements) : null),
@@ -486,6 +487,13 @@ export function MyScheduleView({ user, onToast }: {
   );
 
   const load = useCallback(async () => {
+    let options: { engine?: string; objective?: string } = {};
+    const termRes = await authFetch("/api/term/window");
+    if (termRes.ok) {
+      const term = await termRes.json();
+      options = term.options ?? {};
+      setSavedOptions(options);
+    }
     const res = await authFetch("/api/schedule/mine");
     if (res.status === 404) {
       setUnpublished(true);
@@ -495,7 +503,10 @@ export function MyScheduleView({ user, onToast }: {
         const solved = await (await fetch("/api/solve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ engine: "cpsat" }),
+          body: JSON.stringify({
+            engine: options.engine ?? "cpsat",
+            objective: options.objective ?? "preference",
+          }),
         })).json();
         if (solved.timetable?.placements) {
           setMine({
@@ -526,7 +537,11 @@ export function MyScheduleView({ user, onToast }: {
     setBusy(true);
     try {
       const res = await authFetch("/api/schedule/publish", {
-        method: "POST", body: JSON.stringify({ engine: "cpsat" }),
+        method: "POST",
+        body: JSON.stringify({
+          engine: savedOptions.engine ?? "cpsat",
+          objective: savedOptions.objective ?? "preference",
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Publish failed");

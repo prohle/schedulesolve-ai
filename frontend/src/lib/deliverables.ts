@@ -253,19 +253,48 @@ export interface BuildingUtilization {
 
 export function buildingUtilization(
   scenario: Scenario,
-  report: UtilizationReport | null
+  report: UtilizationReport | null,
+  placements: Placement[] = []
 ): BuildingUtilization[] {
   if (!report) return [];
   const rooms = new Map(scenario.rooms.map((r) => [r.id, r]));
   const buildings = new Map(scenario.buildings.map((b) => [b.id, b]));
+
+  // Peak *simultaneous* occupancy per building (day + period), matching the
+  // solver's building_balance objective. Falls back to the room-peak report
+  // when no placements are supplied.
+  const cellLoad = new Map<string, number>();
+  placements.forEach((placement) => {
+    const enrollment = placement.enrollment ?? 0;
+    const periods = placement.periods?.length
+      ? placement.periods
+      : placement.period !== undefined && placement.period !== null
+        ? [placement.period]
+        : [];
+    placement.days.forEach((day) => {
+      periods.forEach((period) => {
+        const key = `${placement.building_id}|${day}|${period}`;
+        cellLoad.set(key, (cellLoad.get(key) ?? 0) + enrollment);
+      });
+    });
+  });
+
   const acc = new Map<string, { capacity: number; peak: number }>();
-  report.rooms.forEach((entry) => {
-    const room = rooms.get(entry.room_id);
-    if (!room) return;
-    const current = acc.get(room.building_id) ?? { capacity: 0, peak: 0 };
-    current.capacity += entry.capacity;
-    current.peak += entry.peak_seats;
-    acc.set(room.building_id, current);
+  scenario.buildings.forEach((building) => {
+    const capacity = scenario.rooms
+      .filter((room) => room.building_id === building.id)
+      .reduce((sum, room) => sum + room.capacity, 0);
+    let peak = 0;
+    cellLoad.forEach((seats, key) => {
+      if (key.startsWith(`${building.id}|`)) peak = Math.max(peak, seats);
+    });
+    if (placements.length === 0) {
+      report.rooms.forEach((entry) => {
+        const room = rooms.get(entry.room_id);
+        if (room?.building_id === building.id) peak += entry.peak_seats;
+      });
+    }
+    acc.set(building.id, { capacity, peak });
   });
   return [...acc.entries()]
     .map(([id, value]) => ({
@@ -301,7 +330,7 @@ export function proofMetrics(
   margins: MarginsReport | null,
   prefs: PreferenceMetrics
 ): ProofMetrics {
-  const facility = buildingUtilization(scenario, utilization);
+  const facility = buildingUtilization(scenario, utilization, placements);
   const faculty = utilization?.faculty ?? [];
   return {
     peakUtilization: facility.reduce((max, b) => Math.max(max, b.utilization), 0),

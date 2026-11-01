@@ -92,6 +92,10 @@ interface BuildingRow {
   campus?: string;
   rooms: number;
   seats: number;
+  capacity?: number;
+  peak_seats?: number;
+  utilization?: number;
+  scheduled_sections?: number;
 }
 
 interface RoomRow {
@@ -166,6 +170,15 @@ interface Overview {
   cohorts?: CohortRow[];
   campuses: { id: string; name: string; buildings: BuildingRow[] }[];
   buildings: BuildingRow[];
+  building_utilization?: {
+    id: string;
+    name: string;
+    campus: string;
+    capacity: number;
+    peak_seats: number;
+    utilization: number;
+    scheduled_sections: number;
+  }[];
   rooms: RoomRow[];
   halls: RoomRow[];
   faculty: FacultyRow[];
@@ -351,6 +364,7 @@ export function TermSetupView({
   const [coursePrefs, setCoursePrefs] = useState<Preference[]>([]);
   const [holiday, setHoliday] = useState({ day: 0, period: "", label: "Holiday" });
   const [engine, setEngine] = useState("cpsat");
+  const [objective, setObjective] = useState("preference");
   const [autoPublish, setAutoPublish] = useState(false);
   const [termStart, setTermStart] = useState("");
   const [termEnd, setTermEnd] = useState("");
@@ -379,6 +393,7 @@ export function TermSetupView({
       setWeeks(w.weeks);
       const options = (w.options ?? {}) as Record<string, unknown>;
       setEngine(typeof options.engine === "string" ? options.engine : "cpsat");
+      setObjective(typeof options.objective === "string" ? options.objective : "preference");
       setAutoPublish(Boolean(options.auto_publish));
       setTermStart(typeof options.start_date === "string" ? isoForInput(options.start_date) : "");
       setTermEnd(typeof options.end_date === "string" ? isoForInput(options.end_date) : "");
@@ -590,6 +605,7 @@ export function TermSetupView({
         body: JSON.stringify({
           options: {
             engine,
+            objective,
             auto_publish: autoPublish,
             start_date: termStart ? new Date(termStart).toISOString() : null,
             end_date: termEnd ? new Date(termEnd).toISOString() : null,
@@ -1041,6 +1057,7 @@ export function TermSetupView({
                   <th className="p-2.5">Building</th>
                   <th className="p-2.5">Rooms</th>
                   <th className="p-2.5">Seats</th>
+                  <th className="p-2.5">Utilization</th>
                   <th className="p-2.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1053,6 +1070,27 @@ export function TermSetupView({
                     </td>
                     <td className="p-2.5 font-mono">{building.rooms}</td>
                     <td className="p-2.5 font-mono">{building.seats.toLocaleString()}</td>
+                    <td className="p-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-9 font-mono text-[11px] font-bold">{building.utilization ?? 0}%</span>
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              (building.utilization ?? 0) > 90
+                                ? "bg-rose-500"
+                                : (building.utilization ?? 0) > 75
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                            )}
+                            style={{ width: `${Math.min(100, building.utilization ?? 0)}%` }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-slate-500">
+                          {building.scheduled_sections ?? 0} sections
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-2.5 text-right">
                       <div className="inline-flex items-center gap-1">
                         <IconButton
@@ -1572,6 +1610,19 @@ export function TermSetupView({
                         {building.rooms} rooms
                         <br />
                         {building.seats.toLocaleString()} seats
+                        <br />
+                        <span
+                          className={cn(
+                            "font-bold",
+                            (building.utilization ?? 0) > 90
+                              ? "text-rose-600"
+                              : (building.utilization ?? 0) > 75
+                                ? "text-amber-600"
+                                : "text-emerald-600"
+                          )}
+                        >
+                          {building.utilization ?? 0}% used
+                        </span>
                       </span>
                     </button>
                   ))}
@@ -1939,6 +1990,15 @@ export function TermSetupView({
               </select>
             </label>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Objective
+              <select value={objective} onChange={(e) => setObjective(e.target.value)} className={cn(FIELD, "mt-1")}>
+                <option value="preference">Faculty preferences</option>
+                <option value="building_balance">Building utilization balance</option>
+                <option value="room_fit">Room fit (least wasted seats)</option>
+                <option value="balanced_load">Faculty load balance</option>
+              </select>
+            </label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Term start
               <input type="datetime-local" value={termStart} onChange={(e) => setTermStart(e.target.value)} className={cn(FIELD, "mt-1")} />
             </label>
@@ -1965,8 +2025,9 @@ export function TermSetupView({
             Save schedule options
           </button>
           <p className="mt-2 text-[11px] text-slate-500">
-            Saved: engine <strong>{String((window.options ?? {}).engine ?? "cpsat")}</strong>, auto-publish{" "}
-            <strong>{String(Boolean((window.options ?? {}).auto_publish))}</strong>.
+            Saved: engine <strong>{String((window.options ?? {}).engine ?? "cpsat")}</strong>,
+            objective <strong>{String((window.options ?? {}).objective ?? "preference")}</strong>,
+            auto-publish <strong>{String(Boolean((window.options ?? {}).auto_publish))}</strong>.
           </p>
         </Section>
       )}

@@ -154,6 +154,7 @@ class SolveRequest(BaseModel):
     scenario: Scenario
     operations: Optional[list] = None
     engine: str = "cpsat"  # "cpsat" (OR-Tools) | "ours" (ScheduleSolve home solver)
+    objective: str = "preference"  # preference | balanced_load | room_fit | building_balance
 
 
 class IngestRequest(BaseModel):
@@ -364,7 +365,7 @@ def solve_scenario(req: SolveRequest) -> SolveResult:
                             detail=f"unknown engine {req.engine!r}; available: {ENGINE_IDS}")
     ops, _ = validate_operations(
         [Operation.model_validate(o) for o in (req.operations or [])], req.scenario)
-    return solve(req.scenario, ops, engine=req.engine)
+    return solve(req.scenario, ops, engine=req.engine, objective=req.objective)
 
 
 class CompareRequest(BaseModel):
@@ -514,6 +515,7 @@ class RegisterRequest(BaseModel):
 
 class PublishRequest(BaseModel):
     engine: str = "cpsat"
+    objective: str = "preference"
 
 
 class ChangeRequestIn(BaseModel):
@@ -633,11 +635,11 @@ def _latest_published():
         return row
 
 
-def _publish_current(engine: str, created_by: str) -> dict:
+def _publish_current(engine: str, created_by: str, objective: str = "preference") -> dict:
     from app.db import SessionLocal
     from app.models.auth import PublishedSchedule
     scenario = get_current_scenario()
-    result = solve(scenario, engine=engine)
+    result = solve(scenario, engine=engine, objective=objective)
     if result.timetable is None:
         raise HTTPException(status_code=422,
                             detail=f"Current scenario solves as {result.status}; nothing to publish.")
@@ -661,7 +663,7 @@ def schedule_publish(req: PublishRequest,
                      authorization: Optional[str] = Header(None)) -> dict:
     user = _current_user(authorization)
     _require_role(user, "coordinator")
-    return _publish_current(req.engine, user.email)
+    return _publish_current(req.engine, user.email, req.objective)
 
 
 @app.get("/schedule/current")

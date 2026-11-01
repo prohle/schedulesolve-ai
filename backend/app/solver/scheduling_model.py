@@ -409,6 +409,43 @@ def solve(
         for (sid, _iid, _key, rid), v in a.items():
             terms.append((room_capacity[rid] - enroll_by_section[sid]) * v)
         m.Minimize(cp_model.LinearExpr.Sum(terms))
+    elif objective == "building_balance":
+        # Building utilization is a first-class term objective: minimize the
+        # busiest *simultaneous* building occupancy (day + period) relative to
+        # the building's seat capacity. This spreads sections across campus
+        # instead of concentrating a time slot in one hall.
+        enroll_by_section = {s.id: sc.enrollment_for_section(s) for s in sc.sections}
+        building_capacity: dict[str, int] = {}
+        for building in sc.buildings:
+            building_capacity[building.id] = sum(
+                room.capacity for room in sc.rooms if room.building_id == building.id
+            )
+        building_cell: dict[tuple[str, int, int], list] = {}
+        for (sid, _iid, key, rid), v in a.items():
+            pattern = sec_pattern[sid]
+            cells = (
+                [(day, key) for day in PATTERN_DAYS[pattern]]
+                if pattern in ("MWF", "TTh")
+                else [(key, period) for period in BLOCK_PERIODS]
+            )
+            for cell in cells:
+                building_cell.setdefault((room_building[rid], *cell), []).append(
+                    enroll_by_section[sid] * v
+                )
+        total_enrollment = sum(enroll_by_section.values())
+        capacities = [value for value in building_capacity.values() if value > 0]
+        upper = max(
+            1000,
+            (1000 * total_enrollment) // max(1, min(capacities, default=1)) + 1000,
+        )
+        max_building_util = m.NewIntVar(0, upper, "max_building_util")
+        for (building_id, _day, _period), terms in building_cell.items():
+            capacity = building_capacity.get(building_id, 0)
+            if capacity <= 0:
+                continue
+            # util >= 1000 * seats_in_use / capacity  (integer, linear)
+            m.Add(max_building_util * capacity >= 1000 * cp_model.LinearExpr.Sum(terms))
+        m.Minimize(max_building_util)
     else:  # "preference" (default)
         prefs: list[tuple[str, InstructorPreference]] = []
         for i in sc.instructors:
