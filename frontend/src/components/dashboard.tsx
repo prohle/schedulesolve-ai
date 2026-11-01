@@ -44,7 +44,9 @@ export function Dashboard() {
         if (res.ok) {
           const me = (await res.json()).user as AuthUser;
           setUser(me);
-          setActiveView("schedule");
+          // Coordinators land on the Import wizard (the demo path judges
+          // follow); instructors and students land on their own schedule.
+          setActiveView(me.role === "coordinator" ? "wizard" : "schedule");
         } else {
           clearSession();
         }
