@@ -9,6 +9,21 @@
 
 export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+// Same-origin route handlers that need the caller's bearer token: pass the
+// Authorization header through to the Python backend.
+export function forwardAuth(
+  request: Request,
+  path: string,
+  method: string,
+  body?: string
+): Promise<Response> {
+  const headers: Record<string, string> = {};
+  const auth = request.headers.get("authorization");
+  if (auth) headers.Authorization = auth;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  return forward(path, { method, headers, body });
+}
+
 export async function forward(path: string, init?: RequestInit): Promise<Response> {
   try {
     const res = await fetch(`${BACKEND_URL}${path}`, init);

@@ -43,6 +43,7 @@ from app.models.results import (
 from app.models.scenario import Operation, ParsedRequest, Scenario, TermClosure
 from app.parsing.parser import ConstraintParser, validate_operations
 from app.services import audit
+from app.services import term as term_service
 from app.services.apply import apply_operations
 from app.services.copilot import run_copilot
 from app.services.student_plan import suggest_student_plan
@@ -475,6 +476,27 @@ class ClosuresIn(BaseModel):
     closures: list[TermClosure]
 
 
+class TermWindowIn(BaseModel):
+    term: Optional[str] = None
+    opens_at: Optional[str] = None
+    deadline: Optional[str] = None
+    weeks: Optional[int] = None
+    status: Optional[str] = None
+
+
+class IntakeSubmitIn(BaseModel):
+    hard_unavailable: list[dict] = []
+    preferences: list[dict] = []
+    note: str = ""
+    instructor_id: Optional[str] = None  # coordinator submitting on behalf
+
+
+class EntityPatchIn(BaseModel):
+    kind: str
+    id: str
+    patch: dict = {}
+
+
 class DecideRequest(BaseModel):
     action: str = "apply"  # apply | reject
 
@@ -846,6 +868,166 @@ def set_term_closures(req: ClosuresIn,
                        f"Term closures set: {len(closures)} slot(s) closed",
                        {"closures": [c.model_dump() for c in closures]})
     return {"scenario": sc.model_dump()}
+
+
+# --- pre-term intake window + institution model ------------------------------
+
+def _window_payload(scenario: Scenario, user) -> dict:
+    state = term_service.window_state(scenario)
+    if user.role == "instructor":
+        state["submissions"] = [
+            row for row in state["submissions"]
+            if row["instructor_id"] == user.instructor_id
+        ]
+    state["role"] = user.role
+    state["instructor_id"] = user.instructor_id
+    return state
+
+
+def _overview_payload() -> dict:
+    latest = _latest_published()
+    placements = None
+    if latest is not None:
+        try:
+            placements = json.loads(latest.timetable_json)["placements"]
+        except (TypeError, ValueError, KeyError):
+            placements = None
+    return term_service.overview(get_current_scenario(), placements)
+
+
+@app.get("/term/window")
+def term_window(authorization: Optional[str] = Header(None)) -> dict:
+    """The pre-term intake window: deadline, status and submissions."""
+    user = _current_user(authorization)
+    return _window_payload(get_current_scenario(), user)
+
+
+@app.post("/term/window")
+def term_window_update(req: TermWindowIn,
+                       authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    term_service.set_window(
+        get_current_scenario(),
+        term=req.term, opens_at=req.opens_at, deadline=req.deadline,
+        weeks=req.weeks, status=req.status,
+    )
+    audit.record_event("term-window", "Intake window updated",
+                       req.model_dump(exclude_none=True))
+    return _window_payload(get_current_scenario(), user)
+
+
+@app.post("/term/window/open")
+def term_window_open(authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    term_service.open_window(get_current_scenario())
+    audit.record_event("term-window", "Faculty intake window opened", {})
+    return _window_payload(get_current_scenario(), user)
+
+
+@app.post("/term/window/close")
+def term_window_close(authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    term_service.close_window(get_current_scenario())
+    audit.record_event("term-window", "Faculty intake window closed", {})
+    return _window_payload(get_current_scenario(), user)
+
+
+@app.post("/term/window/accept")
+def term_window_accept(authorization: Optional[str] = Header(None)) -> dict:
+    """Accept every faculty submission and build the institution model."""
+    global _current_scenario
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated, summary = term_service.accept_window(get_current_scenario())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    _current_scenario = updated
+    audit.record_event(
+        "term-accepted",
+        f"Accepted {summary['accepted']} faculty submission(s) for {summary['term']}",
+        summary,
+    )
+    return {
+        "window": _window_payload(updated, user),
+        "summary": summary,
+        "scenario": updated.model_dump(),
+    }
+
+
+@app.post("/term/window/submit")
+def term_window_submit(req: IntakeSubmitIn,
+                       authorization: Optional[str] = Header(None)) -> dict:
+    """A faculty member submits hard constraints + soft preferences."""
+    user = _current_user(authorization)
+    if user.role == "instructor":
+        instructor_id = user.instructor_id
+    elif user.role == "coordinator" and req.instructor_id:
+        instructor_id = req.instructor_id
+    else:
+        raise HTTPException(status_code=403, detail="Sign in as the instructor to submit.")
+    if not instructor_id:
+        raise HTTPException(status_code=400, detail="No instructor linked to this account.")
+    try:
+        submission = term_service.submit_intake(
+            get_current_scenario(), instructor_id,
+            hard_unavailable=req.hard_unavailable,
+            preferences=req.preferences,
+            note=req.note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    audit.record_event(
+        "faculty-intake",
+        f"{submission['instructor_name']} submitted {submission['hard_count']} hard "
+        f"and {submission['preference_count']} soft constraint(s)",
+        {"instructor_id": instructor_id},
+    )
+    return {"submission": submission,
+            "window": _window_payload(get_current_scenario(), user)}
+
+
+@app.get("/institution/overview")
+def institution_overview(authorization: Optional[str] = Header(None)) -> dict:
+    """Everything the system understands: campus, buildings, rooms, halls,
+    faculty, load rules, weeks, holidays, constraints and degree maps."""
+    _current_user(authorization)
+    return _overview_payload()
+
+
+@app.patch("/institution/entity")
+def institution_update(req: EntityPatchIn,
+                       authorization: Optional[str] = Header(None)) -> dict:
+    """Coordinator double-checks/edits an entity in the institution model."""
+    global _current_scenario
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated = term_service.update_entity(
+            get_current_scenario(), req.kind, req.id, req.patch)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _current_scenario = updated
+    audit.record_event("institution-edit", f"Edited {req.kind} {req.id}", req.patch)
+    return {"scenario": updated.model_dump(), "overview": _overview_payload()}
+
+
+@app.delete("/institution/entity")
+def institution_delete(kind: str, id: str,
+                       authorization: Optional[str] = Header(None)) -> dict:
+    global _current_scenario
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated = term_service.delete_entity(get_current_scenario(), kind, id)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _current_scenario = updated
+    audit.record_event("institution-delete", f"Removed {kind} {id}", {})
+    return {"scenario": updated.model_dump(), "overview": _overview_payload()}
 
 
 # --- intelligence services: sparse matrices, spectral radar, AI tightening ----

@@ -27,8 +27,13 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { EChart } from "./echart";
-import { campusQuadOption, campusTrafficOption } from "./charts";
+import { EChart } from "@/components/ui/echart";
+import {
+  campusQuadFromRows,
+  campusQuadOption,
+  campusTrafficFromSeries,
+  campusTrafficOption,
+} from "./charts";
 import {
   CAMPUSES,
   CAMPUS_ORDER,
@@ -36,6 +41,7 @@ import {
   SLOTS,
   WEEK_OPTIONS,
   activeBuildings,
+  buildingSlot,
   generateRoomData,
   heatClass,
   policyMessage,
@@ -44,6 +50,7 @@ import {
   type Day,
   type Week,
 } from "./campus-data";
+import type { LiveCampus } from "@/lib/campus-live";
 
 type ViewMode = "macro" | "micro";
 type Wing = "all" | "A" | "B";
@@ -53,7 +60,13 @@ const FIELD =
 
 const PILL = "whitespace-nowrap rounded-lg border px-2.5 py-1 font-bold";
 
-export function CampusMatrix({ onToast }: { onToast: (message: string) => void }) {
+export function CampusMatrix({
+  onToast,
+  live,
+}: {
+  onToast: (message: string) => void;
+  live?: LiveCampus | null;
+}) {
   const [campus, setCampus] = useState<string>("all");
   const [building, setBuilding] = useState<string>("all");
   const [week, setWeek] = useState<Week>("3");
@@ -68,11 +81,48 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
   const [playing, setPlaying] = useState(false);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; body: React.ReactNode } | null>(null);
 
-  const list = useMemo(() => activeBuildings(campus, building), [campus, building]);
-  const summary = useMemo(() => summarizeMatrix(list, week, day), [list, week, day]);
-  const policy = policyMessage(week, day);
+  const model = live?.campuses ?? CAMPUSES;
+  const order = live?.order ?? CAMPUS_ORDER;
+  const slots = live?.slots ?? SLOTS;
+  const resolve = live?.resolve ?? generateRoomData;
+
+  const list = useMemo(
+    () => activeBuildings(campus, building, model, order),
+    [campus, building, model, order]
+  );
+  const summary = useMemo(
+    () => summarizeMatrix(list, week, day, resolve, slots),
+    [list, week, day, resolve, slots]
+  );
+  const policy = live ? "Live placed term" : policyMessage(week, day);
   const activeSlotId = slot === "all" ? 1 : slot;
-  const activeSlot = SLOTS[activeSlotId];
+  const activeSlot = slots[activeSlotId] ?? slots[0];
+
+  const trafficOption = useMemo(() => {
+    if (!live) return campusTrafficOption;
+    const palette = ["#2563eb", "#10b981", "#8b5cf6", "#f59e0b"];
+    const series = list.slice(0, 4).map((item, index) => ({
+      name: item.building.name.split("(")[0].trim(),
+      color: palette[index % palette.length],
+      data: slots.map(
+        (entry) => buildingSlot(item.building, week, day, entry.id, resolve).count
+      ),
+    }));
+    return campusTrafficFromSeries(slots.map((entry) => entry.short), series);
+  }, [live, list, slots, week, day, resolve]);
+
+  const quadOption = useMemo(
+    () =>
+      live
+        ? campusQuadFromRows(
+            summary.rows.slice(0, 6).map((row) => ({
+              name: row.item.building.name.split("(")[0].trim(),
+              percent: row.average,
+            }))
+          )
+        : campusQuadOption,
+    [live, summary]
+  );
 
   const target = useMemo(() => {
     if (building !== "all") {
@@ -96,10 +146,10 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
     let index = 0;
     const timer = window.setInterval(() => {
       setSlot(index);
-      index = (index + 1) % SLOTS.length;
+      index = (index + 1) % slots.length;
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [playing]);
+  }, [playing, slots.length]);
 
   // Tooltip follows the cursor while a cell is hovered.
   useEffect(() => {
@@ -134,13 +184,13 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
     setSlot(slotId);
     setView("micro");
     setTip(null);
-    onToast(`Inspecting ${SLOTS[slotId].label} in the spatial grid`);
+    onToast(`Inspecting ${slots[slotId]?.label ?? "slot"} in the spatial grid`);
   }
 
   const scrubber = (
     <div className="flex flex-wrap items-center gap-1 text-[10.5px]">
       <span className="pr-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Slot:</span>
-      {SLOTS.map((entry) => {
+      {slots.map((entry) => {
         const active = slot === entry.id;
         return (
           <button
@@ -229,14 +279,16 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className={`${PILL} border-slate-200 bg-slate-100 text-slate-800`}>
-                {campus === "all" ? "All Quads" : CAMPUSES[campus].name.split("(")[0]}
+                {campus === "all" ? "All Quads" : (model[campus]?.name ?? campus).split("(")[0]}
               </span>
               <span className="text-slate-300">›</span>
               <span className={`${PILL} border-blue-200 bg-blue-50 text-blue-800`}>
                 {building === "all" ? "All Buildings" : (target?.building.code ?? "—")}
               </span>
               <span className="text-slate-300">›</span>
-              <span className={`${PILL} border-indigo-200 bg-indigo-50 text-indigo-800`}>Week {week}</span>
+              <span className={`${PILL} border-indigo-200 bg-indigo-50 text-indigo-800`}>
+                {live ? "Live placed term" : `Week ${week}`}
+              </span>
               <span className="text-slate-300">›</span>
               <span className={`${PILL} border-emerald-200 bg-emerald-50 text-emerald-800`}>
                 {day.toUpperCase()}, {activeSlot.time.split("–")[0].trim()}
@@ -364,7 +416,7 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-100/90 text-[9.5px] font-bold text-slate-700">
                     <th className="w-[24%] border-r border-slate-200 bg-slate-100 p-2 text-left">Quad &amp; Building</th>
-                    {SLOTS.map((entry) => (
+                    {slots.map((entry) => (
                       <th
                         key={entry.id}
                         className={`border-r border-slate-200 p-1 ${entry.id === 3 ? "w-[10%]" : "w-[11%]"} ${
@@ -381,7 +433,7 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {summary.rows.map(({ item, slots }) => (
+                  {summary.rows.map(({ item, slots: cells }) => (
                     <tr key={item.building.id} className="transition-colors hover:bg-slate-50/80">
                       <td className="border-r border-slate-200 bg-slate-50/80 p-2 text-left">
                         <div className="truncate text-[9px] font-bold uppercase tracking-wider text-blue-600">
@@ -392,8 +444,8 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                           {item.building.totalRooms} Rooms • {item.building.totalSeats.toLocaleString()} Seats
                         </div>
                       </td>
-                      {slots.map((agg, index) => {
-                        const entry = SLOTS[index];
+                      {cells.map((agg, index) => {
+                        const entry = slots[index];
                         return (
                           <td key={entry.id} className="border-r border-slate-200 p-0.5 last:border-r-0 sm:p-1">
                             <button
@@ -540,8 +592,10 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                     {Array.from({ length: entry.count }).map((_, index) => {
                       if (wing === "A" && index >= 4) return null;
                       if (wing === "B" && index < 4) return null;
-                      const name = roomName(entry, index);
-                      const room = generateRoomData(
+                      const name = live
+                        ? live.roomName(target.building.id, entry.id, index)
+                        : roomName(entry, index);
+                      const room = resolve(
                         target.building.id,
                         week,
                         day,
@@ -658,9 +712,11 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                       <LineChart className="h-3.5 w-3.5 text-blue-600" />
                       <span>Campus Time-of-Day Traffic &amp; Student Load Curve</span>
                     </h4>
-                    <span className="shrink-0 text-[10px] font-bold text-slate-500">Peak: 10:00–11:30</span>
+                    <span className="shrink-0 text-[10px] font-bold text-slate-500">
+                      {live ? "Live day profile" : "Peak: 10:00–11:30"}
+                    </span>
                   </div>
-                  <EChart option={campusTrafficOption} className="h-44 w-full" label="Campus traffic by time of day" />
+                  <EChart option={trafficOption} className="h-44 w-full" label="Campus traffic by time of day" />
                 </div>
 
                 <div className="flex flex-col justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 xl:col-span-5">
@@ -670,13 +726,17 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                       <span>Multi-Quad Building Utilization</span>
                     </h4>
                     <p className="text-[10px] font-medium text-slate-500">
-                      Average seat occupancy across 4 Quad Sites.
+                      {live ? "Average seat occupancy per building." : "Average seat occupancy across 4 Quad Sites."}
                     </p>
                   </div>
-                  <EChart option={campusQuadOption} className="h-36 w-full" label="Utilization by campus quad" />
+                  <EChart option={quadOption} className="h-36 w-full" label="Utilization by campus quad" />
                   <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2 text-[10px] text-slate-700 shadow-xs">
                     <span className="font-semibold">Highest Occupancy Site:</span>
-                    <span className="truncate font-bold text-blue-700">Business &amp; Governance (84.2%)</span>
+                    <span className="truncate font-bold text-blue-700">
+                      {live
+                        ? `${summary.busiestName} (${summary.busiestPercent}%)`
+                        : "Business & Governance (84.2%)"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -725,9 +785,9 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                     className={FIELD}
                   >
                     <option value="all">All University Quads (Enterprise Overview)</option>
-                    {CAMPUS_ORDER.map((id) => (
+                    {order.map((id) => (
                       <option key={id} value={id}>
-                        {CAMPUSES[id].name} ({id === "main" ? "Central Core" : id === "eng" ? "Applied Tech" : id === "biz" ? "Governance" : "Life Quad"})
+                        {model[id]?.name ?? id}
                       </option>
                     ))}
                   </select>
@@ -748,7 +808,7 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                     className={FIELD}
                   >
                     <option value="all">All Buildings in Scope</option>
-                    {activeBuildings(campus, "all").map((entry) => (
+                    {activeBuildings(campus, "all", model, order).map((entry) => (
                       <option key={entry.building.id} value={entry.building.id}>
                         {entry.building.name} ({entry.building.totalRooms} Rooms)
                       </option>
@@ -765,12 +825,17 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                     value={week}
                     onChange={(event) => setWeek(event.target.value)}
                     className={FIELD}
+                    disabled={Boolean(live)}
                   >
-                    {WEEK_OPTIONS.map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
+                    {live ? (
+                      <option value={week}>Live placed term</option>
+                    ) : (
+                      WEEK_OPTIONS.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -803,7 +868,7 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                     className={FIELD}
                   >
                     <option value="all">All Time Slots (Daily Matrix View)</option>
-                    {SLOTS.map((entry) => (
+                    {slots.map((entry) => (
                       <option key={entry.id} value={entry.id}>
                         {entry.time} ({entry.label})
                       </option>
@@ -817,13 +882,26 @@ export function CampusMatrix({ onToast }: { onToast: (message: string) => void }
                   Institutional Scope Summary
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-slate-700">
-                  <div>• 4 Campus Quads</div>
-                  <div>• 12 Academic Bldgs</div>
-                  <div>• 311 Physical Rooms</div>
-                  <div>• 15,370 Peak Seats</div>
+                  {live ? (
+                    <>
+                      <div>• {live.stats.buildings} Buildings</div>
+                      <div>• {live.stats.rooms} Physical Rooms</div>
+                      <div>• {live.stats.seats.toLocaleString()} Seats</div>
+                      <div>• {live.term}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div>• 4 Campus Quads</div>
+                      <div>• 12 Academic Bldgs</div>
+                      <div>• 311 Physical Rooms</div>
+                      <div>• 15,370 Peak Seats</div>
+                    </>
+                  )}
                 </div>
                 <div className="border-t border-slate-200 pt-2 text-[10.5px] font-medium text-slate-500">
-                  Enforcing 1.5h slots (80m + 10m travel buffer) &amp; intermittent 14:00 faculty blackouts.
+                  {live
+                    ? "Every cell is read from the placed timetable: room, day and period."
+                    : "Enforcing 1.5h slots (80m + 10m travel buffer) & intermittent 14:00 faculty blackouts."}
                 </div>
               </div>
             </div>

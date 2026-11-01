@@ -13,10 +13,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 If you hit this:
 
 ```
-AiError: AiError: Invalid data for image - reason too many images in request (max 32) (6989dc2a-1a6b-4ed7-a16a-4f0462f205a5)
+AiError: AiError: Invalid data for image - reason too many images in request (max 32) (4b910a94-d579-4dd7-8897-24915fb68459)
 ```
 
-the provider rejects requests carrying more than **32 images**. Avoid it by:
+(also seen as `2e4b0b08-c543-439b-811a-74456052d1d1`, `6989dc2a-1a6b-4ed7-a16a-4f0462f205a5`)
+
+the provider rejects requests carrying more than **32 images** — a hard limit, not a
+transient failure. Don't retry the same request; reduce the payload instead. Avoid it by:
 
 - Sending at most 32 images per request — trim, batch, or split the payload before calling the model.
 - Not re-sending accumulated conversation images on every turn; keep history lean (drop or summarize old image attachments).

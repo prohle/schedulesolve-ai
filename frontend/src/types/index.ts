@@ -564,3 +564,48 @@ export const PERIOD_NAMES = ["8:00", "9:30", "11:00", "12:30"];
 export const PATTERN_DAYS: Record<string, number[]> = { MWF: [0, 2, 4], TTh: [1, 3] };
 export const BLOCK_DAYS = [1, 2, 3];
 export const BLOCK_PERIODS = [2, 3];
+// --- Deliverables (role outputs rendered from a placed timetable) -----------
+
+export interface RoomUtilization {
+  room_id: string;
+  name: string;
+  capacity: number;
+  peak_seats: number;
+  utilization: number;
+}
+
+export interface FacultyLoad {
+  instructor_id: string;
+  name: string;
+  load: number;
+  max_sections: number;
+  satisfied: boolean;
+  utilization: number;
+}
+
+export interface UtilizationReport {
+  room_utilization: number;
+  rooms: RoomUtilization[];
+  faculty: FacultyLoad[];
+  all_loads_met: boolean;
+}
+
+export interface CohortMargin {
+  cohort_id: string;
+  name: string;
+  size: number;
+  terms_remaining: number;
+  plan_courses: string[];
+  pool_courses: string[];
+  offered_pool_courses: string[];
+  margin: number;
+  ok: boolean;
+  example_track: string[];
+  risk: string;
+}
+
+export interface MarginsReport {
+  min_courses: number;
+  cohorts: CohortMargin[];
+  all_ok: boolean;
+}

@@ -16,7 +16,7 @@ import {
   Sliders,
   X,
 } from "lucide-react";
-import { EChart } from "./echart";
+import { EChart } from "@/components/ui/echart";
 import { modalCapacityOption, modalSpeedOption } from "./charts";
 import { MASTER_ROWS, SOLVER_LOGS, type Persona } from "./data";
 import { downloadMasterCsv } from "./download";

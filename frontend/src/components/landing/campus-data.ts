@@ -275,6 +275,19 @@ export interface RoomState {
   isBlackout: boolean;
 }
 
+// The matrix can be driven by the design's procedural model or by the live
+// placed timetable. Both resolve a cell to the same RoomState shape.
+export type RoomStateResolver = (
+  buildingId: string,
+  week: Week,
+  day: Day,
+  slotId: number,
+  floorId: string,
+  roomIndex: number,
+  capPerRoom: number,
+  isHall: boolean
+) => RoomState;
+
 // Procedural occupancy generator (ported 1:1 from the design reference).
 export function generateRoomData(
   buildingId: string,
@@ -377,13 +390,18 @@ export interface ActiveBuilding {
   building: Building;
 }
 
-export function activeBuildings(campus: string, building: string): ActiveBuilding[] {
+export function activeBuildings(
+  campus: string,
+  building: string,
+  campuses: Record<string, Campus> = CAMPUSES,
+  order: readonly string[] = CAMPUS_ORDER
+): ActiveBuilding[] {
   const list: ActiveBuilding[] = [];
-  CAMPUS_ORDER.forEach((campusId) => {
+  order.forEach((campusId) => {
     if (campus !== "all" && campus !== campusId) return;
-    CAMPUSES[campusId].buildings.forEach((b) => {
+    campuses[campusId]?.buildings.forEach((b) => {
       if (building !== "all" && building !== b.id) return;
-      list.push({ campusId, campusName: CAMPUSES[campusId].name, building: b });
+      list.push({ campusId, campusName: campuses[campusId].name, building: b });
     });
   });
   return list;
@@ -395,17 +413,27 @@ export interface SlotAggregate {
   isBlackout: boolean;
 }
 
-export function buildingSlot(b: Building, week: Week, day: Day, slotId: number): SlotAggregate {
+export function buildingSlot(
+  b: Building,
+  week: Week,
+  day: Day,
+  slotId: number,
+  resolve: RoomStateResolver = generateRoomData
+): SlotAggregate {
   let count = 0;
   let isBlackout = false;
   b.floors.forEach((floor) => {
     for (let r = 0; r < floor.count; r++) {
-      const res = generateRoomData(b.id, week, day, slotId, floor.id, r, floor.capPerRoom, floor.isHall);
+      const res = resolve(b.id, week, day, slotId, floor.id, r, floor.capPerRoom, floor.isHall);
       count += res.count;
       if (res.isBlackout) isBlackout = true;
     }
   });
-  return { count, percent: isBlackout ? 0 : Math.round((count / b.totalSeats) * 100), isBlackout };
+  return {
+    count,
+    percent: isBlackout ? 0 : Math.round((count / Math.max(1, b.totalSeats)) * 100),
+    isBlackout,
+  };
 }
 
 export interface MatrixSummary {
@@ -417,14 +445,20 @@ export interface MatrixSummary {
   busiestPercent: number;
 }
 
-export function summarizeMatrix(list: ActiveBuilding[], week: Week, day: Day): MatrixSummary {
+export function summarizeMatrix(
+  list: ActiveBuilding[],
+  week: Week,
+  day: Day,
+  resolve: RoomStateResolver = generateRoomData,
+  slotList: Slot[] = SLOTS
+): MatrixSummary {
   let grandStudents = 0;
   let grandSeats = 0;
   let busiestName = "Haas Business";
   let busiestPercent = 0;
 
   const rows = list.map((item) => {
-    const slots = SLOTS.map((slot) => buildingSlot(item.building, week, day, slot.id));
+    const slots = slotList.map((slot) => buildingSlot(item.building, week, day, slot.id, resolve));
     grandSeats += item.building.totalSeats;
     grandStudents += slots[1].count;
 

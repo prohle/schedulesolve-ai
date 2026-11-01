@@ -9,6 +9,8 @@ import { Toast } from "@/components/ui/toast";
 import { Header } from "./header";
 import { Sidebar, MobileNav, type ActiveView } from "./sidebar";
 import { WizardView } from "./views/wizard";
+import { DeliverablesView } from "./views/deliverables";
+import { TermSetupView } from "./views/term-setup";
 import { IntelligenceView } from "./views/intelligence";
 import { LoginView } from "./views/login";
 import { MyScheduleView } from "./views/my-schedule";
@@ -30,6 +32,7 @@ export function Dashboard() {
 
   useEffect(() => {
     const stored = getStoredUser();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!stored) { setAuthReady(true); return; }
     authFetch("/api/auth/me")
       .then(async (res) => {
@@ -79,11 +82,19 @@ export function Dashboard() {
       <Header user={user} onLogout={handleLogout} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar activeView={activeView} setActiveView={setActiveView} />
-        <main className="relative min-w-0 flex-1 overflow-hidden bg-muted/30 bg-[radial-gradient(54rem_26rem_at_85%_-10%,rgba(99,102,241,0.08),transparent),radial-gradient(36rem_20rem_at_-10%_110%,rgba(14,165,233,0.06),transparent)]">
+        <main className="relative min-w-0 flex-1 overflow-hidden bg-muted/30 bg-[radial-gradient(54rem_26rem_at_85%_-10%,rgba(37,99,235,0.08),transparent),radial-gradient(36rem_20rem_at_-10%_110%,rgba(124,58,237,0.06),transparent),radial-gradient(40rem_24rem_at_50%_115%,rgba(16,185,129,0.05),transparent)]">
           {/* Clearance for the fixed mobile tab bar (removed on lg). */}
           <div className="custom-scrollbar h-full overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 lg:pb-4">
             <div key={activeView} className="animate-rise mx-auto w-full max-w-6xl">
+              {activeView === "setup" && <TermSetupView user={user} onToast={showToast} />}
               {activeView === "wizard" && <WizardView onToast={showToast} />}
+              {activeView === "deliverables" && (
+                <DeliverablesView
+                  user={user}
+                  onToast={showToast}
+                  onOpenFull={() => setActiveView("intelligence")}
+                />
+              )}
               {activeView === "schedule" && <MyScheduleView user={user} onToast={showToast} />}
               {activeView === "intelligence" && <IntelligenceView onToast={showToast} />}
             </div>

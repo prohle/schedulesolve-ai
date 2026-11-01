@@ -38,7 +38,7 @@ export function Header({ user, onLogout }: { user?: AuthUser | null; onLogout?: 
             <h1 className="flex items-center gap-1.5 truncate text-sm font-extrabold tracking-tight text-foreground">
               ScheduleSolve AI
               <Tip label="Every schedule is solver-proven — the AI proposes, the solver verifies. No guesswork." side="bottom">
-                <span className="hidden cursor-help rounded-md bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700 ring-1 ring-indigo-200/70 min-[420px]:inline-block">
+                <span className="hidden cursor-help rounded-md bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-blue-200/70 min-[420px]:inline-block">
                   solver-proven
                 </span>
               </Tip>
@@ -60,14 +60,14 @@ export function Header({ user, onLogout }: { user?: AuthUser | null; onLogout?: 
 
           {user && (
             <>
-              <span className="hidden h-8 items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200/70 sm:inline-flex">
+              <span className="hidden h-8 items-center gap-1.5 rounded-full bg-blue-50 px-2.5 text-[11px] font-bold text-blue-700 ring-1 ring-blue-200/70 sm:inline-flex">
                 {user.role === "coordinator" ? <ShieldCheck className="h-3.5 w-3.5" />
                   : user.role === "instructor" ? <BookOpenCheck className="h-3.5 w-3.5" />
                   : <GraduationCap className="h-3.5 w-3.5" />}
                 <span className="capitalize">{user.role}</span>
               </span>
               <Tip label={`${user.email} · ${user.role}`} side="bottom">
-                <span className="flex h-8 w-8 cursor-help items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 text-[11px] font-extrabold text-white shadow-sm">
+                <span className="flex h-8 w-8 cursor-help items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-violet-500 text-[11px] font-extrabold text-white shadow-sm">
                   {(user.display_name || user.email).slice(0, 1).toUpperCase()}
                 </span>
               </Tip>

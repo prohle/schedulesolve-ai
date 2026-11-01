@@ -32,6 +32,7 @@ def init_db() -> None:
     a down database must never take the solver with it."""
     from app.models import audit  # noqa: F401  (register models)
     from app.models import auth  # noqa: F401  (users / schedules / requests)
+    from app.models import term  # noqa: F401  (intake window / faculty submissions)
 
     try:
         Base.metadata.create_all(bind=engine)

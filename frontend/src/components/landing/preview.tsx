@@ -20,7 +20,7 @@ import {
   Table,
   UserCheck,
 } from "lucide-react";
-import { EChart } from "./echart";
+import { EChart } from "@/components/ui/echart";
 import { CampusMatrix } from "./campus-matrix";
 import { CAMPUSES } from "./campus-data";
 import {

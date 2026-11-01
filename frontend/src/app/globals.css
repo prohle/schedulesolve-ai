@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f5f7;
+  /* Palette aligned with local-design/first-page.html: the signed-in app must
+     feel like the page the user just came from. */
+  --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #4f46e5;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #eef2f7;
+  --secondary: #f1f5f9;
   --secondary-foreground: #334155;
-  --muted: #eef2f7;
+  --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #eef2ff;
-  --accent-foreground: #3730a3;
+  --accent: #eff6ff;
+  --accent-foreground: #1d4ed8;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e3e7ee;
-  --input: #dbe1ea;
-  --ring: #6366f1;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #3b82f6;
   --radius: 0.75rem;
 }
 
@@ -47,8 +49,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), var(--font-geist-sans);
+  --font-mono: var(--font-jetbrains-mono), var(--font-geist-mono);
 }
 
 @layer base {
@@ -150,10 +152,10 @@
       0 20px 44px -12px rgba(49, 46, 129, 0.22);
   }
   .brand-gradient {
-    background-image: linear-gradient(120deg, #0284c7, #4f46e5 55%, #7c3aed);
+    background-image: linear-gradient(120deg, #2563eb, #1d4ed8 55%, #7c3aed);
   }
   .text-gradient {
-    background-image: linear-gradient(100deg, #0369a1, #4f46e5 55%, #7c3aed);
+    background-image: linear-gradient(100deg, #2563eb, #1d4ed8 55%, #7c3aed);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -242,7 +244,8 @@
   box-shadow: 0 0 25px -3px rgba(37, 99, 235, 0.25);
 }
 
-.landing .shadow-card-hover {
+.landing .shadow-card-hover,
+.shadow-card-hover {
   box-shadow:
     0 12px 30px -5px rgba(37, 99, 235, 0.12),
     0 4px 12px -2px rgba(15, 23, 42, 0.04);

@@ -319,3 +319,70 @@ export const campusQuadOption: EChartsOption = {
     },
   ],
 };
+
+// --- live calendar matrix analytics -----------------------------------------
+
+export function campusTrafficFromSeries(
+  labels: string[],
+  series: { name: string; color: string; data: number[] }[]
+): EChartsOption {
+  return {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "#ffffff",
+      borderColor: "#cbd5e1",
+      textStyle: { color: "#0f172a", fontSize: 10 },
+    },
+    legend: { bottom: 0, textStyle: { fontSize: 9, color: "#475569" } },
+    grid: { top: 15, bottom: 34, left: 42, right: 12 },
+    xAxis: { type: "category", data: labels, ...interAxis },
+    yAxis: {
+      type: "value",
+      splitNumber: 4,
+      ...interAxis,
+      splitLine: { lineStyle: { color: "#f1f5f9" } },
+    },
+    series: series.map((entry) => ({
+      name: entry.name,
+      type: "line",
+      smooth: true,
+      data: entry.data,
+      lineStyle: { color: entry.color, width: 2.5 },
+      itemStyle: { color: entry.color },
+      symbolSize: 4,
+    })),
+  };
+}
+
+export function campusQuadFromRows(rows: { name: string; percent: number }[]): EChartsOption {
+  const colors = ["#2563eb", "#10b981", "#8b5cf6", "#f59e0b", "#0ea5e9", "#e11d48"];
+  return {
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", formatter: "{b}: {c}%", textStyle: { fontSize: 10 } },
+    grid: { top: 10, bottom: 15, left: 104, right: 24 },
+    xAxis: {
+      type: "value",
+      max: 100,
+      splitLine: { lineStyle: { color: "#f1f5f9" } },
+      axisLabel: { color: "#475569", fontSize: 9 },
+    },
+    yAxis: {
+      type: "category",
+      data: rows.map((row) => row.name),
+      axisLabel: { color: "#475569", fontSize: 9, fontWeight: "bold" as const, width: 96, overflow: "truncate" },
+    },
+    series: [
+      {
+        type: "bar",
+        data: rows.map((row, index) => ({
+          value: row.percent,
+          itemStyle: { color: colors[index % colors.length] },
+        })),
+        barWidth: "40%",
+        itemStyle: { borderRadius: [0, 4, 4, 0] },
+        label: { show: true, position: "right", formatter: "{c}%", fontSize: 9, fontWeight: "bold" },
+      },
+    ],
+  };
+}
