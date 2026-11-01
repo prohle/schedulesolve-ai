@@ -8,6 +8,24 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      # The auth / intake / university-facts suites exercise the durable
+      # Postgres model, so CI must run a real Postgres 18 (not SQLite).
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: schedulesolve
+          POSTGRES_PASSWORD: schedulesolve
+          POSTGRES_DB: schedulesolve
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U schedulesolve -d schedulesolve"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://schedulesolve:schedulesolve@localhost:5433/schedulesolve
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install

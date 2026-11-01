@@ -105,7 +105,7 @@ export function AnalyticsSection({
                     <span>Faculty Schedule Preference Match Index</span>
                   </h4>
                   <p className="text-[11px] font-medium text-slate-500">
-                    98.4% Average satisfaction across 48 faculty profiles.
+                    Preference-match index computed from the live faculty model after sign-in.
                   </p>
                 </div>
 
@@ -150,6 +150,9 @@ export function FacilitiesSection() {
             <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
               CAMPUS FACILITY &amp; CLASSROOM MATRIX
             </h2>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Illustrative demo campus — the signed-in app uses your institution&apos;s rooms.
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-100 p-1.5 text-xs font-bold">
@@ -231,12 +234,12 @@ export function ProofsSection({ onInspect }: { onInspect: (proof: ProofKey) => v
   return (
     <section id="proofs" className="relative mx-auto max-w-[1800px] space-y-8 px-4 sm:px-8">
       <div className="watermark-bg top-12 left-0 text-[10vw] font-black opacity-[0.025]">
-        SMT ENGINE
+        PROOF ENGINE
       </div>
 
       <div className="relative z-10 border-b border-editorial-border pb-6">
         <span className="rounded-full border border-teal-brand-200 bg-teal-brand-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-teal-brand-900">
-          Mathematical Proof Engine
+          Solver Proof Engine
         </span>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-navy-900 sm:text-5xl">
           4 Core Institutional Guarantees
@@ -384,7 +387,7 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
             <div className="border-b border-editorial-border pb-3">
               <h3 className="text-base font-black text-navy-900">Projected Institutional Gains</h3>
               <p className="text-[11px] font-medium text-slate-500">
-                Calculated based on SMT parallel kernel benchmark
+                Illustrative projection — actual gains depend on your institution.
               </p>
             </div>
 
@@ -393,7 +396,7 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
                 <div className="text-[10px] font-extrabold uppercase text-slate-500">
                   Scheduling Time
                 </div>
-                <div className="mt-1 text-2xl font-black text-teal-brand-700">6 wks → 42s</div>
+                <div className="mt-1 text-2xl font-black text-teal-brand-700">Weeks → seconds</div>
                 <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
                   Automated Resolution
                 </div>
@@ -464,9 +467,9 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
               ))}
             </div>
             <blockquote className="text-lg font-bold leading-relaxed text-navy-900 sm:text-2xl">
-              &quot;ScheduleSolve AI reduces annual timetable generation cycle from 6 agonizing
-              weeks of registrar spreadsheets down to 42 seconds — while completely eliminating
-              student degree completion deadlocks.&quot;
+              &quot;ScheduleSolve AI collapses the annual timetable cycle from weeks of registrar
+              spreadsheets down to seconds — while eliminating student degree-completion
+              deadlocks.&quot;
             </blockquote>
           </div>
 
@@ -505,11 +508,11 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
               <div>
                 <h4 className="text-sm font-black text-slate-900">Central Quad Academic Complex</h4>
                 <p className="text-xs font-medium text-slate-500">
-                  12 Buildings • 4 Quads • 361 Sections Proved
+                  12 Buildings • 4 Quads • 361-Section Stress Tier
                 </p>
               </div>
               <span className="rounded-lg bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">
-                78.4% Load
+                Demo 78.4% Load
               </span>
             </div>
 

@@ -2,7 +2,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](./backend)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](./frontend)
-[![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen.svg)](#run-it)
+[![Tests](https://img.shields.io/badge/tests-78%20passing-brightgreen.svg)](#run-it)
+[![Meta models](https://img.shields.io/badge/Meta%20models-Muse%20Spark%20%C2%B7%20Voice%20%C2%B7%20Spark%20Open-0668E1)](#meta-ai-tooling-at-runtime)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](./docker-compose.yml)
 
 # ScheduleSolve AI — Agentic Constraint Solver & Timetable Infrastructure
@@ -27,6 +28,8 @@ Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* 
 > **▶ Live demo (no account, no API key needed): https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** — the full Express flow (Import → Intake → Build → Review → Term Change) plus the Full advanced workspace, proxied to the backend API at https://prohle--schedulesolve-ai-api.us-east.modal.run (`/docs`, `/status`, `/engines`). Both are scale-to-zero on Modal, so the first request may take a few seconds. Judges can also run everything locally in 2 minutes with `docker compose up` — see [Run it](#run-it).
 >
 > **▶ Demo video (2:51, live Puppeteer screencast of the running app — not screenshots): https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4** — one-click coordinator login → any-format import autoclean → Patel intake → **dual-engine compare with Rank 1 / Rank 2 ranked from outputs** → university-scale publish → instructor change request approved and re-published → Chen term change with solver-verified coverage + agent trace → growth what-if re-solve. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md).
+
+**Meta models at runtime:** Muse Spark `muse-spark-1.3-contributor` (ingest, constraint parse, explanation, tightener, student plan) · Muse Voice Transcribe `muse-voice-transcribe-1.0` (draft-only voice notes) · verified **Muse Spark Open** `meta-models/muse-spark-open-1026` path on Baseten (18/18 live calls) — full table and captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime). The LLM proposes; the solver proves.
 
 ![Express · Build: visual timetable grid](docs/screenshot-build.png)
 

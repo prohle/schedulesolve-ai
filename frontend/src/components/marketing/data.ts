@@ -110,9 +110,9 @@ export interface Proof {
 export const PROOFS: Proof[] = [
   {
     key: "utilization",
-    title: "Dual SAT/CP Kernel",
-    body: "Parallel Z3 SMT and Google OR-Tools CP-SAT kernel resolution in 0.038s. Resolves 361+ section matrices effortlessly.",
-    metric: "0.038s Resolution Speed",
+    title: "Dual Proving Engines",
+    body: "OR-Tools CP-SAT and a native C++ solver race on identical data: 29 ms at university scale, and 3.3 s at the 361-section stress tier where CP-SAT exceeds its budget.",
+    metric: "29 ms University Solve",
   },
   {
     key: "cohort",
@@ -139,11 +139,11 @@ export const PROOF_DETAILS: Record<
   { title: string; formulaLabel: string; formula: string; note: string }
 > = {
   utilization: {
-    title: "Dual SAT/CP Solver Kernel Formula",
-    formulaLabel: "Z3 SMT Objective Function:",
+    title: "Dual Proving Engine Formula",
+    formulaLabel: "CP-SAT Objective (both engines prove the same optimum):",
     formula:
-      "Maximize Σ (Capacity_Utilized_i / Room_Cap_i) s.t. Hard_Constraints == True",
-    note: "Parallel SMT kernel solves room assignments across 361+ sections in 0.038 seconds with zero hard constraint violations.",
+      "Minimize penalty s.t. every hard constraint holds — capacity, qualification, loads, cohort conflicts, walk buffers",
+    note: "Both engines are audited from placements alone. The native C++ search core proves the 361-section stress tier in 3.3 s, where CP-SAT reports `unknown` inside its budget. No LLM touches the schedule.",
   },
   cohort: {
     title: "4-Year Cohort Safety Proof",
@@ -170,9 +170,9 @@ export const PROOF_DETAILS: Record<
 
 export const FAQS: { question: string; answer: string }[] = [
   {
-    question: "How does the SMT kernel handle complex campus constraints?",
+    question: "How does the dual-solver engine handle complex campus constraints?",
     answer:
-      "Traditional greedy algorithms hit deadlocks when handling 100+ room constraints. ScheduleSolve AI runs a parallel race between Microsoft Research's Z3 Satisfiability Modulo Theories (SMT) solver and Google OR-Tools CP-SAT kernel, finding global mathematical optima in under 0.038 seconds.",
+      "Traditional greedy algorithms hit deadlocks when handling 100+ room constraints. ScheduleSolve AI races two real proving engines on identical data — Google OR-Tools CP-SAT and a native C++ solver built for this problem class — and ranks them from their outputs alone. The LLM never touches the schedule; every placement is solver-proven.",
   },
   {
     question: "Can we integrate directly with Ellucian Banner, Workday, or Canvas?",
@@ -187,7 +187,7 @@ export const FAQS: { question: string; answer: string }[] = [
   {
     question: "How long does campus onboarding take?",
     answer:
-      "Most universities complete full data ingestion (building inventory, course catalogs, faculty preferences) within 5 to 7 business days using our guided onboarding tools.",
+      "The demo institution ingests in minutes. A real registrar catalog depends on the files you have: PDF catalogs, Word degree maps and Excel room sheets are extracted and autocleaned, then the completeness check names anything still missing before you solve.",
   },
 ];
 

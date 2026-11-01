@@ -159,7 +159,7 @@ export function LandingPage() {
                 </span>
               </span>
               <span className="hidden rounded-full border border-teal-brand-200 bg-teal-brand-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap text-teal-brand-800 2xl:inline-block">
-                Spatial Engine v4.2
+                Muse Spark + CP-SAT
               </span>
             </div>
           </a>
@@ -232,9 +232,10 @@ export function LandingPage() {
               </h1>
 
               <p className="max-w-2xl text-base font-medium leading-relaxed text-slate-600 sm:text-lg">
-                Parallel Z3 SMT and CP-SAT solver kernels delivering 100% constraint satisfaction,
-                15,370 seat spatial optimization, zero student deadlock schedules, and complete
-                faculty workload harmony.
+                A native C++ solver and Google OR-Tools CP-SAT race on identical data, delivering
+                solver-proven feasibility, campus-wide spatial optimization, zero cohort deadlocks,
+                and faculty workload harmony — while Muse Spark turns messy files and plain English
+                into typed constraints.
               </p>
 
               <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -259,27 +260,27 @@ export function LandingPage() {
 
               <div className="grid grid-cols-2 gap-4 border-t border-editorial-border pt-6 text-xs sm:grid-cols-4">
                 <div>
-                  <div className="text-xl font-black tracking-tight text-navy-900">0.038s</div>
+                  <div className="text-xl font-black tracking-tight text-navy-900">29 ms</div>
                   <div className="text-[11px] font-semibold text-slate-500">
-                    Parallel SMT Resolution
+                    University-Scale Solve
                   </div>
                 </div>
                 <div>
                   <div className="text-xl font-black tracking-tight text-teal-brand-600">100%</div>
                   <div className="text-[11px] font-semibold text-slate-500">
-                    Conflict-Free Guarantee
+                    Solver-Proven Feasibility
                   </div>
                 </div>
                 <div>
-                  <div className="text-xl font-black tracking-tight text-navy-900">15,370</div>
+                  <div className="text-xl font-black tracking-tight text-navy-900">361</div>
                   <div className="text-[11px] font-semibold text-slate-500">
-                    Peak Campus Seat Scope
+                    Stress-Tier Sections
                   </div>
                 </div>
                 <div>
-                  <div className="text-xl font-black tracking-tight text-teal-brand-600">+18.4%</div>
+                  <div className="text-xl font-black tracking-tight text-teal-brand-600">+20%</div>
                   <div className="text-[11px] font-semibold text-slate-500">
-                    Unlocked Seat Capacity
+                    Growth What-If
                   </div>
                 </div>
               </div>
@@ -329,11 +330,11 @@ export function LandingPage() {
                 <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-navy-950/95 via-navy-900/40 to-transparent p-6 text-white">
                   <div className="flex items-center justify-between">
                     <span className="rounded-full bg-gradient-to-r from-teal-brand-500 to-cyan-brand-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-navy-950 shadow-xs backdrop-blur-md">
-                      LIVE TELEMETRY
+                      DEMO TELEMETRY
                     </span>
                     <span className="flex items-center gap-1.5 rounded-full border border-teal-brand-500/40 bg-teal-brand-500/20 px-2.5 py-1 text-[10px] font-bold text-cyan-brand-400 backdrop-blur-md">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-brand-400" />
-                      100% OPTIMAL LOAD
+                      ILLUSTRATIVE CAMPUS
                     </span>
                   </div>
 
@@ -417,7 +418,7 @@ export function LandingPage() {
             <span>Zero-Conflict Timetable Engine</span>
           </div>
           <div className="text-[11px] font-semibold">
-            Enforcing 1.5h Standard Slots (80m + 10m buffer) &amp; Intermittent 14:00 Blackouts
+            Demo grid: 1.5h standard slots (80m + 10m buffer) &amp; 14:00 blackouts
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login-register" className="font-semibold text-teal-brand-700 hover:underline">

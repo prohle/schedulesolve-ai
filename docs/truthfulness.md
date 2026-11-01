@@ -30,6 +30,7 @@ code or by calling the API.
 | Northgate University (148 faculty, 271 courses/sections, 110 cohorts, 35 PhD students, 14 buildings, 9 campuses) | Generated demo data, not a real registrar extract | **Demo institution** badge; `docs/limitations.md`; `docs/data_realism_audit.md` |
 | Faculty feedback from "Simulate all" | Randomised constraints/preferences, deterministic per professor | Note "Simulated faculty feedback (demo)." |
 | First-page preview charts (88.6%, 361 sections, 48 faculty) | Design-reference sample data, not the live model | **Illustrative sample** badge + subtitle |
+| Marketing landing page (`/`) campus demo, facility cards, ROI sliders | Procedural demo campus + illustrative projections, not the live institution | "Demo telemetry", "Illustrative campus", "Illustrative projection" labels; sign-in CTA |
 | Analytics modal "benchmark" | Animation only; no solver call | "Illustrative preview — sign in for the live solver" |
 | "Live telemetry" labels on the landing matrix | Procedural demo campus on the first page; live model inside the app | Preview badge; app uses live scenario/placements |
 
@@ -58,7 +59,11 @@ The landing copy previously claimed a "Z3 SMT" engine, a "dual SAT/CP race",
 and hard-coded timings (`0.034s` / `0.038s`). None of that was true. The copy
 now names the real engines and says timings are shown after a signed-in solve.
 The preview no longer presents `361 / 48 / 88.6%` as live results; it is
-labelled illustrative sample data.
+labelled illustrative sample data. The public marketing page (`/`) follows the
+same rule: its procedural campus is labelled **Demo telemetry / Illustrative
+campus**, its ROI is labelled an illustrative projection, and the engine copy
+names CP-SAT plus the native C++ solver (29 ms university solve; 3.3 s at the
+361-section stress tier).
 
 ## How to verify
 

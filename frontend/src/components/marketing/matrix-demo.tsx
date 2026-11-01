@@ -160,6 +160,9 @@ export function MatrixDemo({
             <h2 className="mt-2 text-2xl font-black tracking-tight text-navy-900 sm:text-4xl">
               Live Campus Timetable Matrix &amp; Spatial Heatmap
             </h2>
+            <p className="mt-1 text-xs font-medium text-slate-500">
+              Illustrative demo campus — sign in for your institution&apos;s live model.
+            </p>
           </div>
 
           <div className="flex items-center gap-1.5 rounded-2xl border border-editorial-border bg-white p-1.5 shadow-xs">
