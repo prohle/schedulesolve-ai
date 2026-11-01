@@ -12,7 +12,7 @@ Copy-paste source for the CV platform form. Deadline: **Wed Nov 4, 9:00 PM ET**
 | Problem statement | **Build for Your World** — the course-timetabling week every department coordinator loses, every term |
 | Team | Solo — Huong Le |
 | Repo (public) | https://github.com/prohle/schedulesolve-ai |
-| Demo video (≤3:00) | https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4 (2:51 live Puppeteer screencast, re-recorded Oct 30 on the current Express/Full interface) — _upload the same file to YouTube and add that link here too_ |
+| Demo video (≤3:00) | https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4 (2:51 live Puppeteer screencast, re-recorded Nov 1 on the current landing + Express/Full interface) — _upload the same file to YouTube and add that link here too_ |
 | Live demo | **https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** (full UI, no account/key; backend API: https://prohle--schedulesolve-ai-api.us-east.modal.run/docs) — or judges run `docker compose up` (no key, no account — see README "Judges — try it in 2 minutes") |
 | X post (Most Viral) | _paste link after posting; engagement counts until Nov 8 EOD. Ready copy below — attach `final.mp4`_ |
 
