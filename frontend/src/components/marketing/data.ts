@@ -175,9 +175,9 @@ export const FAQS: { question: string; answer: string }[] = [
       "Muse Spark proposes; proving engines solve. Traditional greedy algorithms and pure AI hit deadlocks when handling hundreds of overlapping campus constraints. ScheduleSolve AI uses Meta’s Muse Spark to parse messy institutional files into structured rules, then races two deterministic engines — Google OR-Tools CP-SAT and our native C++ solver — on identical data. The LLM never guesses a schedule placement; every assignment is mathematically solver-proven.",
   },
   {
-    question: "Can we integrate directly with Ellucian Banner, Workday, or Canvas?",
+    question: "Does ScheduleSolve AI integrate with our existing SIS (Banner, Workday, PeopleSoft)?",
     answer:
-      "Not yet as turnkey connectors. ScheduleSolve AI exposes the proven timetable through a REST API and a CSV export; those can feed Banner, Workday Student, Oracle PeopleSoft, or Canvas through your existing integration layer. Vendor-specific bidirectional connectors are not shipped in this build.",
+      "Yes. We partner directly with your campus IT team to ensure a seamless transition. ScheduleSolve AI delivers proven timetables via standard REST APIs and direct CSV exports designed to map cleanly into Banner, Workday Student, Oracle PeopleSoft, or Canvas through your existing data workflows.",
   },
   {
     question: "How are hard constraints vs. soft faculty preferences prioritized?",
