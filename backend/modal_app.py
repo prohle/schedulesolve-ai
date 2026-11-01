@@ -33,7 +33,7 @@ volume = modal.Volume.from_name("schedulesolve-data", create_if_missing=True)
     image=image,
     secrets=[modal.Secret.from_name("meta-api")],
     volumes={"/data": volume},
-    env={"DATABASE_URL": "sqlite:////data/schedulesolve.db"},
+    env={"DATABASE_URL": "sqlite:////data/schedulesolve.db", "ALLOW_SQLITE": "1"},
     timeout=300,          # Muse calls can take 30-90s
     cpu=2,
     memory=4096,

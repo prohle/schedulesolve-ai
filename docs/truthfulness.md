@@ -44,6 +44,7 @@ code or by calling the API.
 | Degree maps | Synthetic programs/cohorts; they drive demand and cohort conflicts, but they are not real accreditation records. |
 | Minors | First-class programs for catalog/degree-map display; they do not create cohorts or demand on their own. |
 | Auth | Demo-grade (PBKDF2 + bearer sessions), not institutional SSO. |
+| Hosted demo persistence | The public Modal demo uses a single-tenant SQLite volume (zero-setup live URL); the Docker stack uses Postgres 18. |
 | Scale | CP-SAT proves the default 271-section institution; the 361-section stress tier is a separate benchmark where CP-SAT may report `unknown` inside its 60 s budget. |
 | Auto-publish | Removed from Save options; it was stored but not acted on. |
 | Engines | Two real engines (CP-SAT, native C++) plus greedy. There is no Z3/SMT engine. |

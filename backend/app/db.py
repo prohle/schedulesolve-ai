@@ -23,15 +23,23 @@ DEFAULT_DATABASE_URL = (
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 if DATABASE_URL.startswith("sqlite"):
-    raise RuntimeError(
-        "SQLite is not supported. This project requires Postgres 18 in Docker: "
-        "`docker compose up -d db` and DATABASE_URL=postgresql://..."
-    )
+    # The Docker stack is Postgres-only. The single-tenant Modal demo keeps a
+    # SQLite volume so judges get a zero-setup live URL; it opts in explicitly
+    # with ALLOW_SQLITE=1 so no local/CI run can silently fall back to SQLite.
+    if os.getenv("ALLOW_SQLITE") != "1":
+        raise RuntimeError(
+            "SQLite is not supported. This project requires Postgres 18 in Docker: "
+            "`docker compose up -d db` and DATABASE_URL=postgresql://..."
+        )
 
 if DATABASE_URL.startswith("postgres://"):  # SQLAlchemy wants postgresql://
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
