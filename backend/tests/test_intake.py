@@ -8,6 +8,8 @@ applied + re-published, infeasible means rejected with the solver's
 explanation. Nothing is re-parsed and nothing is silently dropped.
 """
 
+from datetime import datetime, timedelta, timezone
+
 from app.main import load_seed_scenario
 from app.models.scenario import Operation, TermClosure
 from app.parsing.mock import mock_parse
@@ -109,6 +111,44 @@ def test_structured_intake_whitelist_and_self_only(client):
     own = client.get("/me/change-requests", headers=chen).json()["requests"]
     req = next(r for r in own if r["id"] == created.json()["id"])
     assert req["operations"][0]["instructor_id"] == "chen"
+
+
+def test_faculty_individual_can_elect_constraints_before_deadline(client):
+    """Every professor logs in, sees only their own submission, and elects
+    hard + soft constraints until the deadline — then the window refuses."""
+    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    chen = _login(client, "chen@schedulesolve.demo")
+    diaz = _login(client, "diaz@schedulesolve.demo")
+    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    client.post("/term/window", headers=coordinator,
+                json={"deadline": future, "status": "open"})
+
+    submitted = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [{"day": 4, "period": 2}],
+        "preferences": [
+            {"kind": "prefer", "day": 1, "period": 1, "weight": 8},
+            {"kind": "avoid", "period": 0, "weight": 5},
+        ],
+        "note": "Committee duty Friday afternoon.",
+    })
+    assert submitted.status_code == 200, submitted.text
+    submission = submitted.json()["submission"]
+    assert submission["instructor_id"] == "chen"
+    assert submission["hard_count"] == 1
+    assert submission["preference_count"] == 2
+
+    # Per-individual: Chen sees her own submission; Diaz does not see it.
+    chen_window = client.get("/term/window", headers=chen).json()
+    assert [s["instructor_id"] for s in chen_window["submissions"]] == ["chen"]
+    diaz_window = client.get("/term/window", headers=diaz).json()
+    assert all(s["instructor_id"] == "diaz" for s in diaz_window["submissions"])
+    assert chen_window["open"] is True
+
+    # The deadline closes the election: the same login is refused.
+    client.post("/term/window/close", headers=coordinator)
+    denied = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [], "preferences": [], "note": "late"})
+    assert denied.status_code == 409
 
 
 def test_term_closure_blocks_slots_in_solver(client):

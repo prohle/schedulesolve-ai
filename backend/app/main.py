@@ -158,6 +158,10 @@ class StudentPlanRequest(BaseModel):
     message: str
     target_courses: Optional[int] = None
     target_credits: Optional[int] = None
+    # Contradictions the student has arbitrated, keyed by conflict kind:
+    # record_vs_lookup -> record|lookup, must_already_completed -> completed|retake,
+    # must_vs_availability -> availability|course.
+    resolutions: dict[str, str] = {}
     scenario: Optional[Scenario] = None
 
 
@@ -529,7 +533,8 @@ def student_plan(req: StudentPlanRequest) -> StudentPlanResponse:
             study_record=req.study_record,
             completed_course_ids=req.completed_course_ids,
             student_id=req.student_id,
-            target_credits=req.target_credits)
+            target_credits=req.target_credits,
+            resolutions=req.resolutions)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

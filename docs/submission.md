@@ -49,7 +49,16 @@ from the institution's degree map, completed courses from the record
 they provide (or a cohort progress lookup when they don't), then "I work
 Tue/Thu, I need CS 201, no 8 AMs" — and gets a personal plan selected
 from the placed timetable and re-verified before it is shown, or an
-honest explanation of why their must-take course cannot fit this term. The LLM
+honest explanation of why their must-take course cannot fit this term. The
+same panel projects the graduation term from the degree-map chain, completed
+record, locked prerequisites and the verified plan — "On track for Spring
+2029" or "CS 401 pushes graduation +1 term." Contradictory inputs are never
+resolved silently: a record that disagrees with the cohort lookup, a
+must-take course that only meets inside an unavailable block, or "I need
+CS 201" when CS 201 is already completed each return a named conflict with
+both options, and the student chooses which wins; the response also names
+the input that is missing (e.g. an individual study record) so the
+projection can be made exact. The LLM
 never touches the schedule — it proposes; the solver proves; every step
 is in the audit trail.
 
@@ -167,9 +176,9 @@ mock parser, so judges can click every beat offline.
 
 | Criterion (weight) | Evidence a judge can check in <5 min |
 |---|---|
-| Impact (30%) | Coordinator-week → minutes, quantified in README "Proof at university scale" + benchmark script; real domain (degree roadmaps, walk matrix, prep caps) at three measured scales — department (26 instructors), university (38), and a full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students); students get the same proof in reverse — a personal plan that fits their job and degree roadmap, or an honest warning before a must-take course slips a semester |
+| Impact (30%) | Coordinator-week → minutes, quantified in README "Proof at university scale" + benchmark script; real domain (degree roadmaps, walk matrix, prep caps) at three measured scales — department (26 instructors), university (38), and a full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students); students get the same proof in reverse — a personal plan that fits their job and degree roadmap, an honest warning before a must-take course slips a semester, and a projected graduation term that names the course that pushes it out |
 | Use of Meta AI tooling (25%) | 5 runtime Muse Spark roles (ingest, parse, explain, tighten, student plan) + Muse Voice Transcribe as a draft-only input (identity comes from the signed-in session — voice alone never changes the term), live badges (model + latency) on screen, `muse-verification.json` + `muse-verification-open.json` + `muse-verification-student.json`, agent trace names Muse at every proposing step |
-| Technical depth & execution (20%) | AI-authored **native C++ rival solver proving CP-SAT's optimum faster** at every demo scale and the only engine to complete the **full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students; CP-SAT reports `unknown` inside its budget there)** (docs/solver_evidence.md, benchmark + parity tests), CP-SAT assumption-literal minimal conflict cores, feasibility probes, spectral (Laplacian/Fiedler/Hoffman/max-clique) warm-start + deadlock radar, C39 guarantee audit (100/100 at stress scale), **multi-user roles** (coordinator/instructor/student logins, published schedules, verified change requests, per-professor structured intake grid + term closures), **coordinator-owned academic policy** (student-credit load curve, research/teaching tracks, full-time thresholds), **catalog decisions** (not-offered/dormant/special topics with records), **PhD 1-3 credit Fall reservations** with supervisor caps, **national-holiday/term-date suggestions + day swaps**, **realism audit + seeded randomized solver performance record** (docs/data_realism_audit.md, docs/solver_performance.md), 78 passing tests, CI |
+| Technical depth & execution (20%) | AI-authored **native C++ rival solver proving CP-SAT's optimum faster** at every demo scale and the only engine to complete the **full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students; CP-SAT reports `unknown` inside its budget there)** (docs/solver_evidence.md, benchmark + parity tests), CP-SAT assumption-literal minimal conflict cores, feasibility probes, spectral (Laplacian/Fiedler/Hoffman/max-clique) warm-start + deadlock radar, C39 guarantee audit (100/100 at stress scale), **multi-user roles** (coordinator/instructor/student logins, published schedules, verified change requests, per-professor structured intake grid + term closures), **coordinator-owned academic policy** (student-credit load curve, research/teaching tracks, full-time thresholds), **catalog decisions** (not-offered/dormant/special topics with records), **PhD 1-3 credit Fall reservations** with supervisor caps, **national-holiday/term-date suggestions + day swaps**, **realism audit + seeded randomized solver performance record** (docs/data_realism_audit.md, docs/solver_performance.md), 86 passing tests, CI |
 | Demo (25%) | Working live stack (`docker compose up`, Postgres 18), before/after zero-ripple term change, solver-verified resolutions, department-scale solve in the Build step |
 
 ## What was built during the hackathon (Oct 27 – Nov 4)
@@ -202,7 +211,7 @@ can reach, and quote any reply (with permission) in the form's Impact field:
 
 - [x] All work committed and pushed; repo public and cloneable
 - [x] `docker compose up --build` boots cleanly (db Postgres 18 → backend → frontend; verified Oct 30 with port overrides — UI 200, proxied scenario, both engines `optimal` penalty −6 inside the containers, native binary built in-image)
-- [x] Backend tests pass (`cd backend && .venv/bin/python -m pytest -q` — 48 tests, verified Oct 30, incl. full-university stress scale)
+- [x] Backend tests pass (`cd backend && .venv/bin/python -m pytest -q` — 86 tests, verified Nov 1, incl. full-university stress scale)
 - [x] Frontend production build passes (`cd frontend && npm run build`, verified Oct 30)
 - [x] Video ≤ 3:00 (2:51), recorded live Oct 30 on the current interface — frame-checked: every badge says `muse-spark`, never `MOCK`
 - [x] Video shows, in order: any-format import autoclean (PDF/DOCX/CSV/TXT/XLSX/MD) → Patel intake applied to the term → **dual-engine compare at department scale, Rank 1 / Rank 2 from outputs (native solver first)** → university scale (38/41/20, asserted on screen) + publish → Chen change request approved and re-published → term change with agent trace + ranked verified reassignment → Diaz impossible override (conflict core + verified repairs) → capacity what-ifs + end card

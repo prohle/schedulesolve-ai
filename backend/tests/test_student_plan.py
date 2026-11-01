@@ -55,7 +55,7 @@ def test_suggestion_is_conflict_free_and_respects_availability():
         for b in cells[i + 1:]:
             assert not (a & b)
     steps = [s.step for s in resp.agent_trace]
-    assert steps == ["parse", "progress", "select", "verify", "audit"]
+    assert steps == ["parse", "progress", "select", "verify", "projection", "audit"]
 
 
 def test_study_record_unlocks_next_sequence():
@@ -113,6 +113,121 @@ def test_suggestion_flags_impossible_availability():
         "I work Mondays, Tuesdays, Wednesdays, Thursdays and Fridays. I need CS 201.")
     assert resp.courses == []
     assert resp.target_met is False
+
+
+def test_projection_is_on_track_for_an_on_time_cohort():
+    sc = load_seed_scenario()
+    resp = suggest_student_plan(sc, "cs2025", MSG_FITS)
+    assert resp.projection_status == "on_track"
+    assert resp.graduation_delay_terms == 0
+    assert "On track for Spring 2029" in resp.projection_note
+    assert resp.projected_graduation
+    assert resp.expected_graduation == "Spring 2029"
+    # The projection is visible on the progress object too.
+    assert resp.progress is not None
+    assert resp.progress.projection_status == "on_track"
+    assert resp.progress.projected_graduation == resp.projected_graduation
+
+
+def test_projection_names_the_course_that_delays_a_senior():
+    sc = load_seed_scenario()
+    # CS 2023 is in term 7 but has only CS 101 on record; the 8:00 block
+    # keeps CS 201 out of this term's verified plan, so the mandatory chain
+    # cannot finish by the expected Spring 2027.
+    resp = suggest_student_plan(
+        sc, "cs2023", "I need CS 401 this term, and no 8:00 classes.",
+        study_record="Completed: CS 101")
+    assert resp.projection_status == "delayed"
+    assert resp.graduation_delay_terms >= 1
+    assert "CS 401 pushes graduation" in resp.projection_note
+    assert resp.projection_course == "CS 401"
+    assert resp.projected_graduation != resp.expected_graduation
+
+
+def test_projection_reports_complete_when_mandatory_chain_is_done():
+    sc = load_seed_scenario()
+    resp = suggest_student_plan(
+        sc, "cs2025", "What should I take next?",
+        study_record="Completed: CS 101, CS 201, MATH 201, CS 210, CS 301, CS 310, CS 401")
+    assert resp.projection_status == "complete"
+    assert "All mandatory courses complete" in resp.projection_note
+    assert resp.graduation_delay_terms == 0
+
+
+def test_missing_inputs_name_the_record_the_projection_needs():
+    sc = load_seed_scenario()
+    # Cohort lookup only: the projection is an estimate, and the response says
+    # which input would make it exact.
+    resp = suggest_student_plan(sc, "cs2025", MSG_FITS)
+    assert any("individual study record" in item for item in resp.missing_inputs)
+    # Supplying the record removes that missing-input warning.
+    resp = suggest_student_plan(
+        sc, "cs2025", MSG_FITS,
+        study_record="Completed: CS 101, CS 201")
+    assert not any("individual study record" in item for item in resp.missing_inputs)
+
+
+def test_contradictory_record_and_lookup_let_the_student_choose():
+    sc = load_seed_scenario()
+    message = "I need CS 301 this term."
+    record = "Completed: CS 101, CS 201"
+    # The record says CS 201 is done; the cohort lookup (term 3) credits only
+    # CS 101. Both sides are surfaced instead of one silently winning.
+    resp = suggest_student_plan(sc, "cs2025", message, study_record=record)
+    conflict = next(c for c in resp.conflicts if c.kind == "record_vs_lookup")
+    assert conflict.options == ["record", "lookup"]
+    assert conflict.chosen_option == "record"          # documented default
+    assert resp.progress.required_completed == 2       # record wins
+    assert "CS 201" in conflict.detail
+
+    # The student can instead let the cohort lookup win.
+    resp = suggest_student_plan(
+        sc, "cs2025", message, study_record=record,
+        resolutions={"record_vs_lookup": "lookup"})
+    conflict = next(c for c in resp.conflicts if c.kind == "record_vs_lookup")
+    assert conflict.chosen_option == "lookup"
+    assert resp.progress.required_completed == 1
+    assert resp.progress.source.startswith("progress lookup")
+    assert "you chose the cohort lookup" in resp.progress.source
+
+
+def test_must_course_vs_availability_lets_the_student_choose():
+    sc = load_seed_scenario()
+    # Default: availability wins, CS 201 is not suggested and the clash is named.
+    resp = suggest_student_plan(sc, "cs2025", MSG)
+    assert all(c.course_code != "CS 201" for c in resp.courses)
+    conflict = next(c for c in resp.conflicts if c.kind == "must_vs_availability")
+    assert conflict.options == ["availability", "course"]
+    assert conflict.chosen_option == "availability"
+
+    # The student can choose the course instead; it is then included with a
+    # plain warning and the verification step knows the exception was chosen.
+    resp = suggest_student_plan(
+        sc, "cs2025", MSG,
+        resolutions={"must_vs_availability": "course"})
+    assert any(c.course_code == "CS 201" for c in resp.courses)
+    assert any("You chose CS 201 over your stated availability" in n
+               for n in resp.notes)
+    conflict = next(c for c in resp.conflicts if c.kind == "must_vs_availability")
+    assert conflict.chosen_option == "course"
+    assert resp.agent_trace[-2].step == "projection"  # plan survived verification
+
+
+def test_must_course_already_completed_lets_the_student_retake():
+    sc = load_seed_scenario()
+    record = "Completed: CS 101, CS 201"
+    resp = suggest_student_plan(
+        sc, "cs2025", "I need CS 201 this term.", study_record=record)
+    conflict = next(c for c in resp.conflicts if c.kind == "must_already_completed")
+    assert conflict.chosen_option == "completed"
+    assert all(c.course_code != "CS 201" for c in resp.courses)
+
+    resp = suggest_student_plan(
+        sc, "cs2025", "I need CS 201 this term.", study_record=record,
+        resolutions={"must_already_completed": "retake"})
+    assert any(c.course_code == "CS 201" for c in resp.courses)
+    conflict = next(c for c in resp.conflicts if c.kind == "must_already_completed")
+    assert conflict.chosen_option == "retake"
 
 
 def test_student_plan_api(client):

@@ -163,6 +163,28 @@ class StudentProgress(BaseModel):
     mandatory_locked: list[str] = []  # course codes: earlier courses unfinished
     optional_remaining: int = 0
     projected_graduation: str = ""
+    expected_graduation: str = ""
+    projection_status: Literal["on_track", "delayed", "complete"] = "on_track"
+    projection_note: str = ""
+    graduation_delay_terms: int = 0
+    projection_course: str = ""
+
+
+class StudentPlanConflict(BaseModel):
+    """Contradictory inputs the student must arbitrate.
+
+    Advising never silently picks a side. When the record disagrees with the
+    cohort lookup, or a must-take course only meets inside a time the student
+    marked unavailable, the response carries the conflict, the options, the
+    default and — once the student chooses — the option that won.
+    """
+
+    kind: str                    # record_vs_lookup | must_already_completed | ...
+    summary: str
+    detail: str = ""
+    options: list[str] = []      # machine choices the client sends back
+    default_option: str = ""
+    chosen_option: str = ""
 
 
 class StudentPlanCourse(BaseModel):
@@ -196,7 +218,14 @@ class StudentPlanResponse(BaseModel):
     credits_selected: int = 0
     full_time: bool = False
     projected_graduation: str = ""
+    expected_graduation: str = ""
+    projection_status: Literal["on_track", "delayed", "complete"] = "on_track"
+    projection_note: str = ""
+    graduation_delay_terms: int = 0
+    projection_course: str = ""
     notes: list[str] = []
+    missing_inputs: list[str] = []   # what the student can supply to sharpen this
+    conflicts: list[StudentPlanConflict] = []  # contradictions they must arbitrate
     parser_mode: Literal["muse-spark", "mock"]
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None

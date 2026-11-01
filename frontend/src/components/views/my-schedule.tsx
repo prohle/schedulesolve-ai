@@ -29,6 +29,30 @@ interface InstructorLoad {
   preferences: { kind: string; day?: number | null; period?: number | null }[];
 }
 
+interface TermWindowState {
+  status: string;
+  deadline: string;
+  open: boolean;
+  deadline_passed: boolean;
+  days_left: number;
+  submitted_count: number;
+  total_faculty: number;
+  submissions?: {
+    instructor_id: string;
+    status: string;
+    hard_count: number;
+    preference_count: number;
+    note?: string;
+    hard_unavailable?: { day: number; period: number }[];
+    preferences?: {
+      kind: string;
+      day?: number | null;
+      period?: number | null;
+      course_id?: string | null;
+    }[];
+  }[];
+}
+
 interface MineResponse {
   role: string;
   scope: string;
@@ -52,6 +76,15 @@ interface ChangeRequest {
 }
 
 /* ---------------- per-professor structured intake ---------------- */
+
+const CONFLICT_OPTION_LABEL: Record<string, string> = {
+  record: "Use my record",
+  lookup: "Use cohort lookup",
+  completed: "Keep it completed",
+  retake: "Retake it",
+  availability: "Keep my availability",
+  course: "Take the course anyway",
+};
 
 const CELL_WORD = ["", "Prefer", "Avoid", "Off"];
 const CELL_CLASS = [
@@ -83,9 +116,10 @@ function buildIntakeOps(cells: Record<string, number>, name: string): IntakeOper
   return ops;
 }
 
-function IntakePanel({ user, load, busy, onSend }: {
+function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
   user: AuthUser;
   load?: InstructorLoad | null;
+  intakeWindow?: TermWindowState | null;
   busy: boolean;
   onSend: (operations: IntakeOperation[], note: string) => void;
 }) {
@@ -96,23 +130,51 @@ function IntakePanel({ user, load, busy, onSend }: {
   const [maxPreps, setMaxPreps] = useState(2);
   const [loadTouched, setLoadTouched] = useState(false);
   const prefilled = useRef(false);
+  const intakePrefilled = useRef(false);
+  const dirty = useRef(false);
 
-  // Start from the constraints already on the term, so editing is incremental.
-  useEffect(() => {
-    if (!load || prefilled.current) return;
-    prefilled.current = true;
+  const cellsFrom = (
+    hard: { day: number; period: number }[],
+    prefs: { kind: string; day?: number | null; period?: number | null }[],
+  ): Record<string, number> => {
     const next: Record<string, number> = {};
-    for (const s of load.hard_unavailable) next[`${s.day}-${s.period}`] = 3;
-    for (const p of load.preferences) {
+    for (const s of hard) next[`${s.day}-${s.period}`] = 3;
+    for (const p of prefs) {
       const v = p.kind === "avoid" ? 2 : 1;
       if (p.period != null && p.day != null) next[`${p.day}-${p.period}`] = v;
       else if (p.day != null) for (let per = 0; per < PERIOD_NAMES.length; per++) next[`${p.day}-${per}`] ||= v;
       else if (p.period != null) for (let d = 0; d < 5; d++) next[`${d}-${p.period}`] ||= v;
     }
-    setCells(next);
+    return next;
+  };
+
+  // Start from the constraints already on the term, so editing is incremental.
+  useEffect(() => {
+    if (!load || prefilled.current) return;
+    prefilled.current = true;
+    // A pending intake submission is fresher than the published constraints;
+    // the second effect overlays it when it arrives first.
+    if (!intakePrefilled.current) {
+      setCells(cellsFrom(load.hard_unavailable, load.preferences));
+    }
     setMaxSections(load.max_sections);
     setMaxPreps(load.max_preps);
   }, [load]);
+
+  // Before acceptance, the professor's own submission is the truth for this
+  // grid. Overlay it once unless they have already started editing.
+  useEffect(() => {
+    if (intakePrefilled.current || dirty.current) return;
+    const mine = intakeWindow?.submissions?.find(
+      (s) => s.instructor_id === user.instructor_id);
+    if (!mine) return;
+    intakePrefilled.current = true;
+    if (mine.hard_unavailable || mine.preferences) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCells(cellsFrom(mine.hard_unavailable ?? [], mine.preferences ?? []));
+    }
+    if (mine.note) setNote(mine.note);
+  }, [intakeWindow, user.instructor_id]);
 
   const ops = buildIntakeOps(cells, user.display_name);
   if (loadTouched && load) {
@@ -121,20 +183,45 @@ function IntakePanel({ user, load, busy, onSend }: {
     if (maxPreps !== load.max_preps)
       ops.push({ op: "set_prep_cap", value: maxPreps, explanation: `${user.display_name} caps distinct courses at ${maxPreps}.` });
   }
-  const paint = (day: number, period: number) =>
+  const paint = (day: number, period: number) => {
+    dirty.current = true;
     setCells((prev) => ({ ...prev, [`${day}-${period}`]: brush }));
+  };
 
   return (
     <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-1.5">
         <h3 className="text-xs font-bold tracking-wide uppercase">My intake — availability & load</h3>
-        <InfoTip text="Tap cells with a brush: Off = hard constraint (never scheduled), Avoid/Prefer = soft (the solver pays a penalty to violate them). Pick your teaching load too. The coordinator approves; the solver verifies your exact picks before anything changes." />
+        <InfoTip text="Tap cells with a brush: Off = hard constraint (never scheduled), Avoid/Prefer = soft (the solver pays a penalty to violate them). Pick your teaching load too. Before the intake deadline this goes straight to the faculty window; after it, it becomes a change request the coordinator approves. The solver verifies your exact picks before anything changes." />
         {load && (
           <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground ring-1 ring-border">
             Now: {load.current}/{load.max_sections} sections · {load.preps} course{load.preps === 1 ? "" : "s"}
           </span>
         )}
       </div>
+
+      {intakeWindow && (
+        <div className={cn(
+          "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-3 py-2 text-[11px] font-semibold",
+          intakeWindow.open
+            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            : "border-amber-200 bg-amber-50 text-amber-900")}>
+          <span>
+            Faculty intake {intakeWindow.open ? "open" : intakeWindow.deadline_passed ? "closed — deadline passed" : intakeWindow.status}
+            {" · "}deadline {new Date(intakeWindow.deadline).toLocaleString()}
+          </span>
+          {intakeWindow.open && <span className="opacity-80">{intakeWindow.days_left} day{intakeWindow.days_left === 1 ? "" : "s"} left</span>}
+          {intakeWindow.submissions?.some((s) => s.instructor_id === user.instructor_id) ? (
+            <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+              You submitted
+            </span>
+          ) : intakeWindow.open ? (
+            <span className="ml-auto rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+              Awaiting your constraints
+            </span>
+          ) : null}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="flex overflow-hidden rounded-xl ring-1 ring-border" role="group" aria-label="Brush">
@@ -151,18 +238,18 @@ function IntakePanel({ user, load, busy, onSend }: {
             Erase
           </button>
         </div>
-        <button onClick={() => setCells((p) => ({ ...p, ...Object.fromEntries([0, 1, 2, 3].map((per) => [`4-${per}`, 3])) }))}
+        <button onClick={() => { dirty.current = true; setCells((p) => ({ ...p, ...Object.fromEntries([0, 1, 2, 3].map((per) => [`4-${per}`, 3])) })); }}
           className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
           No Fridays
         </button>
-        <button onClick={() => setCells((p) => {
+        <button onClick={() => { dirty.current = true; setCells((p) => {
           const n = { ...p };
           for (let d = 0; d < 5; d++) for (const per of [0, 1]) if (!n[`${d}-${per}`]) n[`${d}-${per}`] = 1;
           return n;
-        })} className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
+        }); }} className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
           Prefer mornings
         </button>
-        <button onClick={() => setCells({})}
+        <button onClick={() => { dirty.current = true; setCells({}); }}
           className="min-h-9 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground underline underline-offset-2">
           Clear
         </button>
@@ -198,10 +285,10 @@ function IntakePanel({ user, load, busy, onSend }: {
           <label key={label} className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
             {label}
             <span className="flex items-center gap-1">
-              <button aria-label={`fewer ${label}`} onClick={() => { set(Math.max(0, value - 1)); setLoadTouched(true); }}
+              <button aria-label={`fewer ${label}`} onClick={() => { dirty.current = true; set(Math.max(0, value - 1)); setLoadTouched(true); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted ring-1 ring-border active:scale-95"><Minus className="h-3.5 w-3.5" /></button>
               <span className="w-5 text-center text-sm font-extrabold text-foreground">{value}</span>
-              <button aria-label={`more ${label}`} onClick={() => { set(Math.min(8, value + 1)); setLoadTouched(true); }}
+              <button aria-label={`more ${label}`} onClick={() => { dirty.current = true; set(Math.min(8, value + 1)); setLoadTouched(true); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted ring-1 ring-border active:scale-95"><Plus className="h-3.5 w-3.5" /></button>
             </span>
           </label>
@@ -214,7 +301,7 @@ function IntakePanel({ user, load, busy, onSend }: {
       <textarea
         className="min-h-16 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
         placeholder='Optional note — e.g. "Conference in week 6, flexible otherwise."'
-        value={note} onChange={(e) => setNote(e.target.value)}
+        value={note} onChange={(e) => { dirty.current = true; setNote(e.target.value); }}
       />
       <button disabled={busy || (ops.length === 0 && !note.trim())}
         onClick={() => onSend(ops, note.trim())}
@@ -311,13 +398,14 @@ function StudentPlanPanel({ user, onToast }: {
   const [message, setMessage] = useState("I work Tuesdays and Thursdays. I need CS 201 this term, and I'd like 4 courses.");
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<StudentPlanResponse | null>(null);
+  const [resolutions, setResolutions] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!cohortId && scenario?.cohorts?.length) setCohortId(scenario.cohorts[0].id);
   }, [scenario, cohortId]);
 
-  async function suggest() {
+  async function suggest(nextResolutions: Record<string, string> = resolutions) {
     if ((!cohortId && !programId) || !message.trim()) return;
     setBusy(true);
     try {
@@ -328,6 +416,7 @@ function StudentPlanPanel({ user, onToast }: {
           program_id: programId || undefined,
           study_record: recordMode === "record" ? recordText : undefined,
           message: message.trim(),
+          resolutions: nextResolutions,
         }),
       });
       const data = await res.json();
@@ -340,6 +429,12 @@ function StudentPlanPanel({ user, onToast }: {
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Suggestion failed", "error");
     } finally { setBusy(false); }
+  }
+
+  function resolveConflict(kind: string, option: string) {
+    const next = { ...resolutions, [kind]: option };
+    setResolutions(next);
+    void suggest(next);
   }
 
   return (
@@ -402,6 +497,37 @@ function StudentPlanPanel({ user, onToast }: {
           <div className="h-2.5 overflow-hidden rounded-full bg-muted">
             <div className="brand-gradient h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${plan.progress.pct_complete}%` }} />
           </div>
+          {plan.projection_note && (
+            <div className={`mt-1 flex flex-col gap-1 rounded-lg border p-2 ${
+              plan.projection_status === "delayed"
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : plan.projection_status === "complete"
+                  ? "border-sky-200 bg-sky-50 text-sky-900"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-900"
+            }`}>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 shrink-0" />
+                <span className="font-bold">{plan.projection_note}</span>
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  plan.projection_status === "delayed"
+                    ? "bg-amber-200 text-amber-900"
+                    : plan.projection_status === "complete"
+                      ? "bg-sky-200 text-sky-900"
+                      : "bg-emerald-200 text-emerald-900"
+                }`}>
+                  {plan.projection_status === "delayed"
+                    ? `+${plan.graduation_delay_terms ?? 0} term${(plan.graduation_delay_terms ?? 0) === 1 ? "" : "s"}`
+                    : plan.projection_status === "complete" ? "complete" : "on track"}
+                </span>
+              </div>
+              <p className="text-[11px] font-medium opacity-90">
+                Projected: {plan.projected_graduation || "—"}
+                {plan.expected_graduation && plan.expected_graduation !== plan.projected_graduation
+                  ? ` · Expected: ${plan.expected_graduation}` : ""}
+                {" "}· from your degree map, record, locked prerequisites and this verified plan
+              </p>
+            </div>
+          )}
           <p className="text-muted-foreground">
             Ready now (mandatory): {plan.progress.mandatory_ready.join(", ") || "none"}
             {plan.progress.mandatory_co_ready.length > 0 && <> · Co-take with gating course: {plan.progress.mandatory_co_ready.join(", ")}</>}
@@ -411,12 +537,44 @@ function StudentPlanPanel({ user, onToast }: {
         </div>
       )}
 
+      {plan?.missing_inputs && plan.missing_inputs.length > 0 && (
+        <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+          <p className="font-bold">Input missing — add it to sharpen this advice</p>
+          {plan.missing_inputs.map((item, i) => <p key={i} className="text-[11px]">{item}</p>)}
+        </div>
+      )}
+
+      {plan?.conflicts && plan.conflicts.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-violet-900">
+          <p className="font-bold">Your inputs contradict each other — choose what wins</p>
+          {plan.conflicts.map((c) => (
+            <div key={c.kind} className="space-y-1">
+              <p className="font-semibold">{c.summary}</p>
+              {c.detail && <p className="text-[11px] opacity-90">{c.detail}</p>}
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {c.options.map((opt) => (
+                  <button key={opt} disabled={busy}
+                    onClick={() => resolveConflict(c.kind, opt)}
+                    className={cn(
+                      "min-h-8 rounded-lg px-2.5 py-1 text-[11px] font-bold ring-1 transition-all active:scale-[0.97] disabled:opacity-50",
+                      c.chosen_option === opt
+                        ? "bg-violet-600 text-white ring-violet-600"
+                        : "bg-white text-violet-800 ring-violet-300 hover:bg-violet-100")}>
+                    {CONFLICT_OPTION_LABEL[opt] ?? opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <textarea
         className="min-h-16 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
         value={message} onChange={(e) => setMessage(e.target.value)}
         placeholder='e.g. "I work Tue/Thu, I need CS 201, no 8:00 classes, 4 courses please."'
       />
-      <button disabled={busy || (!cohortId && !programId) || !message.trim()} onClick={suggest}
+      <button disabled={busy || (!cohortId && !programId) || !message.trim()} onClick={() => void suggest()}
         className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50">
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
         Suggest a verified schedule
@@ -480,6 +638,7 @@ export function MyScheduleView({ user, onToast }: {
     user.role === "coordinator" ? "matrix" : "timetable"
   );
   const [savedOptions, setSavedOptions] = useState<{ engine?: string; objective?: string }>({});
+  const [termWindow, setTermWindow] = useState<TermWindowState | null>(null);
   const { scenario } = useScenario();
   const liveCampus = useMemo(
     () => (scenario && mine ? buildLiveCampus(scenario, mine.placements) : null),
@@ -493,6 +652,7 @@ export function MyScheduleView({ user, onToast }: {
       const term = await termRes.json();
       options = term.options ?? {};
       setSavedOptions(options);
+      setTermWindow(term as TermWindowState);
     }
     const res = await authFetch("/api/schedule/mine");
     if (res.status === 404) {
@@ -577,6 +737,43 @@ export function MyScheduleView({ user, onToast }: {
     if (operations.length === 0 && !note) return;
     setBusy(true);
     try {
+      const capOps = operations.filter(
+        (o) => o.op === "set_load_cap" || o.op === "set_prep_cap");
+      // Before the deadline, a professor's hard/soft election is a first-class
+      // faculty-intake submission (per individual, no coordinator re-parse).
+      // Load-cap edits are not part of that window, so they keep the
+      // change-request path (which the solver verifies exactly).
+      if (termWindow?.open && capOps.length === 0) {
+        const hard = operations
+          .filter((o) => o.op === "add_instructor_unavailability" && o.day != null)
+          .flatMap((o) => (
+            o.period != null
+              ? [{ day: o.day as number, period: o.period }]
+              : [0, 1, 2, 3].map((period) => ({ day: o.day as number, period }))
+          ));
+        const preferences = operations
+          .filter((o) => o.op === "add_instructor_preference" && o.day != null)
+          .map((o) => ({
+            kind: o.kind ?? "prefer",
+            day: o.day ?? null,
+            period: o.period ?? null,
+            weight: o.weight ?? 8,
+          }));
+        const res = await authFetch("/api/term/window/submit", {
+          method: "POST",
+          body: JSON.stringify({
+            hard_unavailable: hard,
+            preferences,
+            note,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).detail || "Intake failed");
+        onToast(
+          `Submitted ${hard.length} hard and ${preferences.length} soft constraint(s) before the deadline`,
+          "success");
+        await load();
+        return;
+      }
       const res = await authFetch("/api/me/change-requests", {
         method: "POST",
         body: JSON.stringify({
@@ -694,7 +891,7 @@ export function MyScheduleView({ user, onToast }: {
       {user.role === "coordinator" && <ClosuresCard onToast={onToast} />}
 
       {(user.role === "instructor") && (
-        <IntakePanel user={user} load={mine?.load} busy={busy} onSend={sendIntake} />
+        <IntakePanel user={user} load={mine?.load} intakeWindow={termWindow} busy={busy} onSend={sendIntake} />
       )}
 
       {user.role === "student" && <StudentPlanPanel user={user} onToast={onToast} />}

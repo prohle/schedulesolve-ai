@@ -287,6 +287,21 @@ export interface StudentProgress {
   mandatory_co_ready: string[];
   mandatory_locked: string[];
   optional_remaining: number;
+  projected_graduation?: string;
+  expected_graduation?: string;
+  projection_status?: "on_track" | "delayed" | "complete";
+  projection_note?: string;
+  graduation_delay_terms?: number;
+  projection_course?: string;
+}
+
+export interface StudentPlanConflict {
+  kind: string;
+  summary: string;
+  detail?: string;
+  options: string[];
+  default_option?: string;
+  chosen_option?: string;
 }
 
 export interface StudentPlanResponse {
@@ -306,7 +321,17 @@ export interface StudentPlanResponse {
   courses: StudentPlanCourse[];
   target_courses: number;
   target_met: boolean;
+  credits_selected?: number;
+  full_time?: boolean;
+  projected_graduation?: string;
+  expected_graduation?: string;
+  projection_status?: "on_track" | "delayed" | "complete";
+  projection_note?: string;
+  graduation_delay_terms?: number;
+  projection_course?: string;
   notes: string[];
+  missing_inputs?: string[];
+  conflicts?: StudentPlanConflict[];
   parser_mode: "muse-spark" | "mock";
   model?: string;
   parser_latency_ms?: number;

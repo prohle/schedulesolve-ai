@@ -25,19 +25,144 @@ student's life, the answer says exactly that.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.intelligence.matrices import course_depths, placement_intervals
 from app.models.results import (
     AgentStep,
     StudentConstraints,
+    StudentPlanConflict,
     StudentPlanCourse,
     StudentPlanResponse,
     StudentProgress,
 )
-from app.models.scenario import PERIOD_COUNT, Program, Scenario
+from app.models.scenario import PERIOD_COUNT, Cohort, Program, Scenario, Student
 from app.parsing.student import StudentPlanParser, extract_course_ids
 from app.solver.scheduling_model import solve
 
 _MAX_NODES = 200_000
+
+
+@dataclass(frozen=True)
+class GraduationProjection:
+    """Term-level projection from the degree map, record and verified plan."""
+
+    status: str
+    projected_graduation: str
+    expected_graduation: str
+    note: str
+    delay_terms: int
+    course: str
+
+
+def _term_label(cohort: Cohort | None, student: Student | None, term: int) -> str:
+    """Map a 1-based term index to the calendar term the cohort entered in.
+
+    Term 1 = Fall of the admission year; term 2 = Spring of the next year;
+    term 8 = Spring four years later. Matches the seed's odd-term roadmap.
+    """
+    if cohort is not None:
+        base_year = cohort.admission_year
+    elif student is not None:
+        base_year = student.entry_year
+    else:
+        return f"Term {term}"
+    season = "Fall" if term % 2 == 1 else "Spring"
+    return f"{season} {base_year + term // 2}"
+
+
+def project_graduation(
+    scenario: Scenario,
+    cohort: Cohort | None,
+    student: Student | None,
+    program: Program,
+    completed: set[str],
+    plan_course_ids: set[str],
+    target_courses: int,
+) -> GraduationProjection:
+    """Project the term when every mandatory course can be completed.
+
+    Inputs: degree-map depth (the sequence), completed courses, locked
+    prerequisites, the current term's verified plan, and the student's course
+    load. Future terms are simulated at the student's target load, taking
+    eligible mandatory courses in depth order. Optional electives are not
+    counted against the mandatory chain (they are shown separately).
+    """
+    depths = course_depths(program)
+    mandatory = {r.course_id for reqs in program.roadmap.values()
+                 for r in reqs if r.required}
+    remaining = set(mandatory) - set(completed)
+    current = cohort.current_term if cohort is not None else 1
+    expected_term = (
+        max(1, (cohort.graduation_year - cohort.admission_year) * 2)
+        if cohort is not None
+        else max(current, max((depths.get(c, current) for c in mandatory), default=current))
+    )
+    expected_label = _term_label(cohort, student, expected_term)
+    if not remaining:
+        return GraduationProjection(
+            "complete", expected_label, expected_label,
+            f"All mandatory courses complete — {expected_label}", 0, "")
+
+    # Only mandatory earlier-depth courses gate a later mandatory course.
+    earlier = {
+        c: {o for o, d in depths.items() if d < depths.get(c, 0) and o in mandatory}
+        for c in remaining
+    }
+    done = set(completed)
+    taken: list[str] = []
+    term = current
+    last_course: str | None = None
+    cap = max(1, target_courses)
+    for _ in range(max(expected_term, current) + 16):
+        if not remaining:
+            break
+        if term == current:
+            # The verified plan is the truth for the term being advised;
+            # it may co-enroll a course ahead of its depth.
+            take = sorted(
+                (c for c in remaining if c in plan_course_ids),
+                key=lambda c: (depths.get(c, 0), scenario.course_code(c)))
+        else:
+            eligible = [
+                c for c in remaining
+                if earlier[c] <= done and depths.get(c, 0) <= term
+            ]
+            eligible.sort(key=lambda c: (depths.get(c, 0), scenario.course_code(c)))
+            take = eligible[:cap]
+        for c in take:
+            done.add(c)
+            remaining.discard(c)
+            taken.append(c)
+            last_course = c
+        if not remaining:
+            break
+        term += 1
+
+    projected_term = term if not remaining else term + 1
+    projected_label = _term_label(cohort, student, projected_term)
+    if projected_term <= expected_term:
+        return GraduationProjection(
+            "on_track", projected_label, expected_label,
+            f"On track for {expected_label}", 0, "")
+
+    delay = projected_term - expected_term
+    culprit: str | None
+    if remaining:
+        locked = [c for c in remaining if earlier[c] - done]
+        pool = locked or list(remaining)
+        culprit = max(pool, key=lambda c: (depths.get(c, 0), scenario.course_code(c)))
+    elif taken:
+        # The chain finished late: name the deepest course in it (the one
+        # whose prerequisites forced the extra term), not an arbitrary pick.
+        culprit = max(taken, key=lambda c: (depths.get(c, 0), scenario.course_code(c)))
+    else:
+        culprit = last_course
+    code = scenario.course_code(culprit) if culprit else "A required course"
+    return GraduationProjection(
+        "delayed", projected_label, expected_label,
+        f"{code} pushes graduation +{delay} term{'s' if delay != 1 else ''} — projected {projected_label}",
+        delay, code)
 
 
 def _section_score(period: int | None, c: StudentConstraints,
@@ -56,6 +181,47 @@ def _section_score(period: int | None, c: StudentConstraints,
     return score
 
 
+@dataclass(frozen=True)
+class CompletedSources:
+    """Both possible progress sources, kept separate so a disagreement can be
+    shown to the student instead of one silently overwriting the other."""
+
+    record: set[str]
+    lookup: set[str]
+    record_given: bool
+    source: str
+
+
+def completed_sources(
+    scenario: Scenario,
+    program: Program,
+    cohort,  # noqa: ANN001
+    explicit_ids: list[str],
+    record_text: str | None,
+    parsed_completed: list[str],
+) -> CompletedSources:
+    """The record the student supplied and the cohort lookup, side by side."""
+    valid = {c.id for c in scenario.courses}
+    record = {x for x in explicit_ids if x in valid}
+    if record_text:
+        record |= set(extract_course_ids(record_text, scenario))
+    record |= {x for x in parsed_completed if x in valid}
+    lookup: set[str] = set()
+    if cohort is not None:
+        lookup = {
+            r.course_id
+            for term, reqs in program.roadmap.items() if int(term) < cohort.current_term
+            for r in reqs if r.required
+        } & valid
+    if record:
+        return CompletedSources(record, lookup, True, "study record you provided")
+    if cohort is not None:
+        return CompletedSources(
+            record, lookup, False,
+            f"progress lookup for {cohort.name} (record not provided)")
+    return CompletedSources(record, lookup, False, "no study record provided")
+
+
 def resolve_completed(
     scenario: Scenario,
     program: Program,
@@ -65,21 +231,13 @@ def resolve_completed(
     parsed_completed: list[str],
 ) -> tuple[list[str], str]:
     """The student's completed set, from the best source we were given."""
-    valid = {c.id for c in scenario.courses}
-    explicit = {x for x in explicit_ids if x in valid}
-    if record_text:
-        explicit |= set(extract_course_ids(record_text, scenario))
-    explicit |= {x for x in parsed_completed if x in valid}
-    if explicit:
-        return sorted(explicit), "study record you provided"
+    sources = completed_sources(
+        scenario, program, cohort, explicit_ids, record_text, parsed_completed)
+    if sources.record_given:
+        return sorted(sources.record), sources.source
     if cohort is not None:
-        done = sorted({
-            r.course_id
-            for term, reqs in program.roadmap.items() if int(term) < cohort.current_term
-            for r in reqs if r.required
-        } & valid)
-        return done, f"progress lookup for {cohort.name} (record not provided)"
-    return [], "no study record provided"
+        return sorted(sources.lookup), sources.source
+    return [], sources.source
 
 
 def suggest_student_plan(
@@ -93,10 +251,16 @@ def suggest_student_plan(
     completed_course_ids: list[str] | None = None,
     student_id: str | None = None,
     target_credits: int | None = None,
+    resolutions: dict[str, str] | None = None,
 ) -> StudentPlanResponse:
+    # The student's arbitration of contradictions, keyed by conflict kind.
+    # Anything not supplied keeps the documented default.
+    resolutions = dict(resolutions or {})
     student = next((s for s in scenario.students if s.id == student_id), None)
     if student_id and student is None:
-        raise ValueError(f"Unknown student '{student_id}'.")
+        raise ValueError(
+            f"Missing input: unknown student '{student_id}'. Pick a valid "
+            f"student or supply your cohort.")
     if student is not None:
         cohort_id = cohort_id or student.cohort_id
         program_id = program_id or student.program_id
@@ -104,13 +268,17 @@ def suggest_student_plan(
             student.completed_course_ids)
     cohort = next((c for c in scenario.cohorts if c.id == cohort_id), None)
     if cohort_id and cohort is None:
-        raise ValueError(f"Unknown cohort '{cohort_id}'.")
+        raise ValueError(
+            f"Missing input: unknown cohort '{cohort_id}'. Pick a cohort from "
+            f"the institution or supply your degree.")
     program = next((p for p in scenario.programs if p.id == program_id), None) \
         if program_id else None
     if program is None and cohort is not None:
         program = next(p for p in scenario.programs if p.id == cohort.program_id)
     if program is None:
-        raise ValueError("Tell us your degree (program) or cohort so we can advise.")
+        raise ValueError(
+            "Missing input: your degree (program_id) or cohort_id — we cannot "
+            "advise without one.")
 
     parser = parser or StudentPlanParser()
     depths = course_depths(program)
@@ -146,10 +314,79 @@ def suggest_student_plan(
     target = max(constraints.target_courses,
                  scenario.policy.min_courses_full_time)
 
-    completed, source = resolve_completed(
+    sources = completed_sources(
         scenario, program, cohort, completed_course_ids or [],
         study_record, constraints.completed_course_ids)
-    completed_set = set(completed)
+    record, lookup = set(sources.record), set(sources.lookup)
+    conflicts: list[StudentPlanConflict] = []
+    missing_inputs: list[str] = []
+
+    # Never silently overwrite one progress source with the other: when the
+    # student's own record and the cohort lookup disagree, the response names
+    # both sides and lets the student choose which wins.
+    if sources.record_given and cohort is not None and record != lookup:
+        only_record = sorted(record - lookup)
+        only_lookup = sorted(lookup - record)
+        parts = []
+        if only_record:
+            parts.append("your record adds "
+                         + ", ".join(scenario.course_code(c) for c in only_record))
+        if only_lookup:
+            parts.append("the cohort lookup adds "
+                         + ", ".join(scenario.course_code(c) for c in only_lookup))
+        chosen = resolutions.get("record_vs_lookup", "record")
+        if chosen not in ("record", "lookup"):
+            chosen = "record"
+        conflicts.append(StudentPlanConflict(
+            kind="record_vs_lookup",
+            summary="Your study record and your cohort's progress lookup disagree.",
+            detail="; ".join(parts) + ". Choose which source wins.",
+            options=["record", "lookup"],
+            default_option="record",
+            chosen_option=chosen))
+        if chosen == "lookup":
+            completed_set = lookup
+            source = (f"progress lookup for {cohort.name} "
+                      "(you chose the cohort lookup over your record)")
+        else:
+            completed_set = record
+            source = sources.source
+    elif sources.record_given:
+        completed_set = record
+        source = sources.source
+    elif cohort is not None:
+        completed_set = lookup
+        source = sources.source
+    else:
+        completed_set = set()
+        source = sources.source
+    completed = sorted(completed_set)
+
+    # "I need CS 201" when CS 201 is already on the record is a contradiction.
+    # Default: keep it completed. If the student chooses "retake", pull it off
+    # the record before eligibility is computed so the plan can include it.
+    retake: set[str] = set()
+    if resolutions.get("must_already_completed") == "retake":
+        retake = {c for c in constraints.must_course_ids if c in completed_set}
+        if retake:
+            completed_set -= retake
+            completed = sorted(completed_set)
+
+    # Tell the student exactly what is missing rather than quietly assuming.
+    if not sources.record_given:
+        if cohort is not None:
+            missing_inputs.append(
+                "Your individual study record (completed courses) — the "
+                f"projection is using {cohort.name}'s roadmap position, which "
+                "may not match your transcript.")
+        else:
+            missing_inputs.append(
+                "Your completed courses (a study record or course codes) — "
+                "without them we cannot audit progress or project graduation.")
+    if not program.roadmap:
+        missing_inputs.append(
+            f"A degree map for {program.name} — the institution has not "
+            "published one yet.")
 
     def eligible(cid: str) -> bool:
         """Every strictly-earlier degree-map course is on the record."""
@@ -174,13 +411,17 @@ def suggest_student_plan(
     locked_mandatory = [c for c in remaining_mandatory
                         if not eligible(c) and c not in co_ready]
 
-    grad_year = (cohort.graduation_year if cohort is not None
-                 else (student.entry_year + 4 if student is not None else 0))
-    projected_graduation = f"Spring {grad_year}" if grad_year else ""
+    projection = project_graduation(
+        scenario, cohort, student, program, completed_set, set(), target)
     progress = StudentProgress(
         source=source, program_id=program.id, program_name=program.name,
         completed_course_ids=completed,
-        projected_graduation=projected_graduation,
+        projected_graduation=projection.projected_graduation,
+        expected_graduation=projection.expected_graduation,
+        projection_status=projection.status,
+        projection_note=projection.note,
+        graduation_delay_terms=projection.delay_terms,
+        projection_course=projection.course,
         required_total=len(mandatory_all),
         required_completed=len(mandatory_all & completed_set),
         pct_complete=round(100 * len(mandatory_all & completed_set)
@@ -211,15 +452,40 @@ def suggest_student_plan(
     notes: list[str] = []
     must: list[str] = []
     for cid in constraints.must_course_ids:
-        if cid in completed_set:
-            notes.append(f"{scenario.course_code(cid)} is already on your record — "
+        code = scenario.course_code(cid)
+        if cid in retake:
+            conflicts.append(StudentPlanConflict(
+                kind="must_already_completed",
+                summary=f"You asked for {code}, but it is already on your record.",
+                detail="You chose to retake it this term.",
+                options=["completed", "retake"],
+                default_option="completed",
+                chosen_option="retake"))
+            notes.append(f"You chose to retake {code}; it is treated as a "
+                         f"request this term even though it is on your record.")
+            if cid in ready_set or cid in co_ready:
+                must.append(cid)
+            else:
+                missing = [scenario.course_code(o) for o in blockers(cid)]
+                notes.append(f"{code} cannot be retaken this term: "
+                             f"{', '.join(missing)} must be completed first.")
+        elif cid in completed_set:
+            conflicts.append(StudentPlanConflict(
+                kind="must_already_completed",
+                summary=f"You asked for {code}, but it is already on your record.",
+                detail=("Keep it completed and spend the term on something else, or "
+                        "retake it deliberately."),
+                options=["completed", "retake"],
+                default_option="completed",
+                chosen_option="completed"))
+            notes.append(f"{code} is already on your record — "
                          f"no need to take it again.")
         elif cid in locked_mandatory:
             missing = [scenario.course_code(o) for o in blockers(cid)]
-            notes.append(f"{scenario.course_code(cid)} is still locked: "
+            notes.append(f"{code} is still locked: "
                          f"{', '.join(missing)} must be completed first.")
         elif cid not in ready_set and cid not in co_ready:
-            notes.append(f"{scenario.course_code(cid)} is not part of the "
+            notes.append(f"{code} is not part of the "
                          f"{program.name} degree map.")
         else:
             must.append(cid)
@@ -229,13 +495,22 @@ def suggest_student_plan(
         trace.append(AgentStep(
             step="solve", actor="CP-SAT", status="blocked",
             detail=f"No placed timetable to advise from (solve {result.status})."))
+        trace.append(AgentStep(
+            step="projection", actor="Degree-map projection",
+            detail=projection.note))
         return StudentPlanResponse(
             cohort_id=cohort.id if cohort else None,
             cohort_name=cohort.name if cohort else "",
             constraints=constraints, progress=progress, target_courses=target,
-            projected_graduation=projected_graduation,
+            projected_graduation=projection.projected_graduation,
+            expected_graduation=projection.expected_graduation,
+            projection_status=projection.status,
+            projection_note=projection.note,
+            graduation_delay_terms=projection.delay_terms,
+            projection_course=projection.course,
             notes=notes + ["No timetable could be built for this term, "
                            "so no personal plan can be suggested yet."],
+            missing_inputs=missing_inputs, conflicts=conflicts,
             parser_mode=parser.mode, model=parser.model,  # type: ignore[arg-type]
             parser_latency_ms=parser.last_latency_ms, agent_trace=trace)
 
@@ -248,6 +523,10 @@ def suggest_student_plan(
 
     eligible_courses = ready_mandatory + ready_optional + co_ready
     candidates: dict[str, list] = {}
+    relaxed_courses: set[str] = set()
+    must_conflict_choice = resolutions.get("must_vs_availability", "availability")
+    if must_conflict_choice not in ("availability", "course"):
+        must_conflict_choice = "availability"
     for cid in eligible_courses:
         sections = [pl for pl in by_course.get(cid, [])
                     if not (placement_intervals(pl) & forbidden)]
@@ -255,9 +534,39 @@ def suggest_student_plan(
             sections.sort(key=lambda pl: -_section_score(pl.period, constraints, pl.days))
             candidates[cid] = sections
         elif cid in must:
-            notes.append(f"{scenario.course_code(cid)} has no section outside your "
-                         f"unavailable times — taking it this term would clash with "
-                         f"what you told us. Talk to your coordinator about a swap.")
+            code = scenario.course_code(cid)
+            all_sections = sorted(
+                by_course.get(cid, []),
+                key=lambda pl: -_section_score(pl.period, constraints, pl.days))
+            if must_conflict_choice == "course" and all_sections:
+                candidates[cid] = all_sections
+                relaxed_courses.add(cid)
+                notes.append(
+                    f"You chose {code} over your stated availability — its "
+                    f"section meets in a time you marked unavailable. Expect a "
+                    f"clash with work or another commitment.")
+                conflicts.append(StudentPlanConflict(
+                    kind="must_vs_availability",
+                    summary=f"{code} only meets inside the times you marked unavailable.",
+                    detail=("Keeping the course may clash with work or another "
+                            "commitment; keeping your availability may delay it."),
+                    options=["availability", "course"],
+                    default_option="availability",
+                    chosen_option="course"))
+            else:
+                notes.append(f"{code} has no section outside your "
+                             f"unavailable times — taking it this term would clash "
+                             f"with what you told us. Talk to your coordinator "
+                             f"about a swap, or choose the course over your "
+                             f"availability.")
+                conflicts.append(StudentPlanConflict(
+                    kind="must_vs_availability",
+                    summary=f"{code} only meets inside the times you marked unavailable.",
+                    detail=("Keeping the course may clash with work or another "
+                            "commitment; keeping your availability may delay it."),
+                    options=["availability", "course"],
+                    default_option="availability",
+                    chosen_option="availability"))
         elif cid in ready_mandatory and cid in by_course:
             notes.append(f"{scenario.course_code(cid)} (mandatory) only meets inside "
                          f"your unavailable times this term.")
@@ -324,7 +633,8 @@ def suggest_student_plan(
     verified = True
     for pl in chosen:
         cells = placement_intervals(pl)
-        if cells & cells_seen or cells & forbidden \
+        clashes_with_life = cells & forbidden and pl.course_id not in relaxed_courses
+        if cells & cells_seen or clashes_with_life \
                 or pl.course_id not in eligible_courses \
                 or pl.course_id in completed_set \
                 or not blockers(pl.course_id) <= (completed_set | chosen_ids):
@@ -332,13 +642,30 @@ def suggest_student_plan(
         cells_seen |= cells
     trace.append(AgentStep(
         step="verify", actor="Validator",
-        detail=("Re-checked the finished plan independently: no overlapping "
-                "courses, nothing already on your record, nothing in your "
-                "unavailable times, every course eligible in your degree map."
+        detail=(("Re-checked the finished plan independently: no overlapping "
+                 "courses, nothing already on your record, every course "
+                 "eligible in your degree map.")
+                + ("" if not relaxed_courses else
+                   " You explicitly chose the course over your unavailable "
+                   "times for: " + ", ".join(
+                       scenario.course_code(c) for c in sorted(relaxed_courses)) + ".")
                 if verified else "Verification failed — plan withheld."),
         status="ok" if verified else "blocked"))
     if not verified:
         chosen = []
+
+    projection = project_graduation(
+        scenario, cohort, student, program, completed_set,
+        {pl.course_id for pl in chosen}, target)
+    progress.projected_graduation = projection.projected_graduation
+    progress.expected_graduation = projection.expected_graduation
+    progress.projection_status = projection.status  # type: ignore[assignment]
+    progress.projection_note = projection.note
+    progress.graduation_delay_terms = projection.delay_terms
+    progress.projection_course = projection.course
+    trace.append(AgentStep(
+        step="projection", actor="Degree-map projection",
+        detail=projection.note))
 
     courses: list[StudentPlanCourse] = []
     for pl in sorted(chosen, key=lambda p: (min(p.days), p.period or 0)):
@@ -382,6 +709,13 @@ def suggest_student_plan(
         constraints=constraints, progress=progress,
         courses=courses, target_courses=target, target_met=target_met,
         credits_selected=credits_selected, full_time=full_time,
-        projected_graduation=projected_graduation, notes=notes,
+        projected_graduation=projection.projected_graduation,
+        expected_graduation=projection.expected_graduation,
+        projection_status=projection.status,  # type: ignore[arg-type]
+        projection_note=projection.note,
+        graduation_delay_terms=projection.delay_terms,
+        projection_course=projection.course,
+        notes=notes,
+        missing_inputs=missing_inputs, conflicts=conflicts,
         parser_mode=parser.mode, model=parser.model,  # type: ignore[arg-type]
         parser_latency_ms=parser.last_latency_ms, agent_trace=trace)
