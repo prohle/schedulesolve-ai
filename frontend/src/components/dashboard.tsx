@@ -11,6 +11,7 @@ import { Sidebar, MobileNav, type ActiveView } from "./sidebar";
 import { WizardView } from "./views/wizard";
 import { DeliverablesView } from "./views/deliverables";
 import { TermSetupView } from "./views/term-setup";
+import { isUniversitySection } from "./views/university-tabs";
 import { IntelligenceView } from "./views/intelligence";
 import { LoginView } from "./views/login";
 import { MyScheduleView } from "./views/my-schedule";
@@ -86,7 +87,14 @@ export function Dashboard() {
           {/* Clearance for the fixed mobile tab bar (removed on lg). */}
           <div className="custom-scrollbar h-full overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 lg:pb-4">
             <div key={activeView} className="animate-rise mx-auto w-full max-w-6xl">
-              {activeView === "setup" && <TermSetupView user={user} onToast={showToast} />}
+              {isUniversitySection(activeView) && (
+                <TermSetupView
+                  user={user}
+                  onToast={showToast}
+                  section={activeView}
+                  onNavigate={setActiveView}
+                />
+              )}
               {activeView === "wizard" && <WizardView onToast={showToast} />}
               {activeView === "deliverables" && (
                 <DeliverablesView

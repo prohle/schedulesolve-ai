@@ -34,6 +34,7 @@ import {
 import { authFetch, type AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { DAY_NAMES, PERIOD_NAMES } from "@/types";
+import type { UniversitySection } from "./university-tabs";
 
 type Toast = (message: string, type?: "info" | "success" | "warning" | "error") => void;
 
@@ -194,21 +195,6 @@ interface Overview {
   counts: Record<string, number>;
 }
 
-type Tab =
-  | "overview"
-  | "facility"
-  | "map"
-  | "people"
-  | "degrees"
-  | "catalog"
-  | "students"
-  | "holidays"
-  | "weeks"
-  | "constraints"
-  | "calendar"
-  | "settings"
-  | "save";
-
 type EditState =
   | { kind: "building"; id: string; name: string }
   | { kind: "room"; id: string; name: string; capacity: number; room_type: string; building_id: string; equipment: string }
@@ -337,13 +323,22 @@ function IconButton({
   );
 }
 
-export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toast }) {
+export function TermSetupView({
+  user,
+  onToast,
+  section,
+  onNavigate,
+}: {
+  user: AuthUser;
+  onToast: Toast;
+  section: UniversitySection;
+  onNavigate: (section: UniversitySection) => void;
+}) {
   const [window, setWindow] = useState<TermWindow | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("overview");
   const [edit, setEdit] = useState<EditState | null>(null);
 
   const [term, setTerm] = useState("");
@@ -659,22 +654,6 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: typeof Building2 }[] = [
-    { id: "overview", label: "Overview", icon: ShieldCheck },
-    { id: "facility", label: "Facility", icon: Building2 },
-    { id: "map", label: "Map", icon: Map },
-    { id: "people", label: "People", icon: Users },
-    { id: "degrees", label: "Degree Map", icon: GraduationCap },
-    { id: "catalog", label: "Course Catalog", icon: BookOpen },
-    { id: "students", label: "Student bodies", icon: Users },
-    { id: "holidays", label: "Holidays", icon: CalendarDays },
-    { id: "weeks", label: "Number of weeks", icon: CalendarDays },
-    { id: "constraints", label: "Campus-wide", icon: AlertTriangle },
-    { id: "calendar", label: "University Calendar", icon: CalendarRange },
-    { id: "settings", label: "Settings", icon: Settings },
-    { id: "save", label: "Save schedule options", icon: Save },
-  ];
-
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -719,6 +698,8 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </div>
       </div>
 
+      {section === "people" && (
+        <>
       {/* Intake window + progress */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Section
@@ -838,9 +819,11 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
           </div>
         </Section>
       </div>
+        </>
+      )}
 
       {/* Instructor submission grid */}
-      {!isCoordinator && (
+      {section === "people" && !isCoordinator && (
         <Section
           title="Your constraints & preferences"
           hint="Click a cell to cycle: available → prefer → avoid → off. Off is a hard blackout; prefer/avoid are soft."
@@ -922,7 +905,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
       )}
 
       {/* Coordinator submissions table */}
-      {isCoordinator && (
+      {section === "people" && isCoordinator && (
         <Section
           title="Faculty submissions"
           hint="Who has submitted, what they asked for, and whether it was accepted into the model."
@@ -988,6 +971,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
       )}
 
       {/* Institution model */}
+      {section === "overview" && (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Buildings" value={String(overview.counts.buildings)} />
         <Stat label="Rooms" value={String(overview.counts.rooms)} />
@@ -996,24 +980,9 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         <Stat label="Sections" value={String(overview.counts.sections)} />
         <Stat label="Cohorts" value={String(overview.counts.cohorts)} />
       </div>
+      )}
 
-      <div className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all",
-              tab === id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" && (
+      {section === "overview" && (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <Section title="Load calculation requirements" icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}>
             <dl className="grid grid-cols-2 gap-2 text-xs">
@@ -1059,7 +1028,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </div>
       )}
 
-      {tab === "facility" && (
+      {section === "facility" && (
         <Section
           title="Campus & buildings"
           hint={`${overview.campuses[0]?.name ?? "Institution"} — every building the solver can place a section in.`}
@@ -1109,7 +1078,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "facility" && (
+      {section === "facility" && (
         <Section
           title="Rooms & halls"
           hint={`${overview.rooms.length} rooms · ${overview.halls.length} large halls (capacity ≥ 100). Edit capacity/equipment or remove a room.`}
@@ -1175,7 +1144,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "people" && (
+      {section === "people" && (
         <Section
           title="Faculty & load calculations"
           hint="Contract caps, qualifications and the current placed load. Edits apply to the next solve."
@@ -1276,7 +1245,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "weeks" && (
+      {section === "weeks" && (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <Section title="Term weeks" hint="How many weeks the timetable repeats across." icon={<CalendarDays className="h-4 w-4 text-blue-600" />}>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -1397,7 +1366,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </div>
       )}
 
-      {tab === "constraints" && (
+      {section === "constraints" && (
         <Section
           title="Campus-wide constraints"
           hint="Institution-level rules the solver enforces on every section."
@@ -1442,7 +1411,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "degrees" && (
+      {section === "degrees" && (
         <div className="space-y-3">
           <Section
             title="Degree maps"
@@ -1567,7 +1536,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </div>
       )}
 
-      {tab === "map" && (
+      {section === "map" && (
         <Section
           title="Campus map"
           hint="Buildings grouped by campus quad. Select a building to inspect or edit its rooms."
@@ -1592,7 +1561,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
                   {buildings.map((building) => (
                     <button
                       key={building.id}
-                      onClick={() => setTab("facility")}
+                      onClick={() => onNavigate("facility")}
                       className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left text-[11px] transition-all hover:border-blue-300 hover:shadow-xs"
                     >
                       <span className="min-w-0">
@@ -1613,7 +1582,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "catalog" && (
+      {section === "catalog" && (
         <Section
           title="Course catalog"
           hint={`${overview.courses.length} courses. Patterns, room type, seats and required equipment drive the solver.`}
@@ -1680,7 +1649,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "students" && (
+      {section === "students" && (
         <Section
           title="Student bodies"
           hint="Every cohort, its program, current term and the courses it must take this term."
@@ -1745,7 +1714,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "holidays" && (
+      {section === "holidays" && (
         <Section
           title="Holidays & campus closures"
           hint="A closure removes a weekday (or one period) from the timetable everywhere."
@@ -1842,7 +1811,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "calendar" && (
+      {section === "calendar" && (
         <Section
           title="University calendar"
           hint="The term timeline the solver plans against."
@@ -1883,7 +1852,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </Section>
       )}
 
-      {tab === "settings" && (
+      {section === "settings" && (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <Section
             title="Term settings"
@@ -1954,7 +1923,7 @@ export function TermSetupView({ user, onToast }: { user: AuthUser; onToast: Toas
         </div>
       )}
 
-      {tab === "save" && (
+      {section === "save" && (
         <Section
           title="Save schedule options"
           hint="Defaults the solver and publish flow use for this term. Persisted with the term."
