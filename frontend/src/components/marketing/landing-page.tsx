@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Eye,
   FileText,
+  LayoutGrid,
   LogIn,
+  Pause,
   Play,
   Sparkles,
 } from "lucide-react";
@@ -41,50 +43,80 @@ const NAV_LINKS = [
 ];
 
 const HERO_SLOTS = [
-  { id: 0, label: "08:30", time: "08:30 – 10:00" },
-  { id: 1, label: "10:00 Peak", time: "10:00 – 11:30" },
-  { id: 2, label: "11:30", time: "11:30 – 13:00" },
-  { id: 4, label: "14:00", time: "14:00 – 15:30" },
-];
-
-const HOTSPOTS = [
+  {
+    id: 0,
+    label: "08:30",
+    time: "08:30 – 10:00",
+    utilization: "34.2%",
+    utilBadge: "Low Load",
+    utilTone: "border-slate-700 bg-slate-800 text-slate-300",
+    students: "5,260 / 15,370",
+    density: "36% Capacity",
+  },
   {
     id: 1,
-    title: "Wheeler Hall (Humanities)",
-    meta: "1,810 Total Seats • 2 Auditoriums",
-    note: "100% Conflict Free",
-    noteTone: "text-emerald-400",
-    position: "top-[30%] left-[26%]",
-    // Opens above the badge: hotspot 1 and 2 sit close together, so stacking
-    // their cards vertically keeps both readable instead of overlapping.
-    placement: "top",
+    label: "10:00 Peak",
+    time: "10:00 – 11:30",
+    utilization: "78.4% Peak",
+    utilBadge: "Optimal Flow",
+    utilTone: "border-emerald-500/30 bg-emerald-950/80 text-emerald-400",
+    students: "12,050 / 15,370",
+    density: "84% Capacity",
   },
   {
     id: 2,
-    title: "Soda Hall (Computer Science)",
-    meta: "CS 61A & AI Research Labs",
-    note: "92% Peak Workload Fit",
-    noteTone: "text-blue-400",
-    position: "top-[38%] left-[56%]",
-    placement: "bottom",
+    label: "11:30",
+    time: "11:30 – 13:00",
+    utilization: "82.1% Peak",
+    utilBadge: "High Density",
+    utilTone: "border-amber-500/30 bg-amber-950/80 text-amber-400",
+    students: "12,610 / 15,370",
+    density: "91% Capacity",
   },
   {
-    id: 3,
-    title: "Haas Business Complex",
-    meta: "2,000 Seats • MBA Case Rooms",
-    note: "100% Faculty Pref Match",
-    noteTone: "text-purple-400",
-    position: "top-[49%] left-[82%]",
-    placement: "left",
+    id: 4,
+    label: "14:00",
+    time: "14:00 – 15:30",
+    utilization: "61.8%",
+    utilBadge: "Balanced",
+    utilTone: "border-cyan-500/30 bg-cyan-950/80 text-cyan-300",
+    students: "9,490 / 15,370",
+    density: "65% Capacity",
   },
 ];
 
-const HOTSPOT_PLACEMENT: Record<string, string> = {
-  top: "bottom-8 left-1/2 -translate-x-1/2",
-  bottom: "top-8 left-1/2 -translate-x-1/2",
-  left: "right-8 top-1/2 -translate-y-1/2",
-  right: "left-8 top-1/2 -translate-y-1/2",
-};
+const HERO_PINS = [
+  {
+    id: 1,
+    position: "top-[30%] left-[26%] sm:top-[32%] sm:left-[28%]",
+    title: "Node #1: HVAC & Audio Grid",
+    lines: ["Ambient Temp: 71.2°F", "Acoustic Profile: Optimal"],
+    toastTitle: "Node #1: Overhead Infrastructure & Acoustic Grid",
+    toastDesc:
+      "Monitors ambient noise profiles, overhead LED climate controls, and HVAC airflow in primary lecture zones.",
+    align: "center",
+  },
+  {
+    id: 2,
+    position: "top-[44%] left-[56%] sm:top-[42%] sm:left-[58%]",
+    title: "Node #2: Center Tier Occupancy",
+    lines: ["Density: {density}", "ADA Accessible Routes: Verified"],
+    toastTitle: "Node #2: Mid-Tier Seating Cluster & Desk Capacity",
+    toastDesc:
+      "Calculates real-time student desk occupancy, wheelchair accessibility clearances, and seat distance ratios.",
+    align: "center",
+  },
+  {
+    id: 3,
+    position: "top-[52%] left-[80%] sm:top-[50%] sm:left-[82%]",
+    title: "Node #3: Quad Access Buffer",
+    lines: ["Transit Buffer: 4.2 min", "Next Class Swap: 11:30 AM"],
+    toastTitle: "Node #3: Quad Access & Transit Buffer Zone",
+    toastDesc:
+      "Tracks inter-building student flow to ensure 10-minute pass-through windows between back-to-back classes.",
+    align: "right",
+  },
+];
 
 function scrollToDemo() {
   document.getElementById("demo-app")?.scrollIntoView({ behavior: "smooth" });
@@ -96,9 +128,25 @@ export function LandingPage() {
   const [analyticsOpen, setAnalyticsOpen] = useState(true);
   const [benchmarkOpen, setBenchmarkOpen] = useState(false);
   const [proof, setProof] = useState<ProofKey | null>(null);
-  const [activeHotspot, setActiveHotspot] = useState<number | null>(null);
+  const [pinToast, setPinToast] = useState<number | null>(null);
+  const [heatmapOn, setHeatmapOn] = useState(true);
+  const [autoScrub, setAutoScrub] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
+  const activeSlot = HERO_SLOTS.find((entry) => entry.id === slot) ?? HERO_SLOTS[1];
+  const activePin = HERO_PINS.find((pin) => pin.id === pinToast) ?? null;
+
+  // Auto-scrub cycles the four hero telemetry windows every 2.2s.
+  useEffect(() => {
+    if (!autoScrub) return;
+    const timer = window.setInterval(() => {
+      setSlot((current) => {
+        const index = HERO_SLOTS.findIndex((entry) => entry.id === current);
+        return HERO_SLOTS[(index + 1) % HERO_SLOTS.length].id;
+      });
+    }, 2200);
+    return () => window.clearInterval(timer);
+  }, [autoScrub]);
 
   function showToast(message: string) {
     setToast(message);
@@ -269,85 +317,115 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Campus backdrop + live overlay */}
+            {/* Campus backdrop + live telemetry overlay */}
             <div className="relative lg:col-span-5">
-              <div className="group/hero relative overflow-hidden rounded-3xl border border-editorial-border bg-navy-950 shadow-editorial">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/photo-1541829070764-84a7d30dd3f3.avif"
-                  alt="University academic quad"
-                  className="h-[460px] w-full object-cover transition-transform duration-700 group-hover/hero:scale-105"
-                />
+              <div className="group/hero relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
+                <div className="relative h-[480px] w-full overflow-hidden sm:h-[540px] md:h-[600px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/photo-1562774053-701939374585.avif"
+                    alt="University lecture hall infrastructure"
+                    className="h-full w-full scale-[1.01] object-cover object-center transition-transform duration-700 group-hover/hero:scale-105"
+                  />
 
-                {HOTSPOTS.map((hotspot) => (
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-slate-950/50" />
                   <div
-                    key={hotspot.id}
-                    className={`group/hotspot absolute z-20 hover:z-30 focus-within:z-30 ${hotspot.position} ${
-                      activeHotspot === hotspot.id ? "z-30" : ""
+                    className={`heatmap-grid pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+                      heatmapOn ? "opacity-60" : "opacity-0"
                     }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveHotspot((current) =>
-                          current === hotspot.id ? null : hotspot.id
-                        )
-                      }
-                      aria-label={`Inspect ${hotspot.title}`}
-                      aria-expanded={activeHotspot === hotspot.id}
-                      className="hotspot-badge peer flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[10px] font-black text-slate-950 shadow-lg"
-                    >
-                      {hotspot.id}
-                    </button>
+                  />
 
-                    <div
-                      className={`absolute w-52 space-y-1 rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white shadow-2xl backdrop-blur-md transition-opacity group-hover/hotspot:pointer-events-auto group-hover/hotspot:opacity-100 peer-focus:pointer-events-auto peer-focus:opacity-100 ${
-                        activeHotspot === hotspot.id
-                          ? "pointer-events-auto opacity-100"
-                          : "pointer-events-none opacity-0"
-                      } ${HOTSPOT_PLACEMENT[hotspot.placement] ?? HOTSPOT_PLACEMENT.right}`}
-                    >
-                      <div className="font-extrabold text-amber-400">{hotspot.title}</div>
-                      <div className="text-[11px] text-slate-300">{hotspot.meta}</div>
-                      <div className={`text-[10px] font-bold ${hotspot.noteTone}`}>
-                        {hotspot.note}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveHotspot(null);
-                          scrollToDemo();
-                        }}
-                        className="pt-0.5 text-left text-[10px] font-bold text-cyan-brand-400 underline underline-offset-2 hover:text-cyan-brand-300"
-                      >
-                        Open live matrix →
-                      </button>
+                  {/* Top badges */}
+                  <div className="absolute left-4 top-4 z-20 sm:left-6 sm:top-6">
+                    <div className="glass-badge-live flex items-center gap-2.5 rounded-full px-3.5 py-1.5">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      </span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">
+                        LIVE TELEMETRY
+                      </span>
                     </div>
                   </div>
-                ))}
-
-                <div className="absolute inset-0 flex flex-col justify-between p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-gradient-to-r from-teal-brand-500 to-cyan-brand-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-navy-950 shadow-xs backdrop-blur-md">
-                      DEMO TELEMETRY
-                    </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-teal-brand-500/40 bg-slate-950/70 px-2.5 py-1 text-[10px] font-bold text-cyan-brand-400 backdrop-blur-md">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-brand-400" />
-                      ILLUSTRATIVE CAMPUS
-                    </span>
+                  <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+                    <div className="glass-badge-subtle flex items-center gap-2 rounded-full px-3.5 py-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                      <span className="text-xs font-medium uppercase tracking-wider text-slate-300">
+                        ILLUSTRATIVE CAMPUS
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-3 rounded-2xl border border-navy-700/60 bg-navy-900/80 p-4 backdrop-blur-md">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span>Active Time Window Scrubber:</span>
-                        <span className="font-extrabold text-cyan-brand-400">
-                          {HERO_SLOTS.find((entry) => entry.id === slot)?.time ?? "10:00 – 11:30"}{" "}
-                          Window
+                  {/* Interactive telemetry pins */}
+                  {HERO_PINS.map((pin) => (
+                    <div key={pin.id} className={`group/pin absolute z-30 ${pin.position}`}>
+                      <button
+                        type="button"
+                        onClick={() => setPinToast(pin.id)}
+                        aria-label={`Inspect telemetry pin ${pin.id}: ${pin.title}`}
+                        className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-400 bg-slate-900/90 text-xs font-bold text-emerald-300 shadow-lg shadow-emerald-950/80 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      >
+                        <span className="pin-pulse" />
+                        {pin.id}
+                      </button>
+
+                      <div
+                        className={`glass-panel pointer-events-none absolute bottom-full mb-2 hidden w-48 flex-col rounded-xl p-2.5 text-xs group-hover/pin:flex ${
+                          pin.align === "right" ? "right-0" : "left-1/2 -translate-x-1/2"
+                        }`}
+                      >
+                        <span className="mb-0.5 font-semibold text-emerald-400">
+                          {pin.title}
                         </span>
+                        {pin.lines.map((line) => (
+                          <span key={line} className="text-slate-300">
+                            {line.replace("{density}", activeSlot.density)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Floating glass telemetry cards */}
+                  <div className="absolute bottom-3 left-3 right-3 z-30 flex flex-col gap-3 sm:bottom-6 sm:left-6 sm:right-6">
+                    <div className="glass-panel w-full rounded-2xl p-3.5 sm:p-5">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-slate-400 sm:text-sm">
+                          Active Time Window Scrubber:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold tracking-wide text-teal-400 transition-all duration-300 sm:text-sm">
+                            {activeSlot.time} Window
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setHeatmapOn((value) => !value)}
+                            aria-label="Toggle heatmap grid"
+                            title="Toggle heatmap grid"
+                            className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                              heatmapOn
+                                ? "border-cyan-500/40 bg-cyan-950/60 text-cyan-300"
+                                : "border-slate-700 bg-slate-900/60 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <LayoutGrid className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAutoScrub((value) => !value)}
+                            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-all ${
+                              autoScrub
+                                ? "border-amber-500/40 bg-amber-950/60 text-amber-300"
+                                : "border-cyan-500/40 bg-cyan-950/60 text-cyan-300 hover:text-white"
+                            }`}
+                          >
+                            {autoScrub ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                            {autoScrub ? "Pause" : "Auto"}
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-1.5 text-[10.5px]">
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
                         {HERO_SLOTS.map((entry) => (
                           <button
                             key={entry.id}
@@ -355,8 +433,8 @@ export function LandingPage() {
                             onClick={() => setSlot(entry.id)}
                             className={
                               slot === entry.id
-                                ? "rounded-xl bg-teal-brand-500 py-2 text-center font-black text-navy-950 shadow-xs transition-all"
-                                : "rounded-xl border border-navy-700 bg-navy-800/80 py-2 text-center font-bold text-white transition-all hover:bg-teal-brand-600/40"
+                                ? "active-time-pill rounded-xl border border-cyan-400/40 px-2 py-2.5 text-center text-xs font-bold text-white transition-all sm:text-sm"
+                                : "rounded-xl border border-slate-800 bg-slate-900/60 px-2 py-2.5 text-center text-xs font-medium text-slate-300 transition-all hover:bg-slate-800/80 hover:text-white sm:text-sm"
                             }
                           >
                             {entry.label}
@@ -365,24 +443,76 @@ export function LandingPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="rounded-xl border border-navy-700/60 bg-navy-900/80 p-3 backdrop-blur-md">
-                        <div className="text-[10px] font-extrabold uppercase text-slate-300">
-                          Campus Utilization
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="glass-panel flex flex-col justify-between rounded-2xl p-3.5 sm:p-4">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs">
+                            CAMPUS UTILIZATION
+                          </span>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${activeSlot.utilTone}`}
+                          >
+                            {activeSlot.utilBadge}
+                          </span>
                         </div>
-                        <div className="mt-0.5 text-xl font-black text-white">78.4% Peak</div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-extrabold tracking-tight text-white transition-all duration-300 sm:text-2xl md:text-3xl">
+                            {activeSlot.utilization}
+                          </span>
+                        </div>
                       </div>
-                      <div className="rounded-xl border border-navy-700/60 bg-navy-900/80 p-3 backdrop-blur-md">
-                        <div className="text-[10px] font-extrabold uppercase text-slate-300">
-                          Students In Class
+
+                      <div className="glass-panel flex flex-col justify-between rounded-2xl p-3.5 sm:p-4">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs">
+                            STUDENTS IN CLASS
+                          </span>
+                          <span className="rounded-full border border-cyan-500/30 bg-cyan-950/80 px-2 py-0.5 text-[10px] font-semibold text-cyan-300">
+                            Active Timetable
+                          </span>
                         </div>
-                        <div className="mt-0.5 text-xl font-black text-cyan-brand-400">
-                          12,050 / 15,370
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-extrabold tracking-tight text-teal-400 drop-shadow-[0_2px_10px_rgba(45,212,191,0.25)] transition-all duration-300 sm:text-2xl md:text-3xl">
+                            {activeSlot.students}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {activePin && (
+                <div className="glass-panel mt-4 flex flex-row items-center justify-between rounded-xl border-l-4 border-l-emerald-400 p-4 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-950 text-sm font-bold text-emerald-400">
+                      {activePin.id}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{activePin.toastTitle}</h4>
+                      <p className="text-xs text-slate-300">{activePin.toastDesc}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPinToast(null)}
+                    className="px-2 py-1 text-xs text-slate-400 hover:text-white"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-col items-center justify-between gap-2 px-2 text-xs text-slate-400 sm:flex-row">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" /> Proved Feasible
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-cyan-400" /> Native C++ · 35 ms
+                  </span>
+                </div>
+                <span>Powered by Meta Muse Spark + Native C++ Solver</span>
               </div>
             </div>
           </div>
