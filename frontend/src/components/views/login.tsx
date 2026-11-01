@@ -1,13 +1,15 @@
 "use client";
 
-// Landing / first page: the institutional auth portal paired with a live
-// preview of what each role receives. Matches local-design/first-page.html.
+// Auth portal (route: /login-register): the institutional sign-in / register
+// form paired with a live preview of what each role receives. Matches
+// local-design/login-preview.html.
 //
 // Auth is real (POST /api/auth/login | /api/auth/register). The persona tabs
 // pre-fill the seeded demo accounts so judges can walk in one click; everything
 // to the right of the divider is a static, interactive preview.
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   BarChart2,
   BarChart3,
@@ -153,9 +155,9 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
     <div className="landing flex min-h-dvh flex-col justify-between bg-slate-50 text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 bg-white/90 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => onToast("ScheduleSolve AI · CP-SAT solver ready", "info")}
+          <Link
+            href="/"
+            title="Back to the landing page"
             className="group flex items-center gap-3 text-left"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -179,7 +181,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                 Powered by <span className="font-semibold text-indigo-600">Muse Spark</span>
               </p>
             </div>
-          </button>
+          </Link>
 
           <div className="flex items-center gap-3">
             <button

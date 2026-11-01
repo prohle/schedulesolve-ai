@@ -1,10 +1,12 @@
 "use client";
 
-// App shell: login gate + role-aware views.
+// App shell (route: /dashboard): role-aware views.
 // Desktop gets an icon rail; mobile gets a bottom tab bar. No banner copy —
-// each view carries its own compact header.
+// each view carries its own compact header. Visitors without a session are
+// redirected to /login-register.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Toast } from "@/components/ui/toast";
 import { Header } from "./header";
 import { Sidebar, MobileNav, type ActiveView } from "./sidebar";
@@ -13,11 +15,11 @@ import { DeliverablesView } from "./views/deliverables";
 import { TermSetupView } from "./views/term-setup";
 import { isUniversitySection } from "./views/university-tabs";
 import { IntelligenceView } from "./views/intelligence";
-import { LoginView } from "./views/login";
 import { MyScheduleView } from "./views/my-schedule";
 import { authFetch, clearSession, getStoredUser, type AuthUser } from "@/lib/auth";
 
 export function Dashboard() {
+  const router = useRouter();
   const [activeView, setActiveView] = useState<ActiveView>("wizard");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -33,8 +35,10 @@ export function Dashboard() {
 
   useEffect(() => {
     const stored = getStoredUser();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!stored) { setAuthReady(true); return; }
+    if (!stored) {
+      router.replace("/login-register");
+      return;
+    }
     authFetch("/api/auth/me")
       .then(async (res) => {
         if (res.ok) {
@@ -47,34 +51,26 @@ export function Dashboard() {
       })
       .catch(() => {})
       .finally(() => setAuthReady(true));
-  }, []);
+  }, [router]);
 
-  function handleLogin(next: AuthUser) {
-    setUser(next);
-    setActiveView("schedule");
-  }
+  // No session (or an expired one): the app shell is not the place to sign in.
+  useEffect(() => {
+    if (authReady && !user) router.replace("/login-register");
+  }, [authReady, user, router]);
 
   async function handleLogout() {
     try { await authFetch("/api/auth/logout", { method: "POST" }); } catch { /* local clear still applies */ }
     clearSession();
     setUser(null);
-    showToast("Signed out", "info");
+    router.replace("/login-register");
   }
 
-  if (!authReady) {
+  if (!authReady || !user) {
     return (
       <div className="flex min-h-dvh items-center justify-center gap-2 text-sm text-muted-foreground">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         Loading…
       </div>
-    );
-  }
-  if (!user) {
-    return (
-      <>
-        <LoginView onLogin={handleLogin} onToast={showToast} />
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      </>
     );
   }
 

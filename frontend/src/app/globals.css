@@ -53,6 +53,45 @@
   --font-mono: var(--font-jetbrains-mono), var(--font-geist-mono);
 }
 
+/* Marketing landing page palette, ported from local-design/landing-page.html.
+   Kept in kebab-case so the utilities read `bg-teal-brand-600`, etc. */
+@theme {
+  --color-navy-950: #061325;
+  --color-navy-900: #0a2540;
+  --color-navy-800: #0f3860;
+  --color-navy-700: #174f82;
+  --color-navy-600: #1e68a4;
+
+  --color-teal-brand-50: #f0fdfa;
+  --color-teal-brand-100: #ccfbf1;
+  --color-teal-brand-200: #99f6e4;
+  --color-teal-brand-300: #5eead4;
+  --color-teal-brand-400: #2dd4bf;
+  --color-teal-brand-500: #14b8a6;
+  --color-teal-brand-600: #00a896;
+  --color-teal-brand-700: #0d9488;
+  --color-teal-brand-800: #115e59;
+  --color-teal-brand-900: #134e4a;
+  --color-teal-brand-950: #042f2e;
+
+  --color-cyan-brand-400: #38bdf8;
+  --color-cyan-brand-500: #06b6d4;
+  --color-cyan-brand-600: #0284c7;
+
+  --color-editorial-bg: #f8fafc;
+  --color-editorial-card: #ffffff;
+  --color-editorial-border: #e2e8f0;
+  --color-editorial-border-teal: #ccfbf1;
+  --color-editorial-muted: #f1f5f9;
+
+  --shadow-editorial:
+    0 20px 40px -15px rgba(10, 37, 64, 0.07), 0 2px 6px -1px rgba(10, 37, 64, 0.03);
+  --shadow-teal-glow:
+    0 0 30px -5px rgba(0, 168, 150, 0.25), 0 10px 20px -5px rgba(6, 182, 212, 0.15);
+  --shadow-executive:
+    0 20px 40px -15px rgba(10, 37, 64, 0.1), 0 2px 6px -1px rgba(10, 37, 64, 0.04);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -386,5 +425,116 @@
   .landing .proof-card:hover,
   .landing .nav-icon-link:hover {
     transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Marketing landing page (design reference: local-design/landing-page.html)  */
+/* ------------------------------------------------------------------------- */
+
+.landing-page {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(0, 168, 150, 0.05) 0px, transparent 45%),
+    radial-gradient(at 100% 10%, rgba(6, 182, 212, 0.05) 0px, transparent 40%),
+    radial-gradient(at 50% 100%, rgba(10, 37, 64, 0.03) 0px, transparent 50%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Translucent editorial watermark behind section headings. */
+.landing-page .watermark-bg {
+  position: absolute;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: rgba(10, 37, 64, 0.03);
+  user-select: none;
+  pointer-events: none;
+  text-transform: uppercase;
+  line-height: 0.82;
+  z-index: 0;
+  white-space: nowrap;
+}
+
+/* Blackout hatched stripe pattern for faculty senate blocks. */
+.landing-page .pattern-blackout {
+  background: repeating-linear-gradient(
+    45deg,
+    #f0fdfa,
+    #f0fdfa 8px,
+    #ccfbf1 8px,
+    #ccfbf1 16px
+  );
+}
+
+.landing-page .heat-cell {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-page .heat-cell:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 168, 150, 0.25);
+  z-index: 20;
+}
+
+.landing-page .drawer-panel {
+  animation: landingDrawerIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-page .analytics-collapsible {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease;
+  opacity: 1;
+}
+.landing-page .analytics-collapsible.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.landing-page .analytics-inner {
+  overflow: hidden;
+}
+
+/* FAQ accordion (the design reference left this inert). */
+.landing-page .faq-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.landing-page .faq-content.open {
+  grid-template-rows: 1fr;
+}
+.landing-page .faq-content > div {
+  overflow: hidden;
+}
+
+.landing-page input[type="range"] {
+  accent-color: #00a896;
+}
+
+.landing-page ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.landing-page ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.landing-page ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.landing-page ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .heat-cell:hover {
+    transform: none;
+  }
+  .landing-page .drawer-panel {
+    animation: none;
   }
 }
