@@ -32,9 +32,12 @@ MUSE_TIMEOUT_S = float(os.getenv("MUSE_TIMEOUT_S", "120"))
 # --- Data --------------------------------------------------------------------
 SEED_SCENARIO_PATH = os.path.join(os.path.dirname(__file__), "data", "seed_scenario.json")
 
-# Persistence: Postgres in Docker (DATABASE_URL=postgresql://...), SQLite file
-# otherwise. The database holds constraint provenance + the audit trail.
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./schedulesolve.db")
+# Persistence: Postgres 18 in Docker (local Compose on 5433, service URL in
+# Compose). The database is required; there is no SQLite mode.
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://schedulesolve:schedulesolve@localhost:5433/schedulesolve",
+)
 
 SOLVER_TIME_LIMIT_S = float(os.getenv("SOLVER_TIME_LIMIT_S", "10"))
 

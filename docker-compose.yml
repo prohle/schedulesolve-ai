@@ -3,6 +3,14 @@
 #   docker compose up --build          # build and boot everything
 #   docker compose down                # stop
 #
+# Project scope: every container, network and volume is named schedulesolve-*.
+# Postgres data uses the project-scoped `schedulesolve_pgdata` volume because
+# Postgres refuses to run on a WSL/Windows bind mount (drvfs reports 0777 and
+# Postgres requires 0700). On native Linux you can swap the volume line below
+# for `./.data/postgres:/var/lib/postgresql` to keep the bytes in this folder.
+
+name: schedulesolve
+#
 # Host ports are configurable so this works even when 8000/3000 are taken:
 #   BACKEND_PORT=8011 FRONTEND_PORT=3011 docker compose up --build
 #
@@ -19,7 +27,16 @@ services:
     volumes:
       # Postgres 18 image: PGDATA lives under /var/lib/postgresql/18/docker,
       # so mount the volume at /var/lib/postgresql (not .../data as in <=17).
-      - db_data:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql
+    ports:
+      # Exposed for running the backend on the host during development.
+      # Inside Compose the backend uses db:5432.
+      - "${PG_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schedulesolve -d schedulesolve"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   backend:
     build: ./backend
@@ -27,10 +44,10 @@ services:
       DATABASE_URL: postgresql://schedulesolve:schedulesolve@db:5432/schedulesolve
       MODEL_API_KEY: ${MODEL_API_KEY:-}
       MUSE_API_KEY: ${MUSE_API_KEY:-}
-    # No readiness gating: the backend treats the database as best-effort
-    # (provenance/audit only) and serves solves even while Postgres warms up.
+    # The database is required: wait for Postgres to accept connections.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "${BACKEND_PORT:-8000}:8000"
 
@@ -44,4 +61,5 @@ services:
       - "${FRONTEND_PORT:-3000}:3000"
 
 volumes:
-  db_data:
+  pgdata:
+    name: schedulesolve_pgdata

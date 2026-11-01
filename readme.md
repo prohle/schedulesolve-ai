@@ -205,12 +205,12 @@ docker compose up --build   # live Muse Spark
 ## Stack
 
 - **Backend:** Python / FastAPI, OR-Tools CP-SAT (assumption literals for minimal-conflict explanation, feasibility probes for coverage proposals, `AddHint` for spectral warm-start) **plus an AI-authored native C++ rival solver** (`backend/native/schedulesolve_solver.cpp`, Python reference in `backend/app/solver/home_solver.py`), selectable per solve and comparable side by side
-- **Multi-user:** SQLAlchemy accounts with PBKDF2 password hashes + hashed bearer sessions; coordinator / instructor / student roles; published schedules and instructor change requests in the same Postgres/SQLite store
+- **Multi-user:** SQLAlchemy accounts with PBKDF2 password hashes + hashed bearer sessions; coordinator / instructor / student roles; published schedules and instructor change requests in the same Postgres store
 - **Frontend:** Next.js
 - **Intelligence:** `scipy.sparse` CSR matrices, `numpy`/`scipy` spectral graph (Laplacian, Fiedler, Hoffman bound, exact max clique)
 - **Inference:** Meta Model API (OpenAI-compatible, `beta.chat.completions.parse` structured output) — deterministic mock parser included so dev/tests burn zero credits
-- **Persistence:** SQLAlchemy over **Postgres 18** (Docker) or **SQLite** (no-Docker fallback) — constraint provenance + the self-healing audit trail (`/history`)
-- **Deploy:** `docker compose up` (db + backend + frontend) or `./start.sh` for a no-Docker local run; public demo live on Modal (UI + backend, both scale-to-zero)
+- **Persistence:** SQLAlchemy over **Postgres 18** in Docker (required — no SQLite mode). Durable institution model, pre-term intake, constraint provenance and the self-healing audit trail (`/history`). Compose uses the project-scoped volume `schedulesolve_pgdata`; on native Linux you can switch it to the in-repo `.data/postgres` bind mount (WSL/Windows drvfs cannot satisfy Postgres's 0700 data-directory check).
+- **Deploy:** `docker compose up` (db + backend + frontend) or `./start.sh` (boots the Compose database, then the servers); public demo live on Modal (UI + backend, both scale-to-zero) with a managed Postgres 18 URL.
 
 ## Run it
 
@@ -223,6 +223,8 @@ docker compose up --build
 ```
 
 Without a key the model roles degrade to a deterministic mock parser, so every beat (parse → solve → self-heal → term-change reassignment → department scale) is clickable offline at zero cost. Add `MODEL_API_KEY` (see below) and the same clicks run live Muse Spark with on-screen model + latency badges. Submission details, track, and bonus-prize flags: [docs/submission.md](./docs/submission.md).
+
+**University setup (coordinator, before the term):** the **University** tab is the institution's durable model — **Facility · Map · People · Degree Map · Course Catalog · Student bodies · Holidays · Number of weeks · Campus-wide constraints · University Calendar · Settings · Save schedule options**. Faculty enter hard constraints and soft preferences against a real deadline; the coordinator watches submissions, accepts the set, then reviews or edits every campus/building/room/hall, load cap, holiday, degree map and course. The shipped mock institution is full: 7 campus quads, 8 buildings, 32 rooms, 68 faculty, 101 courses/sections, 15 majors + 8 minors, 50 cohorts. It lives in **Postgres 18** (`institution_state`), so the university does not re-upload the same data each term; **Settings → Update institution data** replaces/extend it.
 
 **Multi-user, role-based:** the app opens on a login. One-click demo accounts (password `demo1234`, seeded from the scenario itself — no signup needed): `coordinator@schedulesolve.demo` runs the term (Express, publish, approves changes); `chen@schedulesolve.demo` (any `<instructor-id>@…`) sees **only their own sections** in **Schedule**; `cs2025@schedulesolve.demo` (any `<cohort-id>@…`) sees **only their cohort's courses**. The coordinator publishes the solved timetable (**Publish**); instructors' grids update only when an approved change is re-proven by the solver and re-published — an infeasible request comes back rejected with the solver-backed explanation. You can also register your own account and link it to any instructor/cohort.
 
@@ -246,22 +248,25 @@ Nothing here needs an API key or an account beyond the one-tap demo logins.
 
 ```bash
 docker compose up --build
-# frontend http://localhost:3000 · backend http://localhost:8000/docs · db postgres:5432
+# frontend http://localhost:3000 · backend http://localhost:8000/docs
+# database postgres:18 (project-scoped volume schedulesolve_pgdata)
 # taken ports?  BACKEND_PORT=8011 FRONTEND_PORT=3011 docker compose up --build
 # live Muse?    MODEL_API_KEY=... docker compose up --build
 ```
 
-**No Docker (local dev):**
+**Host dev (Docker database required):**
 
 ```bash
-./start.sh        # bootstraps venv + node_modules, auto-picks free ports, Ctrl-C stops both
+./start.sh        # starts the Compose Postgres 18, then backend + frontend
 ```
 
-**Backend only:**
+**Backend only (Postgres 18 required):**
 
 ```bash
+docker compose up -d db
 cd backend
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
+export DATABASE_URL=postgresql://schedulesolve:schedulesolve@localhost:5433/schedulesolve
 .venv/bin/python demo.py            # full pipeline, mock parser, zero credits
 .venv/bin/uvicorn app.main:app      # API at http://localhost:8000/docs
 ```

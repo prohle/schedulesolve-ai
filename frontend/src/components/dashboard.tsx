@@ -39,7 +39,7 @@ export function Dashboard() {
         if (res.ok) {
           const me = (await res.json()).user as AuthUser;
           setUser(me);
-          setActiveView(me.role === "coordinator" ? "wizard" : "schedule");
+          setActiveView("schedule");
         } else {
           clearSession();
         }
@@ -50,7 +50,7 @@ export function Dashboard() {
 
   function handleLogin(next: AuthUser) {
     setUser(next);
-    setActiveView(next.role === "coordinator" ? "wizard" : "schedule");
+    setActiveView("schedule");
   }
 
   async function handleLogout() {

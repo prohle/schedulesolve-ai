@@ -10,7 +10,7 @@ from app.db import Base
 
 
 def _utcnow() -> datetime:
-    # Naive UTC so the same rows work identically on SQLite and Postgres.
+    # Naive UTC, stored consistently in Postgres.
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 

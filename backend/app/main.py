@@ -57,7 +57,7 @@ async def lifespan(_: FastAPI):
     init_db()  # create provenance tables if they don't exist (best-effort)
     try:
         from app.services.auth import seed_demo_users
-        seed_demo_users(load_seed_scenario())
+        seed_demo_users(get_current_scenario())
     except Exception:  # noqa: BLE001 — auth seeding must never block solving
         pass
     yield
@@ -78,8 +78,51 @@ _current_scenario: Optional[Scenario] = None
 
 
 def get_current_scenario() -> Scenario:
+    """The durable institution model: load it from Postgres, or seed the
+    comprehensive university on first run and persist it."""
     global _current_scenario
-    return _current_scenario or load_seed_scenario()
+    if _current_scenario is not None:
+        return _current_scenario
+    try:
+        from app.services.state import load_state
+        stored = load_state()
+        if stored is not None:
+            _current_scenario = stored
+            return _current_scenario
+    except Exception:  # noqa: BLE001 — a missing row is the normal first run
+        pass
+    from app.data.department import build_comprehensive_scenario
+    _current_scenario = build_comprehensive_scenario(load_seed_scenario())
+    try:
+        from app.services.state import save_state
+        save_state(_current_scenario)
+    except Exception:  # noqa: BLE001
+        pass
+    return _current_scenario
+
+
+def _clear_published() -> None:
+    """A changed institution model invalidates the published timetable."""
+    try:
+        from app.db import SessionLocal
+        from app.models.auth import PublishedSchedule
+        with SessionLocal() as session:
+            session.query(PublishedSchedule).delete()
+            session.commit()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _set_current_scenario(scenario: Scenario) -> None:
+    """Swap the institution model, persist it, and invalidate the old term."""
+    global _current_scenario
+    _current_scenario = scenario
+    try:
+        from app.services.state import save_state
+        save_state(scenario)
+    except Exception:  # noqa: BLE001 — solver keeps working if persistence hiccups
+        pass
+    _clear_published()
 
 
 class MessageRequest(BaseModel):
@@ -136,7 +179,7 @@ def _ingest_text(text: str) -> IngestResponse:
     parser = IngestionParser()
     data = parser.parse(text)
     scenario = ingest(text)[0]
-    _current_scenario = scenario
+    _set_current_scenario(scenario)
     audit.record_submission(text[:500], data.summary, parser.mode)
     audit.record_event("ingest",
                        f"Ingested {len(data.courses)} courses, {len(data.instructors)} instructors, "
@@ -194,7 +237,7 @@ def ingest_apply(req: ApplyRequest) -> IngestResponse:
     user-edited InstitutionData after the review panel."""
     global _current_scenario
     scenario = build_scenario(req.data)
-    _current_scenario = scenario
+    _set_current_scenario(scenario)
     audit.record_event("ingest-apply",
                        f"Applied edited data: {len(req.data.courses)} courses, "
                        f"{len(req.data.instructors)} instructors, {len(req.data.cohorts)} cohorts")
@@ -207,7 +250,16 @@ def reset_scenario() -> Scenario:
     """Discard the ingested scenario and return to the seed."""
     global _current_scenario
     _current_scenario = None
-    return get_current_scenario()
+    try:
+        from app.services.state import clear_state
+        clear_state()
+    except Exception:  # noqa: BLE001
+        pass
+    # Reset is the deterministic demo/test seed; a fresh install still boots
+    # the comprehensive university from get_current_scenario().
+    scenario = load_seed_scenario()
+    _set_current_scenario(scenario)
+    return scenario
 
 
 @app.post("/scenario/department", response_model=Scenario)
@@ -220,7 +272,7 @@ def department_scenario() -> Scenario:
     """
     global _current_scenario
     from app.data.department import build_department_scenario
-    _current_scenario = build_department_scenario(load_seed_scenario())
+    _set_current_scenario(build_department_scenario(load_seed_scenario()))
     audit.record_event(
         "scenario", "Loaded department-scale scenario "
         f"({len(_current_scenario.instructors)} instructors, "
@@ -235,7 +287,7 @@ def university_scenario() -> Scenario:
     5 programs, 20 cohorts) — the entire institution on one solve."""
     global _current_scenario
     from app.data.department import build_university_scenario
-    _current_scenario = build_university_scenario(load_seed_scenario())
+    _set_current_scenario(build_university_scenario(load_seed_scenario()))
     audit.record_event(
         "scenario", "Loaded university-scale scenario "
         f"({len(_current_scenario.instructors)} instructors, "
@@ -252,7 +304,7 @@ def full_university_scenario() -> Scenario:
     scripts/benchmark.py for the measured comparison."""
     global _current_scenario
     from app.data.department import build_full_university_scenario
-    _current_scenario = build_full_university_scenario(load_seed_scenario())
+    _set_current_scenario(build_full_university_scenario(load_seed_scenario()))
     audit.record_event(
         "scenario", "Loaded full-university scenario "
         f"({len(_current_scenario.instructors)} instructors, "
@@ -281,7 +333,7 @@ def apply_request(req: ApplyOpsRequest) -> Scenario:
             explanation=f"Keep {sid} with {iid}."))
     validated, notes = validate_operations(ops, base)
     scenario = apply_operations(base, validated)
-    _current_scenario = scenario
+    _set_current_scenario(scenario)
     audit.record_event(
         "apply", f"Applied {len(validated)} operation(s) to the term",
         {"operations": [o.op for o in validated], "notes": notes})
@@ -495,6 +547,10 @@ class EntityPatchIn(BaseModel):
     kind: str
     id: str
     patch: dict = {}
+
+
+class TermOptionsIn(BaseModel):
+    options: dict = {}
 
 
 class DecideRequest(BaseModel):
@@ -791,7 +847,7 @@ def decide_change_request(request_id: int, req: DecideRequest,
                                               get_current_scenario())
             result = solve(get_current_scenario(), ops)
             if ops and result.status != "infeasible":
-                _current_scenario = apply_operations(get_current_scenario(), ops)
+                _set_current_scenario(apply_operations(get_current_scenario(), ops))
                 published = _publish_current("cpsat", user.email)
                 row.status = "applied"
                 row.result_summary = (
@@ -825,7 +881,7 @@ def decide_change_request(request_id: int, req: DecideRequest,
             ops, _notes = validate_operations(
                 [Operation.model_validate(o) if isinstance(o, dict) else o
                  for o in response.applied_operations], get_current_scenario())
-            _current_scenario = apply_operations(get_current_scenario(), ops)
+            _set_current_scenario(apply_operations(get_current_scenario(), ops))
             published = _publish_current("cpsat", user.email)
             row.status = "applied"
             row.result_summary = (
@@ -863,7 +919,7 @@ def set_term_closures(req: ClosuresIn,
             seen.add(key)
             closures.append(c)
     sc.closures = closures
-    _current_scenario = sc
+    _set_current_scenario(sc)
     audit.record_event("closures",
                        f"Term closures set: {len(closures)} slot(s) closed",
                        {"closures": [c.model_dump() for c in closures]})
@@ -945,7 +1001,7 @@ def term_window_accept(authorization: Optional[str] = Header(None)) -> dict:
         updated, summary = term_service.accept_window(get_current_scenario())
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    _current_scenario = updated
+    _set_current_scenario(updated)
     audit.record_event(
         "term-accepted",
         f"Accepted {summary['accepted']} faculty submission(s) for {summary['term']}",
@@ -990,6 +1046,17 @@ def term_window_submit(req: IntakeSubmitIn,
             "window": _window_payload(get_current_scenario(), user)}
 
 
+@app.post("/term/window/options")
+def term_window_options(req: TermOptionsIn,
+                        authorization: Optional[str] = Header(None)) -> dict:
+    """Persist schedule/calendar settings (engine, start/end, auto-publish)."""
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    term_service.set_options(get_current_scenario(), req.options)
+    audit.record_event("term-options", "Schedule options saved", req.options)
+    return _window_payload(get_current_scenario(), user)
+
+
 @app.get("/institution/overview")
 def institution_overview(authorization: Optional[str] = Header(None)) -> dict:
     """Everything the system understands: campus, buildings, rooms, halls,
@@ -1010,7 +1077,7 @@ def institution_update(req: EntityPatchIn,
             get_current_scenario(), req.kind, req.id, req.patch)
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    _current_scenario = updated
+    _set_current_scenario(updated)
     audit.record_event("institution-edit", f"Edited {req.kind} {req.id}", req.patch)
     return {"scenario": updated.model_dump(), "overview": _overview_payload()}
 
@@ -1025,7 +1092,7 @@ def institution_delete(kind: str, id: str,
         updated = term_service.delete_entity(get_current_scenario(), kind, id)
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    _current_scenario = updated
+    _set_current_scenario(updated)
     audit.record_event("institution-delete", f"Removed {kind} {id}", {})
     return {"scenario": updated.model_dump(), "overview": _overview_payload()}
 

@@ -135,6 +135,28 @@ def _submission_dict(row: FacultyIntake, instructor_name: str = "") -> dict:
     }
 
 
+def _options(window: TermWindow) -> dict:
+    if not window.options_json:
+        return {}
+    try:
+        return json.loads(window.options_json)
+    except (TypeError, ValueError):
+        return {}
+
+
+def set_options(scenario: Scenario, patch: dict) -> TermWindow:
+    with SessionLocal() as session:
+        row = _window_row(session)
+        current = _options(row)
+        current.update(patch or {})
+        row.options_json = json.dumps(current)
+        row.updated_at = _utcnow()
+        session.commit()
+        session.refresh(row)
+        session.expunge(row)
+        return row
+
+
 def window_state(scenario: Scenario) -> dict:
     window = get_window(scenario)
     now = _utcnow()
@@ -167,6 +189,7 @@ def window_state(scenario: Scenario) -> dict:
         "submitted_count": len(submitted),
         "pending": [i.id for i in scenario.instructors if i.id not in submitted],
         "submissions": submissions,
+        "options": _options(window),
     }
 
 
@@ -291,11 +314,20 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
         {
             "id": building.id,
             "name": building.name,
+            "campus": building.campus or "Main Campus",
             "rooms": len(rooms_by_building.get(building.id, [])),
             "seats": sum(room.capacity for room in rooms_by_building.get(building.id, [])),
         }
         for building in scenario.buildings
     ]
+    campuses: dict[str, dict] = {}
+    for building in buildings:
+        campus_name = building["campus"]
+        entry = campuses.setdefault(
+            campus_name,
+            {"id": campus_name.lower().replace(" ", "-"), "name": campus_name, "buildings": []},
+        )
+        entry["buildings"].append(building)
 
     rooms = [
         {
@@ -337,6 +369,9 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
         {
             "id": program.id,
             "name": program.name,
+            "kind": program.kind,
+            "degree": program.degree,
+            "department": program.department,
             "roadmap": {
                 term: [requirement.model_dump() for requirement in requirements]
                 for term, requirements in program.roadmap.items()
@@ -364,6 +399,9 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
         for cohort in scenario.cohorts
     ]
 
+    options = _options(window)
+    start = _parse(options.get("start_date")) or (window.deadline + timedelta(days=1))
+    end = _parse(options.get("end_date")) or (start + timedelta(days=7 * window.weeks))
     return {
         "term": {
             "name": window.term,
@@ -371,14 +409,14 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
             "status": window.status,
             "opens_at": _iso(window.opens_at),
             "deadline": _iso(window.deadline),
+            "start_date": _iso(start),
+            "end_date": _iso(end),
+            "exam_week_start": _iso(end - timedelta(days=7)),
         },
-        "campuses": [
-            {
-                "id": "main",
-                "name": scenario.name,
-                "buildings": buildings,
-            }
-        ],
+        "options": options,
+        "programs": programs,
+        "cohorts": cohorts,
+        "campuses": list(campuses.values()),
         "buildings": buildings,
         "rooms": rooms,
         "halls": [room for room in rooms if room["hall"]],

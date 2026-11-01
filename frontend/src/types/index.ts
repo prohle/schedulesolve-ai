@@ -2,6 +2,7 @@
 export interface Building {
   id: string;
   name: string;
+  campus?: string;
 }
 
 export interface Room {
@@ -69,6 +70,9 @@ export interface Program {
   id: string;
   name: string;
   roadmap: Record<string, RoadmapRequirement[]>;
+  kind?: "major" | "minor";
+  degree?: string;
+  department?: string;
 }
 
 export interface Cohort {

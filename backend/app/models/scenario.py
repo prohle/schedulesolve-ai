@@ -54,6 +54,7 @@ Pattern = Literal["MWF", "TTh", "block"]
 class Building(BaseModel):
     id: str
     name: str
+    campus: str = "Main Campus"
 
 
 class Room(BaseModel):
@@ -128,6 +129,9 @@ class Program(BaseModel):
     id: str
     name: str
     roadmap: dict[str, list[RoadmapRequirement]]  # "term index" -> requirements
+    kind: Literal["major", "minor"] = "major"
+    degree: str = "BSc"
+    department: str = ""
 
 
 class Cohort(BaseModel):

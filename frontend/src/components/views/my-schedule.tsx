@@ -9,10 +9,12 @@
 // - coordinator: full timetable, Publish, term closures (holidays), and
 //   the decision queue with each requester's current load vs cap.
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, Check, GraduationCap, Loader2, Minus, Plus, Send, Sparkles, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, Check, GraduationCap, LayoutGrid, Loader2, Minus, Plus, Send, Sparkles, X } from "lucide-react";
 import { authFetch, type AuthUser } from "@/lib/auth";
 import { TimetableGrid } from "@/components/timetable-grid";
+import { CampusMatrix } from "@/components/landing/campus-matrix";
+import { buildLiveCampus } from "@/lib/campus-live";
 import { InfoTip } from "@/components/ui/tip";
 import { useScenario } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
@@ -311,6 +313,7 @@ function StudentPlanPanel({ user, onToast }: {
   const [plan, setPlan] = useState<StudentPlanResponse | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!cohortId && scenario?.cohorts?.length) setCohortId(scenario.cohorts[0].id);
   }, [scenario, cohortId]);
 
@@ -364,7 +367,7 @@ function StudentPlanPanel({ user, onToast }: {
         <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="plan-degree">Degree I want</label>
         <select id="plan-degree" value={programId} onChange={(e) => setProgramId(e.target.value)}
           className="min-h-10 rounded-xl border border-border bg-background px-2 text-xs font-semibold">
-          <option value="">My cohort's degree</option>
+          <option value="">My cohort&apos;s degree</option>
           {(scenario?.programs ?? []).map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
@@ -473,17 +476,50 @@ export function MyScheduleView({ user, onToast }: {
   const [unpublished, setUnpublished] = useState(false);
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"matrix" | "timetable">(
+    user.role === "coordinator" ? "matrix" : "timetable"
+  );
+  const { scenario } = useScenario();
+  const liveCampus = useMemo(
+    () => (scenario && mine ? buildLiveCampus(scenario, mine.placements) : null),
+    [scenario, mine]
+  );
 
   const load = useCallback(async () => {
     const res = await authFetch("/api/schedule/mine");
-    if (res.status === 404) { setUnpublished(true); setMine(null); }
-    else if (res.ok) { setMine(await res.json()); setUnpublished(false); }
+    if (res.status === 404) {
+      setUnpublished(true);
+      if (user.role === "coordinator") {
+        // No published term yet: show the campus matrix from a draft solve so
+        // the Schedule tab is useful (and design-complete) before Publish.
+        const solved = await (await fetch("/api/solve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ engine: "cpsat" }),
+        })).json();
+        if (solved.timetable?.placements) {
+          setMine({
+            role: "coordinator",
+            scope: "Draft solve — not published yet",
+            status: solved.status,
+            objective: solved.objective,
+            placements: solved.timetable.placements,
+          });
+        } else {
+          setMine(null);
+        }
+      } else {
+        setMine(null);
+      }
+    } else if (res.ok) { setMine(await res.json()); setUnpublished(false); }
     const listPath = user.role === "coordinator"
       ? "/api/change-requests" : "/api/me/change-requests";
     const list = await authFetch(listPath);
     if (list.ok) setRequests((await list.json()).requests ?? []);
   }, [user.role]);
 
+  // Mount fetch: state writes happen after the awaits.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load().catch(() => {}); }, [load]);
 
   async function publish() {
@@ -554,12 +590,33 @@ export function MyScheduleView({ user, onToast }: {
           </div>
           <InfoTip text="The coordinator builds the term in Express, then publishes it here. You only see your own sections (instructor) or your cohort's courses (student)." />
         </div>
-        {user.role === "coordinator" && (
-          <button disabled={busy} onClick={publish}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50">
-            <Send className="w-3.5 h-3.5" /> Publish
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl border border-border bg-muted/60 p-1">
+            {(
+              [
+                ["matrix", "Campus Matrix", LayoutGrid],
+                ["timetable", "Timetable", CalendarDays],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className={cn(
+                  "inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all",
+                  view === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+          {user.role === "coordinator" && (
+            <button disabled={busy} onClick={publish}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50">
+              <Send className="w-3.5 h-3.5" /> Publish
+            </button>
+          )}
+        </div>
       </div>
 
       {unpublished && (
@@ -571,7 +628,18 @@ export function MyScheduleView({ user, onToast }: {
 
       {mine && mine.placements.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm sm:p-3">
-          <TimetableGrid placements={mine.placements} />
+          {view === "matrix" ? (
+            liveCampus ? (
+              <CampusMatrix onToast={onToast} live={liveCampus} />
+            ) : (
+              <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                Reading the live campus model…
+              </div>
+            )
+          ) : (
+            <TimetableGrid placements={mine.placements} />
+          )}
         </div>
       )}
       {mine && mine.placements.length === 0 && (

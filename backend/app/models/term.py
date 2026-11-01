@@ -30,6 +30,7 @@ class TermWindow(Base):
     deadline = Column(DateTime, nullable=False)
     weeks = Column(Integer, default=16)
     status = Column(String(20), default="draft")  # draft | open | closed | accepted
+    options_json = Column(Text)  # schedule/calendar settings (engine, start/end, auto-publish)
     accepted_at = Column(DateTime)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

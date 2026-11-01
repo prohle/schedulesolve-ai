@@ -30,3 +30,6 @@ build/
 local*
 AGENTS.md
 backend/native/solver
+
+# Local Docker data (Postgres lives inside the repo)
+.data/

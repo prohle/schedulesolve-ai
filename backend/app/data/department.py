@@ -433,6 +433,182 @@ def build_full_university_scenario(seed: Scenario) -> Scenario:
     return sc
 
 
+# --- Comprehensive university (default institution) -------------------------
+# The signed-in app ships with a full institution: every major has a degree
+# map, minors are first-class programs, and the campus has several quads. It
+# stays solvable in seconds (unlike the 361-section stress tier).
+
+_COMP_SUBJECTS = [
+    ("BIO", "Biology", "BSc", "Health Sciences"),
+    ("CHEM", "Chemistry", "BSc", "Science"),
+    ("PSY", "Psychology", "BA", "Social Sciences"),
+    ("ECN", "Economics", "BSc", "Business"),
+    ("LAW", "Law", "JD", "Law"),
+    ("ART", "Art & Design", "BFA", "Arts"),
+    ("NUR", "Nursing", "BSN", "Health Sciences"),
+    ("ENV", "Environmental Science", "BSc", "Science"),
+    ("ME", "Mechanical Engineering", "BSc", "Engineering"),
+    ("EE", "Electrical Engineering", "BSc", "Engineering"),
+]
+
+_COMP_TITLES = [
+    "Foundations", "Methods", "Systems", "Analysis", "Advanced Topics", "Capstone",
+]
+
+_COMP_CAMPUSES = {
+    "S": "Science Quad",
+    "E": "Engineering Quad",
+    "L": "Central Campus",
+    "A": "Arts & Humanities",
+    "B": "Business District",
+    "H": "Health Sciences",
+    "M": "Science Quad",
+    "D": "Design Quarter",
+}
+
+_COMP_BUILDINGS = [
+    ("B", "Business School", "Business District"),
+    ("H", "Health Sciences Center", "Health Sciences"),
+    ("M", "Mathematics & Statistics", "Science Quad"),
+    ("D", "Design & Media Studio", "Design Quarter"),
+]
+
+_COMP_ROOMS = [
+    ("B", "Case Room", 60, "lecture", ["projector", "mic"]),
+    ("B", "Case Room B", 45, "lecture", ["projector"]),
+    ("B", "Finance Lab", 32, "lab", ["computers"]),
+    ("B", "Seminar 12", 24, "seminar", ["video-conf"]),
+    ("H", "Anatomy Lab", 40, "lab", ["computers"]),
+    ("H", "Clinical Skills", 30, "lab", ["video-conf"]),
+    ("H", "Lecture Hall H1", 120, "lecture", ["projector", "mic"]),
+    ("H", "Seminar H2", 26, "seminar", ["video-conf"]),
+    ("M", "Math Lecture 101", 55, "lecture", ["projector"]),
+    ("M", "Stats Lab", 34, "lab", ["computers"]),
+    ("M", "Seminar 210", 24, "seminar", ["whiteboard"]),
+    ("M", "Colloquium", 70, "lecture", ["projector", "mic"]),
+    ("D", "Design Studio A", 35, "lab", ["computers"]),
+    ("D", "Design Studio B", 30, "lab", ["computers"]),
+    ("D", "Crit Space", 28, "seminar", ["video-conf"]),
+    ("D", "Media Lab", 26, "lab", ["computers", "video-conf"]),
+]
+
+_COMP_MINORS = [
+    ("cs", "Computer Science", ["cs101", "cs201", "cs301"]),
+    ("math", "Mathematics", ["math101", "math210", "math301"]),
+    ("ds", "Data Science", ["ds101", "ds210", "stat310"]),
+    ("bus", "Business", ["bus101", "bus210", "bus310"]),
+    ("eng", "English", ["eng101", "eng210", "eng320"]),
+    ("psy", "Psychology", ["psy101", "psy201", "psy301"]),
+    ("env", "Environmental Studies", ["env101", "env201", "env301"]),
+    ("art", "Art & Design", ["art101", "art201", "art301"]),
+]
+
+
+def build_comprehensive_scenario(seed: Scenario) -> Scenario:
+    """The default institution: 15 majors, 8 minors, several campus quads.
+
+    Built on the university tier (so the demo story and scale proof remain),
+    then expanded with the remaining colleges. Deterministic and solvable in
+    seconds — the 361-section tier stays a separate stress benchmark.
+    """
+    sc = build_university_scenario(seed)
+    sc.name = "Northgate University — Autumn Term 2026"
+
+    for building in sc.buildings:
+        building.campus = _COMP_CAMPUSES.get(building.id, "Main Campus")
+
+    for bid, bname, campus in _COMP_BUILDINGS:
+        sc.buildings.append(Building(id=bid, name=bname, campus=campus))
+        sc.distances[bid] = {}
+        for other in [b.id for b in sc.buildings]:
+            walk = 0 if other == bid else 8 + (abs(ord(bid) - ord(other)) % 5)
+            sc.distances[bid][other] = walk
+            if other != bid:
+                sc.distances.setdefault(other, {})[bid] = walk
+
+    for bid, name, cap, rtype, equip in _COMP_ROOMS:
+        sc.rooms.append(Room(
+            id=f"{bid.lower()}-{name.lower().replace(' ', '-')}",
+            name=f"{bid} {name}", building_id=bid, capacity=cap,
+            room_type=rtype, equipment=equip,
+        ))
+
+    for code, name, degree, department in _COMP_SUBJECTS:
+        prefix = code.lower()
+        courses: list[Course] = []
+        for index, title in enumerate(_COMP_TITLES):
+            number = 101 + (index // 2) * 100 + (index % 2) * 10
+            pattern = "MWF" if index % 2 == 0 else "TTh"
+            room_type = "lab" if index == 2 else ("seminar" if index == 5 else "lecture")
+            equipment = (
+                ["computers"] if room_type == "lab"
+                else ["video-conf"] if room_type == "seminar"
+                else ["projector"]
+            )
+            courses.append(Course(
+                id=f"{prefix}{number}",
+                code=f"{code} {number}",
+                title=f"{name}: {title}",
+                pattern=pattern,
+                room_type=room_type,
+                seats=30 if room_type == "lecture" else 24 if room_type == "lab" else 20,
+                equipment=equipment,
+            ))
+        sc.courses.extend(courses)
+        sc.sections.extend(Section(id=f"sec-{course.id}", course_id=course.id) for course in courses)
+
+        sc.programs.append(Program(
+            id=f"p-{prefix}",
+            name=f"{degree} {name}",
+            degree=degree,
+            department=department,
+            roadmap={
+                "1": [_req(courses[0].id), _req(courses[1].id)],
+                "3": [_req(courses[2].id), _req(courses[3].id)],
+                "5": [_req(courses[4].id), _req(courses[5].id)],
+            },
+        ))
+        for offset, size in enumerate((34, 30, 26)):
+            year = 2026 - offset
+            sc.cohorts.append(Cohort(
+                id=f"{prefix}{year}",
+                program_id=f"p-{prefix}",
+                name=f"{name} {year} cohort",
+                admission_year=year,
+                graduation_year=year + 4,
+                current_term=1 + offset * 2,
+                size=size,
+            ))
+        for faculty_index in range(3):
+            sc.instructors.append(Instructor(
+                id=f"{prefix}-f{faculty_index}",
+                name=f"Prof. {_FULL_SURNAMES[(len(sc.instructors) + faculty_index) % len(_FULL_SURNAMES)]}",
+                qualified_courses=[
+                    courses[faculty_index].id,
+                    courses[faculty_index + 3].id,
+                ],
+                max_sections=2,
+                max_preps=2,
+            ))
+
+    for code, name, course_ids in _COMP_MINORS:
+        existing = [course_id for course_id in course_ids if any(c.id == course_id for c in sc.courses)]
+        sc.programs.append(Program(
+            id=f"minor-{code}",
+            name=f"Minor in {name}",
+            kind="minor",
+            degree="Minor",
+            department=name,
+            roadmap={
+                "1": [_req(course_id, required=False, seat_estimate=8) for course_id in existing[:1]],
+                "3": [_req(course_id, required=False, seat_estimate=8) for course_id in existing[1:2]],
+                "5": [_req(course_id, required=False, seat_estimate=8) for course_id in existing[2:3]],
+            },
+        ))
+
+    return sc
+
+
 def build_department_scenario(seed: Scenario) -> Scenario:
     """Expand the story seed to department scale (see module docstring)."""
     sc = seed.model_copy(deep=True)

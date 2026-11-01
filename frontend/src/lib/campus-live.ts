@@ -100,11 +100,19 @@ export function buildLiveCampus(scenario: Scenario, placements: Placement[]): Li
     };
   });
 
-  const campus: Campus = {
-    name: scenario.name || "Institution",
-    short: scenario.name || "Institution",
-    buildings,
-  };
+  // Group buildings into campus quads (the model carries `campus` on each
+  // building; older data defaults to Main Campus).
+  const campuses: Record<string, Campus> = {};
+  const order: string[] = [];
+  buildings.forEach((building) => {
+    const name = (scenario.buildings.find((b) => b.id === building.id)?.campus) || "Main Campus";
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "main";
+    if (!campuses[id]) {
+      campuses[id] = { name, short: name, buildings: [] };
+      order.push(id);
+    }
+    campuses[id].buildings.push(building);
+  });
 
   const resolve: RoomStateResolver = (
     buildingId: string,
@@ -159,8 +167,8 @@ export function buildLiveCampus(scenario: Scenario, placements: Placement[]): Li
     roomsByKey.get(`${buildingId}|${floorId}|${roomIndex}`)?.name ?? `Room ${roomIndex + 1}`;
 
   return {
-    campuses: { live: campus },
-    order: ["live"],
+    campuses,
+    order,
     slots: SLOTS,
     resolve,
     roomName,

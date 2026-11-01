@@ -12,9 +12,9 @@ export type ActiveView = "setup" | "wizard" | "deliverables" | "intelligence" | 
 const VIEWS = [
   {
     id: "setup" as const,
-    label: "Setup",
+    label: "University",
     icon: CalendarClock,
-    desc: "Pre-term: faculty intake deadline, submissions and the institution model",
+    desc: "Facility · Map · People · Degree Map · Catalog · Students · Holidays · Weeks · Calendar · Settings",
   },
   {
     id: "wizard" as const,

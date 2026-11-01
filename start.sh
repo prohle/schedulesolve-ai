@@ -26,6 +26,24 @@ if [ -f "$ROOT/.env" ]; then
   set +a
 fi
 
+# --- database (required) ----------------------------------------------------
+# Postgres 18 runs in Docker; its data is bind-mounted inside this repo at
+# ./.data/postgres. There is no SQLite mode.
+command -v docker >/dev/null 2>&1 || {
+  echo "Docker is required: this project stores everything in Postgres 18." >&2
+  exit 1
+}
+echo "==> Starting Postgres 18 (Docker, data in ./.data/postgres)"
+docker compose -f "$ROOT/docker-compose.yml" up -d db
+export DATABASE_URL="${DATABASE_URL:-postgresql://schedulesolve:schedulesolve@localhost:${PG_PORT:-5433}/schedulesolve}"
+for _ in $(seq 1 30); do
+  if docker compose -f "$ROOT/docker-compose.yml" exec -T db \
+      pg_isready -U schedulesolve -d schedulesolve >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
 # Python interpreter (backend requires it).
 PYTHON_BIN="python3"
 command -v "$PYTHON_BIN" >/dev/null 2>&1 || PYTHON_BIN="python"
@@ -85,6 +103,7 @@ echo ""
 echo "  ScheduleSolve AI starting…"
 echo "  · Frontend  http://localhost:${FRONTEND_PORT}"
 echo "  · Backend   http://localhost:${BACKEND_PORT}   (API docs: /docs)"
+echo "  · Database  Postgres 18 (Docker)  ${DATABASE_URL##*@}"
 echo "  · Muse mode ${MUSE_MODE}"
 echo "  Press Ctrl-C to stop both."
 echo ""
