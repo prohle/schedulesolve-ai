@@ -154,7 +154,7 @@ export function ProofModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-navy-950"
+            className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700"
           >
             Close Inspector
           </button>

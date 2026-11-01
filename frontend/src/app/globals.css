@@ -53,43 +53,44 @@
   --font-mono: var(--font-jetbrains-mono), var(--font-geist-mono);
 }
 
-/* Marketing landing page palette, ported from local-design/landing-page.html.
-   Kept in kebab-case so the utilities read `bg-teal-brand-600`, etc. */
+/* Marketing landing page palette. The token names are kept for compatibility
+   with the ported design, but the values now come from the product brand:
+   navy = slate, teal-brand = blue (primary), cyan-brand = violet (accent). */
 @theme {
-  --color-navy-950: #061325;
-  --color-navy-900: #0a2540;
-  --color-navy-800: #0f3860;
-  --color-navy-700: #174f82;
-  --color-navy-600: #1e68a4;
+  --color-navy-950: #020617;
+  --color-navy-900: #0f172a;
+  --color-navy-800: #1e293b;
+  --color-navy-700: #334155;
+  --color-navy-600: #475569;
 
-  --color-teal-brand-50: #f0fdfa;
-  --color-teal-brand-100: #ccfbf1;
-  --color-teal-brand-200: #99f6e4;
-  --color-teal-brand-300: #5eead4;
-  --color-teal-brand-400: #2dd4bf;
-  --color-teal-brand-500: #14b8a6;
-  --color-teal-brand-600: #00a896;
-  --color-teal-brand-700: #0d9488;
-  --color-teal-brand-800: #115e59;
-  --color-teal-brand-900: #134e4a;
-  --color-teal-brand-950: #042f2e;
+  --color-teal-brand-50: #eff6ff;
+  --color-teal-brand-100: #dbeafe;
+  --color-teal-brand-200: #bfdbfe;
+  --color-teal-brand-300: #93c5fd;
+  --color-teal-brand-400: #60a5fa;
+  --color-teal-brand-500: #3b82f6;
+  --color-teal-brand-600: #2563eb;
+  --color-teal-brand-700: #1d4ed8;
+  --color-teal-brand-800: #1e40af;
+  --color-teal-brand-900: #1e3a8a;
+  --color-teal-brand-950: #172554;
 
-  --color-cyan-brand-400: #38bdf8;
-  --color-cyan-brand-500: #06b6d4;
-  --color-cyan-brand-600: #0284c7;
+  --color-cyan-brand-400: #a78bfa;
+  --color-cyan-brand-500: #8b5cf6;
+  --color-cyan-brand-600: #7c3aed;
 
   --color-editorial-bg: #f8fafc;
   --color-editorial-card: #ffffff;
   --color-editorial-border: #e2e8f0;
-  --color-editorial-border-teal: #ccfbf1;
+  --color-editorial-border-teal: #dbeafe;
   --color-editorial-muted: #f1f5f9;
 
   --shadow-editorial:
-    0 20px 40px -15px rgba(10, 37, 64, 0.07), 0 2px 6px -1px rgba(10, 37, 64, 0.03);
+    0 20px 40px -15px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
   --shadow-teal-glow:
-    0 0 30px -5px rgba(0, 168, 150, 0.25), 0 10px 20px -5px rgba(6, 182, 212, 0.15);
+    0 0 30px -5px rgba(37, 99, 235, 0.25), 0 10px 20px -5px rgba(124, 58, 237, 0.15);
   --shadow-executive:
-    0 20px 40px -15px rgba(10, 37, 64, 0.1), 0 2px 6px -1px rgba(10, 37, 64, 0.04);
+    0 20px 40px -15px rgba(15, 23, 42, 0.1), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
 }
 
 @layer base {
@@ -436,9 +437,9 @@
   font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   background-color: #f8fafc;
   background-image:
-    radial-gradient(at 0% 0%, rgba(0, 168, 150, 0.05) 0px, transparent 45%),
-    radial-gradient(at 100% 10%, rgba(6, 182, 212, 0.05) 0px, transparent 40%),
-    radial-gradient(at 50% 100%, rgba(10, 37, 64, 0.03) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.06) 0px, transparent 45%),
+    radial-gradient(at 100% 10%, rgba(124, 58, 237, 0.05) 0px, transparent 40%),
+    radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.03) 0px, transparent 50%);
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -461,10 +462,10 @@
 .landing-page .pattern-blackout {
   background: repeating-linear-gradient(
     45deg,
-    #f0fdfa,
-    #f0fdfa 8px,
-    #ccfbf1 8px,
-    #ccfbf1 16px
+    #eff6ff,
+    #eff6ff 8px,
+    #dbeafe 8px,
+    #dbeafe 16px
   );
 }
 
@@ -473,7 +474,7 @@
 }
 .landing-page .heat-cell:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 10px 25px -5px rgba(0, 168, 150, 0.25);
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
   z-index: 20;
 }
 
@@ -512,7 +513,7 @@
 }
 
 .landing-page input[type="range"] {
-  accent-color: #00a896;
+  accent-color: #2563eb;
 }
 
 .landing-page ::-webkit-scrollbar {

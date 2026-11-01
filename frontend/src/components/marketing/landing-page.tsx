@@ -118,48 +118,19 @@ export function LandingPage() {
   }
 
   return (
-    <div className="landing-page flex min-h-full flex-col justify-between text-slate-900 selection:bg-teal-500 selection:text-white">
+    <div className="landing-page flex min-h-full flex-col justify-between text-slate-900 selection:bg-blue-600 selection:text-white">
       {/* Navigation */}
       <header className="sticky top-0 z-40 flex h-16 w-full items-center border-b border-editorial-border bg-white/90 shadow-xs backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between px-4 sm:px-8">
           <a href="#hero" className="group flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-navy-900 via-teal-brand-600 to-cyan-brand-500 p-0.5 shadow-md transition-transform group-hover:scale-105">
-              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[10px] bg-navy-950">
-                <svg
-                  className="h-6 w-6 text-teal-brand-500"
-                  viewBox="0 0 100 100"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M 25 35 C 25 20, 50 20, 50 35 C 50 50, 25 50, 25 65 C 25 80, 50 80, 50 65"
-                    stroke="url(#landingLogoGrad1)"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  <path
-                    d="M 50 35 C 50 20, 75 20, 75 35 C 75 50, 50 50, 50 65 C 50 80, 75 80, 75 65"
-                    stroke="url(#landingLogoGrad2)"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  <circle cx="50" cy="50" r="7" fill="#38bdf8" className="animate-pulse" />
-                  <defs>
-                    <linearGradient id="landingLogoGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#0a2540" />
-                      <stop offset="100%" stopColor="#00a896" />
-                    </linearGradient>
-                    <linearGradient id="landingLogoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#00a896" />
-                      <stop offset="100%" stopColor="#06b6d4" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="ScheduleSolve AI"
+              width={329}
+              height={237}
+              className="h-10 w-auto shrink-0 object-contain transition-transform duration-300 group-hover:scale-105"
+            />
 
             <div className="hidden items-center gap-2.5 sm:flex">
               <span className="whitespace-nowrap text-lg font-black tracking-tight text-navy-900">
@@ -252,7 +223,7 @@ export function LandingPage() {
                 <button
                   type="button"
                   onClick={scrollToDemo}
-                  className="flex items-center gap-2.5 rounded-xl border border-navy-800 bg-navy-900 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-navy-950 active:scale-95"
+                  className="flex items-center gap-2.5 rounded-xl border border-blue-700 bg-blue-600 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-700 active:scale-95"
                 >
                   <Play className="h-4 w-4 text-cyan-brand-400" />
                   <span>Launch Live Matrix Demo</span>

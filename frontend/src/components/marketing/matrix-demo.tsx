@@ -86,7 +86,7 @@ const ROLE_LENS: Record<
     ],
     focusBuildings: ["main-soda"],
     focusSlots: [1, 4],
-    accent: "border-purple-300 bg-purple-50/60",
+    accent: "border-violet-300 bg-violet-50/60",
   },
   student: {
     badge: "Student Cohort lens",
@@ -241,7 +241,7 @@ export function MatrixDemo({
                 onClick={() => selectRole(item.key)}
                 className={
                   role === item.key
-                    ? "rounded-xl bg-navy-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all"
+                    ? "rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-all"
                     : "rounded-xl px-3.5 py-1.5 text-xs font-bold text-slate-600 transition-all hover:text-navy-900"
                 }
               >

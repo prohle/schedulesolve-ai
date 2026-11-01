@@ -440,7 +440,7 @@ export function RoiCalculatorSection({ onRequest }: { onRequest: () => void }) {
             <button
               type="button"
               onClick={onRequest}
-              className="w-full rounded-xl bg-navy-900 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-navy-950"
+              className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all hover:bg-blue-700"
             >
               Download Institutional ROI Analysis
             </button>

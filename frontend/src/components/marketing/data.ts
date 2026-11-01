@@ -259,7 +259,7 @@ export const trafficOption: EChartsOption = {
       type: "line",
       smooth: true,
       data: [4600, 6800, 6000, 800, 5100, 3900, 2200],
-      lineStyle: { color: "#00a896", width: 2.5 },
+      lineStyle: { color: "#2563eb", width: 2.5 },
     },
     {
       name: "Engineering Quad",
@@ -273,7 +273,7 @@ export const trafficOption: EChartsOption = {
       type: "line",
       smooth: true,
       data: [1600, 2250, 2050, 250, 1850, 1400, 850],
-      lineStyle: { color: "#06b6d4", width: 2.5 },
+      lineStyle: { color: "#7c3aed", width: 2.5 },
     },
   ],
 };
@@ -300,8 +300,8 @@ export const facultyRadarOption: EChartsOption = {
         {
           value: [100, 96, 100, 98, 98],
           name: "Faculty Preference Match Index",
-          areaStyle: { color: "rgba(0, 168, 150, 0.25)" },
-          lineStyle: { color: "#00a896", width: 2 },
+          areaStyle: { color: "rgba(37, 99, 235, 0.25)" },
+          lineStyle: { color: "#2563eb", width: 2 },
         },
       ],
     },
