@@ -55,7 +55,9 @@ const HOTSPOTS = [
     note: "100% Conflict Free",
     noteTone: "text-emerald-400",
     position: "top-[30%] left-[26%]",
-    side: "left",
+    // Opens above the badge: hotspot 1 and 2 sit close together, so stacking
+    // their cards vertically keeps both readable instead of overlapping.
+    placement: "top",
   },
   {
     id: 2,
@@ -64,7 +66,7 @@ const HOTSPOTS = [
     note: "92% Peak Workload Fit",
     noteTone: "text-blue-400",
     position: "top-[38%] left-[56%]",
-    side: "right",
+    placement: "bottom",
   },
   {
     id: 3,
@@ -73,9 +75,16 @@ const HOTSPOTS = [
     note: "100% Faculty Pref Match",
     noteTone: "text-purple-400",
     position: "top-[49%] left-[82%]",
-    side: "right",
+    placement: "left",
   },
 ];
+
+const HOTSPOT_PLACEMENT: Record<string, string> = {
+  top: "bottom-8 left-1/2 -translate-x-1/2",
+  bottom: "top-8 left-1/2 -translate-x-1/2",
+  left: "right-8 top-1/2 -translate-y-1/2",
+  right: "left-8 top-1/2 -translate-y-1/2",
+};
 
 function scrollToDemo() {
   document.getElementById("demo-app")?.scrollIntoView({ behavior: "smooth" });
@@ -302,20 +311,20 @@ export function LandingPage() {
                 {HOTSPOTS.map((hotspot) => (
                   <div
                     key={hotspot.id}
-                    className={`group absolute z-20 ${hotspot.position}`}
+                    className={`group absolute z-20 hover:z-30 focus-within:z-30 ${hotspot.position}`}
                   >
                     <button
                       type="button"
                       onClick={scrollToDemo}
                       aria-label={`Inspect ${hotspot.title}`}
-                      className="hotspot-badge flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[10px] font-black text-slate-950 shadow-lg"
+                      className="hotspot-badge peer flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-amber-500 text-[10px] font-black text-slate-950 shadow-lg"
                     >
                       {hotspot.id}
                     </button>
 
                     <div
-                      className={`pointer-events-none absolute top-1/2 w-52 -translate-y-1/2 space-y-1 rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white opacity-0 shadow-2xl backdrop-blur-md transition-opacity group-hover:opacity-100 ${
-                        hotspot.side === "left" ? "left-8" : "right-8"
+                      className={`pointer-events-none absolute w-52 space-y-1 rounded-xl border border-slate-700 bg-slate-900/95 p-3 text-xs text-white opacity-0 shadow-2xl backdrop-blur-md transition-opacity group-hover:opacity-100 peer-focus:opacity-100 ${
+                        HOTSPOT_PLACEMENT[hotspot.placement] ?? HOTSPOT_PLACEMENT.right
                       }`}
                     >
                       <div className="font-extrabold text-amber-400">{hotspot.title}</div>

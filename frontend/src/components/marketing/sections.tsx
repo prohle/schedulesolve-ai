@@ -467,10 +467,12 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
               ))}
             </div>
             <blockquote className="text-lg font-bold leading-relaxed text-navy-900 sm:text-2xl">
-              &quot;ScheduleSolve AI collapses the annual timetable cycle from weeks of registrar
-              spreadsheets down to seconds — while eliminating student degree-completion
-              deadlocks.&quot;
+              &quot;From weeks of registrar spreadsheets to seconds of verifiable proof.
+              Zero schedule collisions. Zero delayed graduations.&quot;
             </blockquote>
+            <p className="text-sm font-extrabold tracking-wide text-teal-brand-700">
+              — Huong Le, Founder
+            </p>
           </div>
 
           <button
