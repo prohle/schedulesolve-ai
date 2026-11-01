@@ -140,7 +140,7 @@ export function LandingPage() {
                 </span>
               </span>
               <span className="hidden rounded-full border border-teal-brand-200 bg-teal-brand-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest whitespace-nowrap text-teal-brand-800 2xl:inline-block">
-                Muse Spark + CP-SAT
+                Powered by Meta Muse Spark
               </span>
             </div>
           </a>
@@ -202,21 +202,20 @@ export function LandingPage() {
             <div className="space-y-6 lg:col-span-7">
               <div className="inline-flex items-center gap-2.5 rounded-full border border-teal-brand-200 bg-teal-brand-50 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-widest text-teal-brand-900 shadow-xs">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-brand-500" />
-                <span>Zero-Conflict Timetable Infrastructure</span>
+                <span>Lightning-Fast Campus Scheduling</span>
               </div>
 
               <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-navy-900 sm:text-6xl xl:text-7xl">
-                Zero-Conflict Timetable Infrastructure <br />
+                Perfect College Schedules{" "}
                 <span className="bg-gradient-to-r from-navy-900 via-teal-brand-600 to-cyan-brand-500 bg-clip-text text-transparent">
-                  for Modern Universities.
+                  in Under 10 Seconds.
                 </span>
               </h1>
 
               <p className="max-w-2xl text-base font-medium leading-relaxed text-slate-600 sm:text-lg">
-                A native C++ solver and Google OR-Tools CP-SAT race on identical data, delivering
-                solver-proven feasibility, campus-wide spatial optimization, zero cohort deadlocks,
-                and faculty workload harmony — while Muse Spark turns messy files and plain English
-                into typed constraints.
+                Drop in your messy school files. ScheduleSolve AI pairs deterministic math with
+                Meta’s Muse Spark to build zero-conflict timetables, keep students on track to
+                graduate on time, and honor every professor’s workload constraints.
               </p>
 
               <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -274,11 +273,8 @@ export function LandingPage() {
                 <img
                   src="/photo-1541829070764-84a7d30dd3f3.avif"
                   alt="University academic quad"
-                  className="h-[460px] w-full object-cover opacity-50 transition-transform duration-700 group-hover/hero:scale-105"
+                  className="h-[460px] w-full object-cover transition-transform duration-700 group-hover/hero:scale-105"
                 />
-
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                <div className="absolute inset-0 hidden bg-gradient-to-r from-slate-900 via-transparent to-transparent lg:block" />
 
                 {HOTSPOTS.map((hotspot) => (
                   <div
@@ -327,12 +323,12 @@ export function LandingPage() {
                   </div>
                 ))}
 
-                <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-navy-950/95 via-navy-900/40 to-transparent p-6 text-white">
+                <div className="absolute inset-0 flex flex-col justify-between p-6 text-white">
                   <div className="flex items-center justify-between">
                     <span className="rounded-full bg-gradient-to-r from-teal-brand-500 to-cyan-brand-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-navy-950 shadow-xs backdrop-blur-md">
                       DEMO TELEMETRY
                     </span>
-                    <span className="flex items-center gap-1.5 rounded-full border border-teal-brand-500/40 bg-teal-brand-500/20 px-2.5 py-1 text-[10px] font-bold text-cyan-brand-400 backdrop-blur-md">
+                    <span className="flex items-center gap-1.5 rounded-full border border-teal-brand-500/40 bg-slate-950/70 px-2.5 py-1 text-[10px] font-bold text-cyan-brand-400 backdrop-blur-md">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-brand-400" />
                       ILLUSTRATIVE CAMPUS
                     </span>
