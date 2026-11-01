@@ -25,6 +25,7 @@ from app.models.scenario import (
     TermClosure,
 )
 from app.models.term import FacultyIntake, TermWindow
+from app.services.offerings import offering_summary
 
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
@@ -290,56 +291,84 @@ def simulate_intake(
 
             rng = random.Random(_stable_seed(f"{window.id}:{instructor.id}"))
             slots = [(day, period) for day in range(5) for period in range(PERIOD_COUNT)]
-            hard = [
-                {"day": day, "period": period}
-                for day, period in rng.sample(slots, rng.choice([0, 1, 1, 2]))
-            ]
+
+            # Hard blackouts are not uniform: Friday afternoons, early
+            # mornings and a full research/committee day are the common
+            # real-world shapes. Research-track faculty get a full day more
+            # often; teaching-track faculty fewer.
+            hard: list[dict] = []
+            if rng.random() < (0.62 if instructor.track == "research" else 0.42):
+                weights = []
+                for day, period in slots:
+                    weight = 1.0
+                    if day == 4:
+                        weight += 1.5
+                    if period == 0:
+                        weight += 1.0
+                    if period == 3:
+                        weight += 0.5
+                    weights.append(weight)
+                for day, period in rng.choices(slots, weights=weights,
+                                               k=rng.choice([1, 1, 2])):
+                    if {"day": day, "period": period} not in hard:
+                        hard.append({"day": day, "period": period})
+            if instructor.track == "research" and rng.random() < 0.18:
+                day = rng.choice([0, 2, 4])
+                for period in range(PERIOD_COUNT):
+                    if {"day": day, "period": period} not in hard:
+                        hard.append({"day": day, "period": period})
             hard_keys = {(slot["day"], slot["period"]) for slot in hard}
 
             preferences: list[dict] = []
-            # Day-level wishes.
-            for day in rng.sample(range(5), rng.choice([1, 2])):
-                if any(day == slot["day"] for slot in hard):
+            blocked_days = {
+                day for day in range(5)
+                if all((day, period) in hard_keys for period in range(PERIOD_COUNT))
+            }
+            # Day-level wishes: avoid Friday / prefer a compact campus day.
+            for day in rng.sample(range(5), rng.choice([0, 1, 1, 2])):
+                if day in blocked_days:
                     continue
                 preferences.append({
-                    "kind": rng.choice(["prefer", "avoid"]),
-                    "day": day,
-                    "period": None,
-                    "course_id": None,
+                    "kind": "avoid" if day == 4 else rng.choice(["prefer", "avoid"]),
+                    "day": day, "period": None, "course_id": None,
                     "weight": rng.choice([5, 8, 10]),
                 })
-            # Period-level wishes.
-            for period in rng.sample(range(PERIOD_COUNT), rng.choice([0, 1])):
+            # Period-level wishes: 8:00 is the common avoidance; 9:30/11:00
+            # are the common preferences.
+            for period in rng.sample(range(PERIOD_COUNT), rng.choice([0, 1, 1])):
                 preferences.append({
-                    "kind": rng.choice(["prefer", "avoid"]),
-                    "day": None,
-                    "period": period,
-                    "course_id": None,
+                    "kind": "avoid" if period == 0 else rng.choice(["prefer", "avoid"]),
+                    "day": None, "period": period, "course_id": None,
                     "weight": rng.choice([5, 8]),
                 })
             # Course wishes from the professor's own qualifications.
             if instructor.qualified_courses:
                 for course_id in rng.sample(
                     instructor.qualified_courses,
-                    min(len(instructor.qualified_courses), rng.choice([1, 1, 2])),
+                    min(len(instructor.qualified_courses),
+                        rng.choice([1, 1, 2])),
                 ):
                     preferences.append({
-                        "kind": "prefer",
-                        "day": None,
-                        "period": None,
-                        "course_id": course_id,
-                        "weight": 8,
+                        "kind": "prefer", "day": None, "period": None,
+                        "course_id": course_id, "weight": 8,
                     })
-            # Never contradict a hard blackout with a "prefer" on that slot.
-            preferences = [
-                pref for pref in preferences
-                if not (
-                    pref.get("day") is not None
-                    and pref.get("period") is not None
-                    and (pref["day"], pref["period"]) in hard_keys
-                    and pref["kind"] == "prefer"
-                )
-            ]
+            # No duplicate wishes; no "prefer" that contradicts a hard
+            # blackout on the same day/period.
+            seen: set[tuple] = set()
+            cleaned: list[dict] = []
+            for pref in preferences:
+                key = (pref["kind"], pref.get("day"), pref.get("period"),
+                       pref.get("course_id"))
+                if key in seen:
+                    continue
+                if (pref.get("day") is not None
+                        and pref.get("period") is not None
+                        and (pref["day"], pref["period"]) in hard_keys
+                        and pref["kind"] == "prefer"):
+                    continue
+                seen.add(key)
+                cleaned.append(pref)
+            preferences = cleaned
 
             row = existing or FacultyIntake(
                 window_id=window.id, instructor_id=instructor.id
@@ -689,6 +718,14 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
             "qualified_courses": _course_codes(scenario, instructor.qualified_courses),
             "assigned_sections": loads.get(instructor.id, 0),
             "preps": len(preps.get(instructor.id, set())),
+            "track": instructor.track,
+            "max_student_load": (
+                instructor.max_student_load
+                if instructor.max_student_load is not None
+                else scenario.policy.faculty_load_cap(instructor.track)
+            ),
+            "accepts_phd": instructor.accepts_phd,
+            "max_phd_students": instructor.max_phd_students,
             "load_pct": round(
                 100 * loads.get(instructor.id, 0) / max(1, instructor.max_sections)
             ),
@@ -725,6 +762,9 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
             ),
             "current_term": cohort.current_term,
             "size": cohort.size,
+            "level": cohort.level,
+            "credits_per_term": cohort.credits_per_term,
+            "entry_term": cohort.entry_term,
             "admission_year": cohort.admission_year,
             "graduation_year": cohort.graduation_year,
             "term_courses": _course_codes(
@@ -768,6 +808,13 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
             "max_preps_per_instructor": max(
                 (i.max_preps for i in scenario.instructors), default=0
             ),
+            "min_courses_full_time": scenario.policy.min_courses_full_time,
+            "min_credits_full_time": scenario.policy.min_credits_full_time,
+            "load_exponent": scenario.policy.load_exponent,
+            "load_multiplier": scenario.policy.load_multiplier,
+            "full_time_faculty_load": scenario.policy.full_time_faculty_load,
+            "research_track_factor": scenario.policy.research_track_factor,
+            "teaching_track_factor": scenario.policy.teaching_track_factor,
             "patterns": {
                 "MWF": {"days": [0, 2, 4], "hours": 1.5},
                 "TTh": {"days": [1, 3], "hours": 1.5},
@@ -802,9 +849,28 @@ def overview(scenario: Scenario, placements: Optional[list[dict]] = None) -> dic
                 "seats": course.seats,
                 "equipment": course.equipment,
                 "duration": course.duration,
+                "credits": course.credits,
+                "catalog_status": course.catalog_status,
+                "is_special_topic": course.is_special_topic,
+                "department": course.department,
             }
             for course in scenario.courses
         ],
+        "policy": scenario.policy.model_dump(),
+        "time_grid": scenario.time_grid.model_dump(),
+        "catalog": offering_summary(scenario),
+        "population": {
+            "cohorts_by_level": {
+                level: sum(1 for c in scenario.cohorts if c.level == level)
+                for level in ("bachelor", "master", "phd")
+            },
+            "students_by_level": {
+                level: sum(c.size for c in scenario.cohorts if c.level == level)
+                for level in ("bachelor", "master", "phd")
+            },
+            "individual_students": len(scenario.students),
+            "phd_reservations": len(scenario.phd_reservations),
+        },
         "counts": {
             "buildings": len(scenario.buildings),
             "rooms": len(scenario.rooms),

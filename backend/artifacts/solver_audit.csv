@@ -1,0 +1,46 @@
+instance,kind,seed,sections,cohorts,instructors,rooms,realism_errors,realism_warnings,objective,engine,status,objective_value,solve_time_ms,wall_ms,placements,valid,c39_ok,c39_met,c39_total,room_utilization,load_overloaded,load_max_utilization,error,agreement_pct
+built: story seed,built,,8,4,6,7,0,6,preference,cpsat,optimal,-6,80,80,8,True,False,2,4,0.386,0,0.29,,100.0
+built: story seed,built,,8,4,6,7,0,6,preference,ours,optimal,-6,6,29,8,True,False,1,4,0.523,0,0.29,,37.5
+built: story seed,built,,8,4,6,7,0,6,preference,greedy,feasible,-6,6,8,8,True,False,1,4,0.523,0,0.29,,37.5
+built: department,built,,25,12,26,16,0,10,preference,cpsat,optimal,-40,82,83,25,True,True,12,12,0.52,0,0.301,,100.0
+built: department,built,,25,12,26,16,0,10,preference,ours,optimal,-40,19,22,25,True,True,12,12,0.484,0,0.29,,12.0
+built: department,built,,25,12,26,16,0,10,preference,greedy,feasible,-34,23,26,25,True,True,12,12,0.484,0,0.29,,12.0
+built: university,built,,41,20,38,16,0,17,preference,cpsat,optimal,-40,166,167,41,True,True,20,20,0.654,0,0.301,,100.0
+built: university,built,,41,20,38,16,0,17,preference,ours,optimal,-40,36,40,41,True,True,20,20,0.7,0,0.29,,4.9
+built: university,built,,41,20,38,16,0,17,preference,greedy,feasible,-34,33,36,41,True,True,20,20,0.7,0,0.29,,4.9
+built: Northgate (default),built,,271,110,148,83,0,0,preference,cpsat,optimal,-40,8020,8070,271,True,True,110,110,0.714,0,0.761,,100.0
+built: Northgate (default),built,,271,110,148,83,0,0,preference,ours,optimal,-40,2371,2402,271,True,True,110,110,0.737,0,0.83,,0.4
+built: Northgate (default),built,,271,110,148,83,0,0,preference,greedy,feasible,-28,2296,2318,271,True,True,110,110,0.737,0,0.83,,0.4
+built: full university (stress),built,,361,100,198,82,0,17,preference,cpsat,unknown,,18134,18162,0,,,0,0,0.0,0,0.0,,
+built: full university (stress),built,,361,100,198,82,0,17,preference,ours,optimal,-40,5787,5826,361,True,True,100,100,0.7,0,0.99,,100.0
+built: full university (stress),built,,361,100,198,82,0,17,preference,greedy,feasible,-34,5927,5957,361,True,True,100,100,0.7,0,0.99,,99.4
+random: department seed 0,random,0,25,12,26,16,0,9,preference,cpsat,infeasible,,2,2,0,,,0,0,0.0,0,0.0,,
+random: department seed 0,random,0,25,12,26,16,0,9,preference,ours,infeasible,,18,20,0,,,0,0,0.0,0,0.0,,
+random: department seed 0,random,0,25,12,26,16,0,9,preference,greedy,infeasible,,16,18,0,,,0,0,0.0,0,0.0,,
+random: department seed 1,random,1,25,12,26,16,0,9,preference,cpsat,optimal,-57,108,110,25,True,True,12,12,0.452,0,0.218,,100.0
+random: department seed 1,random,1,25,12,26,16,0,9,preference,ours,optimal,-57,20,22,25,True,True,12,12,0.447,0,0.218,,12.0
+random: department seed 1,random,1,25,12,26,16,0,9,preference,greedy,feasible,-51,20,22,25,True,True,12,12,0.447,0,0.218,,12.0
+random: department seed 2,random,2,26,12,26,16,0,9,preference,cpsat,optimal,-66,155,156,26,True,True,12,12,0.539,0,0.196,,100.0
+random: department seed 2,random,2,26,12,26,16,0,9,preference,ours,optimal,-66,30,32,26,True,True,12,12,0.529,0,0.185,,15.4
+random: department seed 2,random,2,26,12,26,16,0,9,preference,greedy,feasible,-60,22,25,26,True,True,12,12,0.529,0,0.185,,15.4
+random: department seed 3,random,3,26,12,26,16,0,9,preference,cpsat,optimal,-71,158,159,26,True,True,12,12,0.555,0,0.196,,100.0
+random: department seed 3,random,3,26,12,26,16,0,9,preference,ours,optimal,-71,30,32,26,True,True,12,12,0.373,0,0.198,,15.4
+random: department seed 3,random,3,26,12,26,16,0,9,preference,greedy,feasible,-65,27,32,26,True,True,12,12,0.373,0,0.198,,11.5
+random: department seed 4,random,4,25,12,26,16,0,9,preference,cpsat,optimal,-87,117,118,25,True,True,12,12,0.55,0,0.222,,100.0
+random: department seed 4,random,4,25,12,26,16,0,9,preference,ours,optimal,-87,28,41,25,True,True,12,12,0.369,0,0.222,,4.0
+random: department seed 4,random,4,25,12,26,16,0,9,preference,greedy,feasible,-80,40,51,25,True,True,12,12,0.369,0,0.222,,4.0
+random: department seed 5,random,5,26,12,26,16,0,9,preference,cpsat,optimal,-76,131,133,26,True,True,12,12,0.53,0,0.209,,100.0
+random: department seed 5,random,5,26,12,26,16,0,9,preference,ours,optimal,-76,27,33,26,True,True,12,12,0.513,0,0.185,,11.5
+random: department seed 5,random,5,26,12,26,16,0,9,preference,greedy,feasible,-53,25,34,26,True,True,12,12,0.476,0,0.185,,11.5
+random: department seed 6,random,6,25,12,26,16,0,9,preference,cpsat,infeasible,,3,3,0,,,0,0,0.0,0,0.0,,
+random: department seed 6,random,6,25,12,26,16,0,9,preference,ours,infeasible,,17,42,0,,,0,0,0.0,0,0.0,,
+random: department seed 6,random,6,25,12,26,16,0,9,preference,greedy,infeasible,,15,17,0,,,0,0,0.0,0,0.0,,
+random: department seed 7,random,7,25,12,26,16,0,9,preference,cpsat,infeasible,,2,2,0,,,0,0,0.0,0,0.0,,
+random: department seed 7,random,7,25,12,26,16,0,9,preference,ours,infeasible,,16,22,0,,,0,0,0.0,0,0.0,,
+random: department seed 7,random,7,25,12,26,16,0,9,preference,greedy,infeasible,,14,16,0,,,0,0,0.0,0,0.0,,
+random: department seed 8,random,8,26,12,26,16,0,9,preference,cpsat,optimal,-63,125,127,26,True,True,12,12,0.516,0,0.212,,100.0
+random: department seed 8,random,8,26,12,26,16,0,9,preference,ours,optimal,-63,22,25,26,True,True,12,12,0.486,0,0.222,,19.2
+random: department seed 8,random,8,26,12,26,16,0,9,preference,greedy,feasible,-51,26,28,26,True,True,12,12,0.486,0,0.222,,19.2
+random: department seed 9,random,9,25,12,26,16,0,9,preference,cpsat,optimal,-77,108,109,25,True,True,12,12,0.569,0,0.223,,100.0
+random: department seed 9,random,9,25,12,26,16,0,9,preference,ours,optimal,-77,33,35,25,True,True,12,12,0.412,0,0.189,,20.0
+random: department seed 9,random,9,25,12,26,16,0,9,preference,greedy,feasible,-66,30,39,25,True,True,12,12,0.412,0,0.189,,20.0

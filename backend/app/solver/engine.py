@@ -112,12 +112,14 @@ def solve_with(engine: str, sc: Scenario,
                            objective=objective, engine="cpsat")
     if engine in ("ours", "greedy"):
         from app.solver.home_solver import solve_home
-        if engine == "ours":
-            from app.solver.native_solver import native_available, solve_native
-            if native_available():
-                return solve_native(sc, request_ops, pins_exact=pins_exact,
-                                    instructor_pins=instructor_pins, slot_hints=slot_hints,
-                                    objective=objective)
+        from app.solver.native_solver import native_available, solve_native
+        if native_available():
+            # `greedy` is the same native core stopped after its first
+            # descent: a millisecond-fast baseline at every scale, not just
+            # the sizes the pure-Python reference can finish.
+            return solve_native(sc, request_ops, pins_exact=pins_exact,
+                                instructor_pins=instructor_pins, slot_hints=slot_hints,
+                                objective=objective, quick=(engine == "greedy"))
         return solve_home(sc, request_ops, pins_exact=pins_exact,
                           instructor_pins=instructor_pins, slot_hints=slot_hints,
                           objective=objective, quick=(engine == "greedy"))

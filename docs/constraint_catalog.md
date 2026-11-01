@@ -186,8 +186,23 @@ requests produce the minimal conflicting subset, the self-healing hook.
 Decisions: for each section → (instructor, timeslot set, room).
 Fixed by seed: program offerings (C1/C2/C5 precomputed from cohorts),
 course catalog, room inventory, walk matrix.
-Modeled now: C7, C8, C9, C10, C13-C21, C23-C26, C29, C30, C32, C34-C39.
-Deferred: C3, C6, C11, C22, C27, C28, C31, C33.
+
+## D. Institutional policy (coordinator-owned, v2)
+
+| ID | Constraint | Type | v1 |
+|---|---|---|---|
+| C40 | Instructor student-credit load cap: Σ(credits × (enrollment/40)^exponent × multiplier) per instructor ≤ policy cap × track factor | Hard | ✓ |
+| C41 | Full-time student definition: ≥ coordinator's minimum courses **or** minimum credits per term | Policy | ✓ |
+| C42 | Catalog offering decision: a course may be offered / not offered / dormant / special topic for a term, with a durable reason record | Policy | ✓ |
+| C43 | PhD reservation: PhD students only, Fall entry only, 1-3 credits, at most 3-5 approved students per professor per Fall | Hard (record) | ✓ |
+| C44 | Faculty track: research track has a lower full-time load factor than teaching track | Policy | ✓ |
+| C45 | Meeting-pattern catalog: weekly (MWF/TTh) and block patterns, coordinator-editable periods and durations | Policy | ✓ (data) / solver grid v1 |
+| C46 | Calendar: individually declared holidays, national-holiday suggestions, day swaps ("Friday follows Tuesday"), suggested term start/end | Policy | ✓ |
+| C47 | Special topic: a one-off course opened by a department with instructor, credits, pattern, room type and reason | Policy | ✓ |
+| C48 | Student personal plan: prerequisite-timeline-correct, time/day/campus preference, projected graduation, full-time threshold | Soft + audit | ✓ |
+
+Modeled now: C7, C8, C9, C10, C13-C21, C23-C26, C29, C30, C32, C34-C48.
+Deferred: C3, C6, C11, C22, C27, C28, C31, C33; C45 mixed-duration interval scheduling.
 
 Lifecycle features:
 - Intake windows: single-user flow in v1 (one instructor submits free text →

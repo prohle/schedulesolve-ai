@@ -6,9 +6,11 @@ our word for it. Scoped claims are stronger than broad ones.
 
 ## Data truthfulness
 
-- **The shipped institution is synthetic.** "Northgate University" (9 campus
-  quads, 14 buildings, 62 rooms, 118 faculty, 201 courses/sections, 25 majors +
-  8 minors, 100 cohorts) is generated demo data, not a real registrar extract.
+- **The shipped institution is synthetic.** "Northgate University" (14
+  buildings across 9 campus quads, 83 rooms, 148 faculty, 271
+  courses/sections, 20 undergraduate majors + 5 master's + 5 PhD programs +
+  8 minors, 110 cohorts, 35 named PhD students) is generated demo data, not a
+  real registrar extract.
   The app labels it **Demo institution** and the first-page preview labels
   itself **Illustrative sample**. Real institutions replace it through
   Import / Settings → Update institution data.
@@ -16,7 +18,43 @@ our word for it. Scoped claims are stronger than broad ones.
   generate randomized hard blackouts and soft preferences, stored with the
   note "Simulated faculty feedback (demo)." They are useful for walking the
   full flow; they are not real staff input. Real input comes from each
-  signed-in professor before the deadline.
+  signed-in professor before the deadline. The randomization is realistic in
+  shape (early-morning/Friday avoidances, sparse committee blackouts, course
+  wishes) but it is still generated.
+- **Randomized audit scenarios are generated, not real institutions.**
+  `backend/app/data/random_scenario.py` perturbs the shipped structure with
+  seeded cohort sizes, faculty tracks/caps, closures, blackouts, enrollment
+  and catalog decisions. They are for feasibility/performance testing, not
+  for presenting as a real registrar extract.
+- **The time grid is stored but not fully interval-scheduled.** Coordinators
+  can set the teaching day, period lengths and meeting-pattern catalog
+  (`TimeGrid` / `MeetingPattern`, persisted and editable). The solver currently
+  schedules the four 90-minute base grid plus weekly/block patterns. A term
+  that mixes 50-, 80- and 170-minute classes in one day needs the
+  interval-scheduling solver upgrade; the data model already carries the
+  configuration.
+- **Faculty load is a policy abstraction.** Load is credits × a sub-linear
+  enrollment factor (default exponent 0.7), not a timesheet. The coordinator
+  sets the exponent, multiplier, full-time threshold and research/teaching
+  track factors. It is auditable from placements, but it is a model.
+- **PhD reservations are records, not timetable placements.** A 1-3 credit
+  reading/research course has no fixed weekly meeting; the system enforces
+  PhD-only, Fall-only, credit range and the professor's 3-5 student Fall cap,
+  and keeps the durable record.
+- **Catalog decisions are term-scoped.** Not-offered, dormant and special-topic
+  records carry a term label and reason; there is still one current scenario
+  per deployment (no multi-term versioning).
+- **The demo institution generator is a fixture.** The shipped Northgate
+  structure is generated from code so the demo is reproducible; it is the
+  equivalent of the public preview fixture. Every runtime configuration the
+  coordinator changes — policy, time grid, calendar, offerings, special
+  topics, students, PhD reservations, pins, enrollments — lives in the
+  persisted `Scenario`/database and is editable through the API. Real
+  institutions replace the fixture through Import / Settings, not by editing
+  code.
+- **National holidays are advisory.** The system suggests common national
+  holidays and term dates; every holiday/swap is stored as an editable record
+  and can be overridden with local or religious holidays.
 - **Two real solvers, not a SAT/SMT race.** The engines are OR-Tools CP-SAT
   and the ScheduleSolve native C++ search (plus a greedy first-descent). There
   is no Z3/SMT engine; earlier landing copy that implied one has been removed.
@@ -80,13 +118,13 @@ our word for it. Scoped claims are stronger than broad ones.
   binary is unbuilt, the system transparently falls back to the Python
   reference (`backend/app/solver/native_solver.py`).
 - **Solve budget.** CP-SAT runs under `SOLVER_TIME_LIMIT_S` (default
-  10 s). Measured envelope: CP-SAT proves the demo scales (up to
-  38 instructors / 41 sections); at the full-university stress scale
-  (198 instructors / 361 sections / 100 cohorts) it finds no feasible
-  timetable inside the budget and reports `unknown` — as do all
-  engines on timeout, never a fabricated "infeasible". The native
-  solver proves that instance optimal in ~3.3 s. Instances beyond
-  the stress scale are unmeasured, not claimed.
+  60 s). Measured envelope: CP-SAT proves the default institution
+  (148 instructors / 271 sections / 110 cohorts) optimal in ~8 s; at
+  the full-university stress scale (198 instructors / 361 sections /
+  100 cohorts) it finds no feasible timetable inside the budget and
+  reports `unknown` — as do all engines on timeout, never a fabricated
+  "infeasible". The native solver proves that instance optimal in
+  ~5.9 s. Instances beyond the stress scale are unmeasured, not claimed.
 - **The story seed intentionally fails the four-course guarantee**
   (2/4 cohorts) — it is the tightener's demo world. Department and
   university scales hold 12/12 and 20/20 (README benchmark table).

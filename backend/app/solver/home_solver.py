@@ -155,6 +155,11 @@ def _prepare(sc: Scenario, request_ops: list[Operation],
         "domains": domains, "slots": slots, "pairs": pairs,
         "pair_partners": pair_partners, "section_cohorts": section_cohorts,
         "load_caps": load_caps, "prep_caps": prep_caps, "penalty": penalty,
+        # Student-credit load (C15b): enrollment x credits with the policy's
+        # sub-linear student curve. A section cap alone underprices a
+        # 180-student lecture.
+        "load_units": {s.id: sc.section_load_units(s) for s in sc.sections},
+        "load_caps_units": {i.id: sc.instructor_load_cap(i) for i in sc.instructors},
     }
 
 
@@ -170,6 +175,8 @@ class _Search:
         self.section_cohorts = prep["section_cohorts"]
         self.load_caps = prep["load_caps"]
         self.prep_caps = prep["prep_caps"]
+        self.load_units = prep["load_units"]
+        self.load_caps_units = prep["load_caps_units"]
         self.penalty = prep["penalty"]
         self.hints = slot_hints or {}
 
@@ -189,6 +196,7 @@ class _Search:
         self.inst_busy: set[tuple[str, int, int]] = set()
         self.room_busy: set[tuple[str, int, int]] = set()
         self.inst_load: dict[str, int] = {}
+        self.inst_weight: dict[str, float] = {}
         self.inst_preps: dict[str, set[str]] = {}
         self.cohort_day: dict[tuple[str, int], int] = {}
         self.current_penalty = 0
@@ -206,6 +214,9 @@ class _Search:
         if any((rid, d, p) in self.room_busy for d, p in occupied):
             return False
         if self.inst_load.get(iid, 0) + 1 > self.load_caps[iid]:
+            return False
+        if (self.inst_weight.get(iid, 0.0) + self.load_units[sid]
+                > self.load_caps_units[iid] + 1e-9):
             return False
         course_id = self.course_of[sid]
         preps = self.inst_preps.get(iid, set())
@@ -241,6 +252,7 @@ class _Search:
             self.inst_busy.add((iid, d, p))
             self.room_busy.add((rid, d, p))
         self.inst_load[iid] = self.inst_load.get(iid, 0) + 1
+        self.inst_weight[iid] = self.inst_weight.get(iid, 0.0) + self.load_units[sid]
         self.inst_preps.setdefault(iid, set()).add(self.course_of[sid])
         for cid in self.section_cohorts.get(sid, []):
             for d in {d for d, _ in occupied}:
@@ -255,6 +267,7 @@ class _Search:
             self.inst_busy.discard((iid, d, p))
             self.room_busy.discard((rid, d, p))
         self.inst_load[iid] -= 1
+        self.inst_weight[iid] = self.inst_weight.get(iid, 0.0) - self.load_units[sid]
         course_id = self.course_of[sid]
         if not any(s != sid and a[0] == iid and self.course_of[s] == course_id
                    for s, a in self.assignment.items()):
@@ -267,7 +280,8 @@ class _Search:
     # -- local improvement: hill-climb the incumbent ---------------------------
     def _restore(self, snap: dict) -> None:
         self.inst_busy.clear(); self.room_busy.clear()
-        self.inst_load.clear(); self.inst_preps.clear(); self.cohort_day.clear()
+        self.inst_load.clear(); self.inst_weight.clear()
+        self.inst_preps.clear(); self.cohort_day.clear()
         self.assignment = {}
         self.current_penalty = 0
         for sid, opt in snap.items():
@@ -377,7 +391,7 @@ class _Search:
 
         if len(self.assignment) == len(self.ordered):
             if self.objective == "balanced_load":
-                obj = max(self.inst_load.values(), default=0)
+                obj = max(self.inst_weight.values(), default=0.0)
             else:
                 obj = self.current_penalty
             if self.best_objective is None or obj < self.best_objective:
@@ -392,7 +406,7 @@ class _Search:
             if bound >= self.best_objective:
                 return False
         if self.objective == "balanced_load" and self.best_objective is not None:
-            if max(self.inst_load.values(), default=0) >= self.best_objective:
+            if max(self.inst_weight.values(), default=0.0) >= self.best_objective:
                 return False
 
         # MRV over live domains (forward checking falls out of the count)
@@ -482,6 +496,12 @@ def solve_home(sc: Scenario, request_ops: Optional[list[Operation]] = None,
                _core: bool = True) -> SolveResult:
     t0 = time.perf_counter()
     ops = list(request_ops or [])
+    if slot_hints is None:
+        try:
+            from app.intelligence.spectral import analyze
+            slot_hints = analyze(sc).slot_hints
+        except Exception:  # noqa: BLE001 — hints are advisory, never required
+            slot_hints = None
     deadline = _deadline or (t0 + HOME_TIME_LIMIT_S)
     prep = _prepare(sc, ops, pins_exact, instructor_pins, objective)
     search = _Search(sc, prep, objective, slot_hints, deadline)
@@ -490,9 +510,11 @@ def solve_home(sc: Scenario, request_ops: Optional[list[Operation]] = None,
 
     if search.best is not None:
         timetable, counts = build_timetable(sc, search.best)
-        proven = not search.timed_out or (
-            search.best_objective is not None
-            and search.best_objective <= sum(search.lb.values()))
+        # A quick (greedy-only) run stops by design after the first descent;
+        # it is only "optimal" if the incumbent meets the admissible bound.
+        proven = search.best_objective is not None and (
+            search.best_objective <= sum(search.lb.values())
+            or (not quick and not search.timed_out))
         return SolveResult(
             status="optimal" if proven else "feasible",
             timetable=timetable,

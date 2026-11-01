@@ -165,6 +165,19 @@ def solve(
     opts: dict[str, list[tuple[str, int, str, str]]] = {
         s.id: _options(sc, s) for s in sc.sections
     }
+    empty = sorted(s.id for s in sc.sections if not opts[s.id])
+    if empty:
+        # No legal (instructor, slot, room) for a section. Report a proven
+        # infeasibility instead of letting a later constraint index an empty
+        # variable set.
+        return SolveResult(
+            status="infeasible",
+            conflicts=ConflictReport(
+                conflicting_operation_indices=[],
+                explanation=(f"{len(empty)} section(s) have no legal placement "
+                             f"under the current rules (e.g. {', '.join(empty[:3])})."),
+                suggestion="Relax room/blackout/qualification constraints."),
+            solve_time_ms=int((time.perf_counter() - t0) * 1000))
 
     if slot_hints is None:
         slot_hints = _default_spectral_hints(sc)
@@ -204,11 +217,23 @@ def solve(
     def vars_of(section_id: str):
         return vars_by_section.get(section_id, [])
 
-    # C15 instructor load
+    # C15 instructor load: section cap (contract) + student-credit load cap.
+    # Load is linear in the assignment vars because enrollment and credits are
+    # constants per section; the sub-linear student curve is baked into the
+    # weight, not into the constraint.
+    section_weight = {s.id: sc.section_load_units(s) for s in sc.sections}
     for i in sc.instructors:
         covering = [v for _, v in vars_by_instructor.get(i.id, [])]
         if covering:
             m.Add(cp_model.LinearExpr.Sum(covering) <= i.max_sections)
+        load_cap = sc.instructor_load_cap(i)
+        if covering and load_cap > 0:
+            weighted = [
+                int(round(section_weight[k[0]] * 1000)) * v
+                for k, v in vars_by_instructor.get(i.id, [])
+            ]
+            m.Add(cp_model.LinearExpr.Sum(weighted)
+                  <= int(round(load_cap * 1000)))
 
     # C16 prep caps
     t: dict[tuple[str, str], cp_model.BoolVar] = {}
@@ -485,8 +510,10 @@ def solve(
     solver = cp_model.CpSolver()
     if config.SOLVER_TIME_LIMIT_S > 0:
         solver.parameters.max_time_in_seconds = config.SOLVER_TIME_LIMIT_S
-    # Deterministic solves (stable demo output; ties broken the same way every run)
-    solver.parameters.num_search_workers = 1
+    # Deterministic by default (stable demo output; ties broken the same way
+    # every run). Benchmarks can raise SOLVER_WORKERS to distinguish a genuine
+    # infeasibility from a single-worker timeout.
+    solver.parameters.num_search_workers = config.SOLVER_WORKERS
     status = solver.Solve(m)
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 

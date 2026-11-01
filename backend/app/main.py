@@ -17,11 +17,13 @@ from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app import config
+from app.data.realism import audit_scenario
 from app.db import init_db
 from app.ingestion import check_completeness, ingest
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
 from app.intelligence import analyze, build_matrices, compute_utilization, run_tightener, whatif
+from app.intelligence.load import instructor_loads, suggest_load_policy
 from app.intelligence.matrices import compute_margins
 from app.models.ingestion import CompletenessReport, InstitutionData
 from app.models.intelligence import (
@@ -39,11 +41,22 @@ from app.models.results import (
     StudentPlanResponse,
     TermChangeResponse,
     SolveResult,
+    Timetable,
 )
-from app.models.scenario import Operation, ParsedRequest, Scenario, TermClosure
+from app.models.scenario import (
+    AcademicPolicy,
+    Operation,
+    ParsedRequest,
+    Scenario,
+    TermClosure,
+    TimeGrid,
+)
 from app.parsing.parser import ConstraintParser, validate_operations
 from app.services import audit
+from app.services import offerings as offering_service
+from app.services import phd as phd_service
 from app.services import term as term_service
+from app.services.calendar_policy import national_holidays, suggest_term_dates
 from app.services.apply import apply_operations
 from app.services.copilot import run_copilot
 from app.services.student_plan import suggest_student_plan
@@ -138,11 +151,13 @@ class MessageRequest(BaseModel):
 
 class StudentPlanRequest(BaseModel):
     cohort_id: Optional[str] = None       # progress lookup when no record given
+    student_id: Optional[str] = None      # individual record / PhD student
     program_id: Optional[str] = None      # desired degree (default: cohort's)
     study_record: Optional[str] = None    # pasted record: course codes/names
     completed_course_ids: list[str] = []
     message: str
     target_courses: Optional[int] = None
+    target_credits: Optional[int] = None
     scenario: Optional[Scenario] = None
 
 
@@ -160,6 +175,53 @@ class SolveRequest(BaseModel):
     operations: Optional[list] = None
     engine: str = "cpsat"  # "cpsat" (OR-Tools) | "ours" (ScheduleSolve home solver)
     objective: str = "preference"  # preference | balanced_load | room_fit | building_balance
+
+
+class OfferingIn(BaseModel):
+    course_id: str
+    status: str = "not_offered"
+    reason: str = ""
+    department: str = ""
+    term: str = "current"
+
+
+class SpecialTopicIn(BaseModel):
+    code: str
+    title: str
+    department: str
+    instructor_id: str
+    credits: int = 3
+    pattern: str = "TTh"
+    room_type: str = "seminar"
+    seats: int = 20
+    equipment: list[str] = []
+    term: str = "current"
+    reason: str = ""
+
+
+class PhDReservationIn(BaseModel):
+    student_id: str
+    instructor_id: str
+    course_id: str
+    credits: int = 3
+    term: str = "current"
+    note: str = ""
+
+
+class CalendarSuggestionIn(BaseModel):
+    year: int
+    term: str = "fall"
+    weeks: int = 15
+    country: str = "US"
+    apply: bool = True
+
+
+class PolicyIn(BaseModel):
+    policy: AcademicPolicy
+
+
+class TimeGridIn(BaseModel):
+    time_grid: TimeGrid
 
 
 class IngestRequest(BaseModel):
@@ -465,7 +527,9 @@ def student_plan(req: StudentPlanRequest) -> StudentPlanResponse:
             target_override=req.target_courses,
             program_id=req.program_id,
             study_record=req.study_record,
-            completed_course_ids=req.completed_course_ids)
+            completed_course_ids=req.completed_course_ids,
+            student_id=req.student_id,
+            target_credits=req.target_credits)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1180,6 +1244,271 @@ def institution_delete(kind: str, id: str,
     _set_current_scenario(updated)
     audit.record_event("institution-delete", f"Removed {kind} {id}", {})
     return {"scenario": updated.model_dump(), "overview": _overview_payload()}
+
+
+# --- catalog decisions, policy, load, students, calendar ----------------------
+
+@app.get("/institution/catalog/offerings")
+def catalog_offerings(authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return offering_service.offering_summary(get_current_scenario())
+
+
+@app.post("/institution/catalog/offering")
+def catalog_set_offering(req: OfferingIn,
+                         authorization: Optional[str] = Header(None)) -> dict:
+    """Declare a catalog course offered / not offered / dormant for the term."""
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated = offering_service.set_offering(
+            get_current_scenario(), req.course_id, req.status,
+            reason=req.reason, department=req.department, term=req.term,
+            recorded_by=user.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _set_current_scenario(updated)
+    audit.record_event(
+        "catalog-offering",
+        f"{req.course_id} -> {req.status}: {req.reason or 'no reason given'}",
+        req.model_dump())
+    return {"summary": offering_service.offering_summary(updated)}
+
+
+@app.post("/institution/catalog/special-topic")
+def catalog_add_special_topic(req: SpecialTopicIn,
+                              authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated, course = offering_service.add_special_topic(
+            get_current_scenario(), code=req.code, title=req.title,
+            department=req.department, instructor_id=req.instructor_id,
+            credits=req.credits, pattern=req.pattern, room_type=req.room_type,
+            seats=req.seats, equipment=req.equipment, term=req.term,
+            reason=req.reason, recorded_by=user.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _set_current_scenario(updated)
+    audit.record_event("special-topic", f"Opened {course.code}: {course.title}",
+                       {"course": course.model_dump()})
+    return {"course": course.model_dump(),
+            "summary": offering_service.offering_summary(updated)}
+
+
+@app.delete("/institution/catalog/special-topic/{course_id}")
+def catalog_remove_special_topic(course_id: str,
+                                 authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated = offering_service.remove_special_topic(
+            get_current_scenario(), course_id, recorded_by=user.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _set_current_scenario(updated)
+    audit.record_event("special-topic", f"Withdrew {course_id}", {})
+    return {"summary": offering_service.offering_summary(updated)}
+
+
+@app.get("/institution/policy")
+def institution_policy(authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return get_current_scenario().policy.model_dump()
+
+
+@app.post("/institution/policy")
+def institution_set_policy(req: PolicyIn,
+                           authorization: Optional[str] = Header(None)) -> dict:
+    """Coordinator sets full-time thresholds, load curve and faculty tracks."""
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    updated = get_current_scenario().model_copy(deep=True)
+    updated.policy = req.policy
+    report = audit_scenario(updated)
+    if not report.ok:
+        raise HTTPException(
+            status_code=400,
+            detail="; ".join(f"{i.code}: {i.message}" for i in report.errors[:5]))
+    _set_current_scenario(updated)
+    audit.record_event("academic-policy", "Updated academic/load policy",
+                       req.policy.model_dump())
+    return {"policy": req.policy.model_dump(),
+            "suggestion": suggest_load_policy()}
+
+
+@app.get("/institution/load")
+def institution_load(authorization: Optional[str] = Header(None)) -> dict:
+    """Student-credit load per instructor, from the published or fresh solve."""
+    _current_user(authorization)
+    scenario = get_current_scenario()
+    row = _latest_published()
+    if row is not None:
+        timetable = Timetable.model_validate_json(row.timetable_json)
+    else:
+        result = solve(scenario)
+        timetable = result.timetable
+    report = instructor_loads(scenario, timetable)
+    return {
+        "policy": report.policy,
+        "instructors": [r.__dict__ for r in report.instructors],
+        "totals": {
+            "sections": report.total_sections,
+            "students": report.total_students,
+            "credits": report.total_credits,
+            "load_units": report.total_load_units,
+            "capacity": report.total_capacity,
+        },
+        "overloaded": report.overloaded,
+    }
+
+
+@app.get("/institution/load/suggest")
+def institution_load_suggest(target_ratio_80_40: float = 1.6,
+                             authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return suggest_load_policy(target_ratio_80_40)
+
+
+@app.get("/institution/population")
+def institution_population(authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    scenario = get_current_scenario()
+    by_level: dict[str, int] = {}
+    for cohort in scenario.cohorts:
+        by_level[cohort.level] = by_level.get(cohort.level, 0) + cohort.size
+    return {
+        "cohorts_by_level": {
+            level: sum(1 for c in scenario.cohorts if c.level == level)
+            for level in ("bachelor", "master", "phd")
+        },
+        "students_by_level": by_level,
+        "individual_students": len(scenario.students),
+        "phd": phd_service.phd_summary(scenario),
+        "full_time_policy": {
+            "min_courses": scenario.policy.min_courses_full_time,
+            "min_credits": scenario.policy.min_credits_full_time,
+        },
+    }
+
+
+@app.get("/institution/phd/capacity/{instructor_id}")
+def institution_phd_capacity(instructor_id: str,
+                             term: str = "current",
+                             authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    try:
+        return phd_service.phd_capacity(get_current_scenario(), instructor_id, term)
+    except StopIteration as exc:
+        raise HTTPException(status_code=404, detail="Unknown instructor.") from exc
+
+
+@app.post("/institution/phd/reservations")
+def institution_phd_request(req: PhDReservationIn,
+                            authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator", "student")
+    try:
+        updated, reservation = phd_service.request_reservation(
+            get_current_scenario(), student_id=req.student_id,
+            instructor_id=req.instructor_id, course_id=req.course_id,
+            credits=req.credits, term=req.term, note=req.note)
+    except (ValueError, StopIteration) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _set_current_scenario(updated)
+    audit.record_event("phd-reservation", f"Requested {reservation.id}",
+                       reservation.model_dump())
+    return {"reservation": reservation.model_dump(),
+            "capacity": phd_service.phd_capacity(
+                updated, req.instructor_id, req.term)}
+
+
+@app.post("/institution/phd/reservations/{reservation_id}/decide")
+def institution_phd_decide(reservation_id: str, approve: bool = True,
+                           note: str = "",
+                           authorization: Optional[str] = Header(None)) -> dict:
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    try:
+        updated, reservation = phd_service.decide_reservation(
+            get_current_scenario(), reservation_id, approve=approve, note=note)
+    except (ValueError, StopIteration) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _set_current_scenario(updated)
+    audit.record_event("phd-reservation", f"{reservation.status} {reservation.id}",
+                       reservation.model_dump())
+    return {"reservation": reservation.model_dump(),
+            "capacity": phd_service.phd_capacity(
+                updated, reservation.instructor_id, reservation.term)}
+
+
+@app.get("/institution/time-grid")
+def institution_time_grid(authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return get_current_scenario().time_grid.model_dump()
+
+
+@app.post("/institution/time-grid")
+def institution_set_time_grid(req: TimeGridIn,
+                              authorization: Optional[str] = Header(None)) -> dict:
+    """Coordinator sets the teaching day and allowed meeting patterns."""
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    updated = get_current_scenario().model_copy(deep=True)
+    updated.time_grid = req.time_grid
+    report = audit_scenario(updated)
+    if not report.ok:
+        raise HTTPException(
+            status_code=400,
+            detail="; ".join(f"{i.code}: {i.message}" for i in report.errors[:5]))
+    _set_current_scenario(updated)
+    audit.record_event("time-grid", "Updated teaching grid",
+                       req.time_grid.model_dump())
+    return {"time_grid": req.time_grid.model_dump()}
+
+
+@app.get("/term/calendar/suggest")
+def term_calendar_suggest(year: int, term: str = "fall", weeks: int = 15,
+                          country: str = "US",
+                          authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return suggest_term_dates(year, term, weeks=weeks, country=country)
+
+
+@app.get("/term/calendar/national-holidays")
+def term_calendar_national_holidays(year: int, country: str = "US",
+                                    authorization: Optional[str] = Header(None)) -> dict:
+    _current_user(authorization)
+    return {"year": year, "country": country,
+            "holidays": national_holidays(year, country)}
+
+
+@app.post("/term/calendar/apply-suggested")
+def term_calendar_apply_suggested(req: CalendarSuggestionIn,
+                                  authorization: Optional[str] = Header(None)) -> dict:
+    """Apply the suggested term dates, national holidays and swaps.
+
+    The suggestion is written as ordinary editable holiday/swap records, so
+    the coordinator can still add local or religious holidays afterwards.
+    """
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    suggestion = suggest_term_dates(
+        req.year, req.term, weeks=req.weeks, country=req.country)
+    term_service.set_calendar(
+        get_current_scenario(),
+        start_date=suggestion["start_date"],
+        weeks=req.weeks,
+        holidays=[
+            {"date": h["date"], "label": h["label"]}
+            for h in suggestion["national_holidays"]
+        ],
+        swaps=suggestion["suggested_swaps"],
+    )
+    audit.record_event("term-calendar",
+                       f"Applied suggested {req.term} {req.year} calendar",
+                       suggestion)
+    return {"suggestion": suggestion, "calendar": _calendar_payload()}
 
 
 # --- intelligence services: sparse matrices, spectral radar, AI tightening ----

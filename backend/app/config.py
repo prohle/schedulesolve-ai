@@ -43,6 +43,11 @@ DATABASE_URL = os.getenv(
 # entirely, or a smaller value for a budgeted benchmark.
 SOLVER_TIME_LIMIT_S = float(os.getenv("SOLVER_TIME_LIMIT_S", "60"))
 
+# CP-SAT search workers. 1 keeps tied optima bit-reproducible (the product's
+# audit trail depends on it). Benchmarks may raise it to check whether a hard
+# instance is genuinely infeasible or just outside the single-worker budget.
+SOLVER_WORKERS = max(1, int(os.getenv("SOLVER_WORKERS", "1")))
+
 # ScheduleSolve home solver (pure-Python competitor to CP-SAT): wall-clock
 # budget per run before it returns its best incumbent as "feasible".
 HOME_SOLVER_TIME_LIMIT_S = float(os.getenv("HOME_SOLVER_TIME_LIMIT_S", "30"))

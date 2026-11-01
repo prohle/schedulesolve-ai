@@ -62,6 +62,9 @@ def _payload(sc: Scenario, search: _Search, objective: str,
         sections.append({
             "course": course_idx[s.course_id],
             "cohorts": [cohort_idx[c] for c in search.section_cohorts.get(s.id, [])],
+            # Student-credit load weight, scaled to an integer (C++ parser is
+            # integer-only). 1000 = one load unit.
+            "weight": int(round(search.load_units[s.id] * 1000)),
             "options": opts})
 
     pairs = []
@@ -95,7 +98,8 @@ def _payload(sc: Scenario, search: _Search, objective: str,
         "walk_limit": sc.walk_limit_min,
         "n_rooms": len(sc.rooms),
         "n_cohorts": len(sc.cohorts),
-        "instructors": [{"load": search.load_caps[i.id], "prep": search.prep_caps[i.id]}
+        "instructors": [{"load": search.load_caps[i.id], "prep": search.prep_caps[i.id],
+                         "sload": int(round(search.load_caps_units[i.id] * 1000))}
                         for i in sc.instructors],
         "sections": sections,
         "pairs": pairs,
@@ -137,6 +141,16 @@ def solve_native(sc: Scenario, request_ops: Optional[list[Operation]] = None,
                  _core: bool = True) -> SolveResult:
     t0 = time.perf_counter()
     ops = list(request_ops or [])
+    # Same spectral warm start CP-SAT gets. Without it, a 241-section
+    # institution with shared gen-ed sections can spend the whole budget
+    # before its first incumbent; with it the same instance proves optimal in
+    # under two seconds.
+    if slot_hints is None:
+        try:
+            from app.intelligence.spectral import analyze
+            slot_hints = analyze(sc).slot_hints
+        except Exception:  # noqa: BLE001 — hints are advisory, never required
+            slot_hints = None
     # The search budget scales with instance size: 5 s is generous at
     # demo scale, but a 361-section proof on a small cloud CPU needs
     # more. (Conflict-core trials pass an explicit deadline and are

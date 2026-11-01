@@ -35,15 +35,16 @@ with the `g++` already present in every build image we use.
 
 | Scenario | CP-SAT | Ours (native C++) | Ours (Python ref) |
 |---|---|---|---|
-| Story seed (8 sections) | optimal · −6 · 79 ms | **optimal · −6 · 6 ms** | optimal · −6 · 45 ms |
-| Department (25 sections) | optimal · −40 · 80 ms | **optimal · −40 · 19 ms** | feasible · −40 · 5011 ms |
-| University (41 sections) | optimal · −40 · 153 ms | **optimal · −40 · 29 ms** | feasible · −40 · 5025 ms |
-| Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (10 s budget) · ~11.8 s | **optimal · −40 · 3,285 ms** | unknown (budget) |
+| Story seed (8 sections) | optimal · −6 · 76 ms | **optimal · −6 · 6 ms** | optimal · −6 · 57 ms |
+| Department (25 sections) | optimal · −40 · 162 ms | **optimal · −40 · 35 ms** | feasible · −40 · 30,003 ms |
+| University (41 sections) | optimal · −40 · 143 ms | **optimal · −40 · 36 ms** | feasible · −40 · 30,025 ms |
+| Northgate default (271 sections, 148 instructors, 110 cohorts, 35 PhD students) | optimal · −40 · 8,070 ms | **optimal · −40 · 2,402 ms** | not benchmarked |
+| Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.4 s | **optimal · −40 · 5,915 ms** | unknown (budget) |
 
 Same proven objective at every demo scale; the native core proves it
 faster than CP-SAT on this problem class (faster on every row above).
 At the full-university stress scale the comparison changes
-kind: CP-SAT (single worker, 10 s budget) finds no feasible timetable
+kind: CP-SAT (single worker, 60 s budget) finds no feasible timetable
 and reports `unknown` — a timeout is never dressed up as a proven
 infeasibility, in any engine — while the native core still proves the
 optimum, independently verified from its placements
@@ -90,6 +91,24 @@ return identical placements (tested).
   deletion minimization with the native solver as its own oracle (the
   same contract CP-SAT's assumption literals provide).
 - Determinism and request-op semantics (unavailability ops honored).
+
+## Robustness and randomized evidence
+
+Two solver defects were found and fixed during the realism audit:
+
+- the native core tracked course prep sets in a 64-bit mask, so a catalog with
+  more than 64 courses aliased course ids (the default institution has 271);
+  it now uses exact per-instructor course counts;
+- the native and greedy paths ran without the spectral warm-start hints CP-SAT
+  uses. Wiring the same hints into the shared preparation took the 271-section
+  default institution from "unknown after 120 s" to "optimal in 2.4 s".
+
+`backend/scripts/solver_audit.py` runs all engines on the deterministic tiers
+and seeded randomized realistic variants, verifies every timetable
+independently, and records status/objective/time/C39/room utilization/faculty
+student-load/agreement in `docs/solver_performance.md`. Greedy runs are
+reported as `feasible` unless their incumbent meets the admissible bound; a
+timeout is `unknown`, never `infeasible`.
 
 ## Honest limits
 

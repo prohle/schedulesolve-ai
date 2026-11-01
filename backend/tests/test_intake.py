@@ -64,20 +64,32 @@ def test_structured_intake_verified_apply_and_load(client):
 
 def test_structured_intake_infeasible_is_rejected_with_reason(client):
     coordinator = _login(client, "coordinator@schedulesolve.demo")
-    lee = _login(client, "lee@schedulesolve.demo")  # sole instructor for CS 210
-    created = client.post("/me/change-requests", headers=lee, json={
-        "operations": [
-            _op("add_instructor_unavailability", day=d,
-                explanation=f"Prof. Lee can't teach on day {d}.")
-            for d in range(5)
-        ]})
-    assert created.status_code == 200, created.text
-    decided = client.post(
-        f"/change-requests/{created.json()['id']}/decide",
-        json={"action": "apply"}, headers=coordinator)
-    assert decided.status_code == 200, decided.text
-    assert decided.json()["status"] == "rejected"
-    assert decided.json()["result_summary"]
+    # Every professor declares a zero teaching load (sabbatical). One or two
+    # are absorbable by colleagues; at some point the remaining contract
+    # capacity is below the 8 sections and the solver must reject the request
+    # rather than silently overloading anyone.
+    instructor_ids = [i.id for i in load_seed_scenario().instructors]
+    request_ids = []
+    for instructor_id in instructor_ids:
+        token = _login(client, f"{instructor_id}@schedulesolve.demo")
+        created = client.post("/me/change-requests", headers=token, json={
+            "operations": [
+                _op("set_load_cap", value=0,
+                    explanation=f"Prof. {instructor_id} is on sabbatical this term."),
+            ]})
+        assert created.status_code == 200, created.text
+        request_ids.append(created.json()["id"])
+
+    decisions = []
+    for request_id in request_ids:
+        decided = client.post(
+            f"/change-requests/{request_id}/decide",
+            json={"action": "apply"}, headers=coordinator)
+        assert decided.status_code == 200, decided.text
+        decisions.append(decided.json())
+    assert any(d["status"] == "applied" for d in decisions)
+    assert decisions[-1]["status"] == "rejected"
+    assert decisions[-1]["result_summary"]
 
 
 def test_structured_intake_whitelist_and_self_only(client):

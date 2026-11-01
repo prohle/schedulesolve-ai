@@ -23,6 +23,7 @@
 #include <iterator>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -111,11 +112,13 @@ struct Section {
     vector<int> cohorts;
     vector<Opt> opts;    // pre-sorted by (penalty, hint, i, k, r) in Python
     int lb = 0;
+    long long weight = 0;  // student-credit load, x1000
 };
 struct PairInfo { int a, b; bool walk; };
 
 static vector<Section> g_sections;
 static vector<int> g_load_cap, g_prep_cap;
+static vector<long long> g_sload_cap;   // student-credit load cap, x1000
 static vector<PairInfo> g_pairs;
 static vector<vector<pair<int, bool>>> g_partners;  // section -> (partner, walk?)
 static vector<pair<int, int>> g_bound_pairs;        // sections that can contend
@@ -127,8 +130,14 @@ static bool g_quick = false;
 
 // ------------------------------------------------------------------- state
 static vector<int> g_assign;                // section -> option index or -1
-static vector<uint64_t> g_inst_mask, g_room_mask, g_prep_mask;
+static vector<uint64_t> g_inst_mask, g_room_mask;
+// instructor -> course -> number of assigned sections of that course.
+// A fixed 64-bit mask silently aliases course ids >= 64 (the default
+// institution has 201 courses), which produced false prep-cap conflicts and
+// unbounded search. Prep tracking must stay exact at catalog scale.
+static vector<unordered_map<int, int>> g_prep_counts;
 static vector<int> g_inst_load;
+static vector<long long> g_inst_weight; // student-credit load, x1000
 static vector<vector<int>> g_cohort_day;    // [cohort][day]
 static long long g_pen = 0;
 static vector<int> g_best;
@@ -142,9 +151,10 @@ static bool ok(int s, const Opt& o) {
     if (g_room_mask[o.r] & o.mask) return false;
     if (g_inst_load[o.i] + 1 > g_load_cap[o.i]) return false;
     const Section& sec = g_sections[s];
-    if (!(g_prep_mask[o.i] >> sec.course & 1ULL)) {
-        if (__builtin_popcountll(g_prep_mask[o.i]) + 1 > g_prep_cap[o.i]) return false;
-    }
+    if (g_inst_weight[o.i] + sec.weight > g_sload_cap[o.i]) return false;
+    const auto& preps = g_prep_counts[o.i];
+    if (preps.find(sec.course) == preps.end()
+        && (int)preps.size() + 1 > g_prep_cap[o.i]) return false;
     for (int c : sec.cohorts) {
         int d = o.days;
         while (d) { int day = __builtin_ctz(d); d &= d - 1;
@@ -168,7 +178,8 @@ static void do_assign(int s, int oi) {
     g_inst_mask[o.i] |= o.mask;
     g_room_mask[o.r] |= o.mask;
     g_inst_load[o.i]++;
-    g_prep_mask[o.i] |= (1ULL << g_sections[s].course);
+    g_inst_weight[o.i] += g_sections[s].weight;
+    g_prep_counts[o.i][g_sections[s].course]++;
     int d = o.days;
     for (int c : g_sections[s].cohorts) {
         int dd = d;
@@ -182,12 +193,10 @@ static void do_unassign(int s, int oi) {
     g_inst_mask[o.i] &= ~o.mask;
     g_room_mask[o.r] &= ~o.mask;
     g_inst_load[o.i]--;
-    // prep bit: clear only if no other assigned section of this course remains
-    bool still = false;
-    for (size_t t = 0; t < g_sections.size(); ++t)
-        if ((int)t != s && g_assign[t] >= 0 && g_sections[t].course == g_sections[s].course &&
-            g_sections[t].opts[g_assign[t]].i == o.i) { still = true; break; }
-    if (!still) g_prep_mask[o.i] &= ~(1ULL << g_sections[s].course);
+    g_inst_weight[o.i] -= g_sections[s].weight;
+    auto& preps = g_prep_counts[o.i];
+    auto it = preps.find(g_sections[s].course);
+    if (it != preps.end() && --it->second <= 0) preps.erase(it);
     int d = o.days;
     for (int c : g_sections[s].cohorts) {
         int dd = d;
@@ -201,7 +210,8 @@ static void restore(const vector<int>& snap) {
     fill(g_inst_mask.begin(), g_inst_mask.end(), 0);
     fill(g_room_mask.begin(), g_room_mask.end(), 0);
     fill(g_inst_load.begin(), g_inst_load.end(), 0);
-    fill(g_prep_mask.begin(), g_prep_mask.end(), 0);
+    fill(g_inst_weight.begin(), g_inst_weight.end(), 0);
+    for (auto& preps : g_prep_counts) preps.clear();
     for (auto& row : g_cohort_day) fill(row.begin(), row.end(), 0);
     g_pen = 0;
     for (size_t s = 0; s < snap.size(); ++s) if (snap[s] >= 0) do_assign((int)s, snap[s]);
@@ -277,7 +287,7 @@ static void improve() {
     }
     g_best = g_assign;
     g_best_obj = (g_objective == "balanced_load")
-        ? *max_element(g_inst_load.begin(), g_inst_load.end()) : g_pen;
+        ? *max_element(g_inst_weight.begin(), g_inst_weight.end()) : g_pen;
     restore(vector<int>(g_sections.size(), -1));
 }
 
@@ -331,7 +341,7 @@ static bool dfs(bool first_only) {
     if (assigned == n) {
         long long obj = g_pen;
         if (g_objective == "balanced_load")
-            obj = *max_element(g_inst_load.begin(), g_inst_load.end());
+            obj = *max_element(g_inst_weight.begin(), g_inst_weight.end());
         if (!g_have_best || obj < g_best_obj) {
             g_best_obj = obj; g_best = g_assign; g_have_best = true;
         }
@@ -397,7 +407,7 @@ static bool dfs(bool first_only) {
     if (chosen < 0) return true;
     if (g_have_best) {
         if (g_objective == "balanced_load") {
-            if (*max_element(g_inst_load.begin(), g_inst_load.end()) >= g_best_obj) return false;
+            if (*max_element(g_inst_weight.begin(), g_inst_weight.end()) >= g_best_obj) return false;
         } else if (bound >= g_best_obj) return false;
     }
     if (chosen < 0 || chosen_opts.empty()) return true;
@@ -439,12 +449,14 @@ int main() {
         for (auto& iv : insts->arr) {
             g_load_cap.push_back((int)getInt(iv, "load"));
             g_prep_cap.push_back((int)getInt(iv, "prep"));
+            g_sload_cap.push_back((long long)getInt(iv, "sload", 1000000000LL));
         }
     }
     if (secs) {
         for (auto& sv : secs->arr) {
             Section sec;
             sec.course = (int)getInt(sv, "course");
+            sec.weight = (long long)getInt(sv, "weight", 0);
             if (auto* cs = sv.get("cohorts")) for (auto& c : cs->arr) sec.cohorts.push_back((int)c.i);
             if (auto* os = sv.get("options")) {
                 for (auto& ov : os->arr) {
@@ -494,8 +506,9 @@ int main() {
     g_assign.assign(n, -1);
     g_inst_mask.assign(n_inst, 0);
     g_room_mask.assign(max(n_room, 0), 0);
-    g_prep_mask.assign(n_inst, 0);
+    g_prep_counts.assign(n_inst, {});
     g_inst_load.assign(n_inst, 0);
+    g_inst_weight.assign(n_inst, 0);
     g_cohort_day.assign(g_n_cohorts, vector<int>(5, 0));
     g_deadline = chrono::steady_clock::now() + chrono::milliseconds(limit_ms);
 
@@ -507,7 +520,12 @@ int main() {
 
     long long global_lb = 0;
     for (auto& sec : g_sections) global_lb += sec.lb;
-    bool proven = g_have_best && (!g_timed_out || g_best_obj <= global_lb);
+    // A greedy-only run (quick) stops after the first descent; it can only
+    // claim optimality when that incumbent already meets the admissible
+    // lower bound. Never report "optimal" just because the search stopped
+    // early by design.
+    bool proven = g_have_best && (
+        g_best_obj <= global_lb || (!g_quick && !g_timed_out));
 
     printf("{\"status\":\"%s\",\"objective\":%s,\"assignment\":%s,\"nodes\":%lld,\"timed_out\":%s,\"proven\":%s}",
            !g_have_best ? "infeasible" : (proven ? "optimal" : "feasible"),

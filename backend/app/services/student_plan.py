@@ -40,14 +40,19 @@ from app.solver.scheduling_model import solve
 _MAX_NODES = 200_000
 
 
-def _section_score(period: int | None, c: StudentConstraints) -> int:
-    if period is None:
-        return 0
+def _section_score(period: int | None, c: StudentConstraints,
+                   days: list[int] | None = None) -> int:
     score = 0
+    if days and c.preferred_days:
+        score += 2 * sum(1 for day in days if day in c.preferred_days)
+    if period is None:
+        return score
     if c.prefer_morning:
         score += (3 - period) * 2
     if c.prefer_afternoon:
         score += period * 2
+    if c.preferred_periods and period in c.preferred_periods:
+        score += 3
     return score
 
 
@@ -86,7 +91,17 @@ def suggest_student_plan(
     program_id: str | None = None,
     study_record: str | None = None,
     completed_course_ids: list[str] | None = None,
+    student_id: str | None = None,
+    target_credits: int | None = None,
 ) -> StudentPlanResponse:
+    student = next((s for s in scenario.students if s.id == student_id), None)
+    if student_id and student is None:
+        raise ValueError(f"Unknown student '{student_id}'.")
+    if student is not None:
+        cohort_id = cohort_id or student.cohort_id
+        program_id = program_id or student.program_id
+        completed_course_ids = list(completed_course_ids or []) + list(
+            student.completed_course_ids)
     cohort = next((c for c in scenario.cohorts if c.id == cohort_id), None)
     if cohort_id and cohort is None:
         raise ValueError(f"Unknown cohort '{cohort_id}'.")
@@ -109,9 +124,27 @@ def suggest_student_plan(
     # validation), then narrow to what is actually left for this student.
     parse_pool = sorted(roadmap_courses | {c.id for c in scenario.courses})
     constraints = parser.parse(message, scenario, cohort, [], parse_pool)
+    if student is not None:
+        # Campus days are a hard preference ("I can only come Tue/Thu");
+        # preferred days/periods are soft ordering hints, never exclusions.
+        if student.campus_days:
+            constraints.avoid_days = sorted(
+                set(constraints.avoid_days)
+                | (set(range(5)) - set(student.campus_days)))
+        constraints.preferred_days = sorted(
+            set(constraints.preferred_days) | set(student.preferred_days))
+        constraints.preferred_periods = sorted(
+            set(constraints.preferred_periods) | set(student.preferred_periods))
     if target_override:
         constraints.target_courses = max(1, min(6, target_override))
-    target = constraints.target_courses
+    elif target_credits:
+        # Convert a credit target to a course count using the smallest
+        # common course credit in the catalog (never fewer than 1).
+        min_credit = min((c.credits for c in scenario.courses), default=3)
+        constraints.target_courses = max(
+            1, min(6, int((target_credits + min_credit - 1) // min_credit)))
+    target = max(constraints.target_courses,
+                 scenario.policy.min_courses_full_time)
 
     completed, source = resolve_completed(
         scenario, program, cohort, completed_course_ids or [],
@@ -141,9 +174,13 @@ def suggest_student_plan(
     locked_mandatory = [c for c in remaining_mandatory
                         if not eligible(c) and c not in co_ready]
 
+    grad_year = (cohort.graduation_year if cohort is not None
+                 else (student.entry_year + 4 if student is not None else 0))
+    projected_graduation = f"Spring {grad_year}" if grad_year else ""
     progress = StudentProgress(
         source=source, program_id=program.id, program_name=program.name,
         completed_course_ids=completed,
+        projected_graduation=projected_graduation,
         required_total=len(mandatory_all),
         required_completed=len(mandatory_all & completed_set),
         pct_complete=round(100 * len(mandatory_all & completed_set)
@@ -196,6 +233,7 @@ def suggest_student_plan(
             cohort_id=cohort.id if cohort else None,
             cohort_name=cohort.name if cohort else "",
             constraints=constraints, progress=progress, target_courses=target,
+            projected_graduation=projected_graduation,
             notes=notes + ["No timetable could be built for this term, "
                            "so no personal plan can be suggested yet."],
             parser_mode=parser.mode, model=parser.model,  # type: ignore[arg-type]
@@ -214,7 +252,7 @@ def suggest_student_plan(
         sections = [pl for pl in by_course.get(cid, [])
                     if not (placement_intervals(pl) & forbidden)]
         if sections:
-            sections.sort(key=lambda pl: -_section_score(pl.period, constraints))
+            sections.sort(key=lambda pl: -_section_score(pl.period, constraints, pl.days))
             candidates[cid] = sections
         elif cid in must:
             notes.append(f"{scenario.course_code(cid)} has no section outside your "
@@ -228,7 +266,7 @@ def suggest_student_plan(
         candidates,
         key=lambda cid: (cid not in must, cid not in ready_mandatory,
                          cid not in ready_set, depths.get(cid, 99),
-                         -_section_score(candidates[cid][0].period, constraints), cid))
+                         -_section_score(candidates[cid][0].period, constraints, candidates[cid][0].days), cid))
 
     # Exact branch-and-bound: maximize (must taken, mandatory taken, courses
     # up to target, preference score). One section per course, no overlaps.
@@ -249,7 +287,7 @@ def suggest_student_plan(
             key = (sum(1 for pl in chosen if pl.course_id in must),
                    sum(1 for pl in chosen if pl.course_id in ready_mandatory),
                    min(len(chosen), target),
-                   sum(_section_score(pl.period, constraints) for pl in chosen))
+                   sum(_section_score(pl.period, constraints, pl.days) for pl in chosen))
             if best["key"] is None or key > best["key"]:
                 best["key"], best["chosen"] = key, list(chosen)
             return
@@ -311,17 +349,28 @@ def suggest_student_plan(
             section_id=pl.section_id, instructor_name=pl.instructor_name,
             days=pl.days, period=pl.period, start_time=pl.start_time,
             end_time=pl.end_time, room_name=pl.room_name, required=mandatory,
+            credits=course.credits,
             reason=("Mandatory for your degree and next in sequence — skipping it "
                     "risks a delayed semester." if mandatory else
                     "Optional pick from your degree map that fits this term.")
                    + " Fits your stated availability."))
 
-    target_met = len(courses) >= target
+    credits_selected = sum(scenario.course(pl.course_id).credits for pl in chosen)
+    full_time = scenario.policy.is_full_time(len(courses), credits_selected)
+    target_met = len(courses) >= target and (
+        not target_credits or credits_selected >= target_credits)
     if not target_met and not any("no section outside" in n for n in notes):
-        notes.append(f"Only {len(courses)} non-conflicting courses fit your "
-                     f"availability and progress (target {target}). Loosening a "
-                     f"work block or accepting an early slot would open more of "
-                     f"your degree map.")
+        notes.append(f"Only {len(courses)} non-conflicting courses "
+                     f"({credits_selected} credits) fit your availability and "
+                     f"progress (target {target} courses / "
+                     f"{scenario.policy.min_credits_full_time} credits for "
+                     f"full-time). Loosening a work block or accepting an early "
+                     f"slot would open more of your degree map.")
+    if not full_time:
+        notes.append(
+            f"Below the coordinator's full-time threshold "
+            f"({scenario.policy.min_courses_full_time} courses or "
+            f"{scenario.policy.min_credits_full_time} credits).")
     trace.append(AgentStep(
         step="audit", actor="Audit trail",
         detail=f"Advised {len(courses)} course(s) for {program.name}: "
@@ -331,6 +380,8 @@ def suggest_student_plan(
         cohort_id=cohort.id if cohort else None,
         cohort_name=cohort.name if cohort else "",
         constraints=constraints, progress=progress,
-        courses=courses, target_courses=target, target_met=target_met, notes=notes,
+        courses=courses, target_courses=target, target_met=target_met,
+        credits_selected=credits_selected, full_time=full_time,
+        projected_graduation=projected_graduation, notes=notes,
         parser_mode=parser.mode, model=parser.model,  # type: ignore[arg-type]
         parser_latency_ms=parser.last_latency_ms, agent_trace=trace)

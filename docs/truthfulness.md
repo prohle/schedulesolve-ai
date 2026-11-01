@@ -21,13 +21,13 @@ code or by calling the API.
 | Audit trail records submissions/events | `submissions`, `events` tables; `GET /history` |
 | Muse Spark is live when a key is set | `MUSE_API_KEY` set in the running container; `parser.mode = "muse-spark"`; mock fallback is visibly labelled |
 | Import/autoclean is bounded by the source | no OCR; unreadable files produce `[unreadable]`; completeness check names missing inputs |
-| Tests pass | `63 passed` in `backend/tests` |
+| Tests pass | `backend/tests` (realism, randomized, policy, API, solver parity) |
 
 ## Synthetic or simulated — labelled as such
 
 | Item | What it really is | Where it is labelled |
 |---|---|---|
-| Northgate University (118 faculty, 201 courses, 100 cohorts, 14 buildings, 9 campuses) | Generated demo data, not a real registrar extract | **Demo institution** badge; `docs/limitations.md` |
+| Northgate University (148 faculty, 271 courses/sections, 110 cohorts, 35 PhD students, 14 buildings, 9 campuses) | Generated demo data, not a real registrar extract | **Demo institution** badge; `docs/limitations.md`; `docs/data_realism_audit.md` |
 | Faculty feedback from "Simulate all" | Randomised constraints/preferences, deterministic per professor | Note "Simulated faculty feedback (demo)." |
 | First-page preview charts (88.6%, 361 sections, 48 faculty) | Design-reference sample data, not the live model | **Illustrative sample** badge + subtitle |
 | Analytics modal "benchmark" | Animation only; no solver call | "Illustrative preview — sign in for the live solver" |
@@ -43,9 +43,14 @@ code or by calling the API.
 | Degree maps | Synthetic programs/cohorts; they drive demand and cohort conflicts, but they are not real accreditation records. |
 | Minors | First-class programs for catalog/degree-map display; they do not create cohorts or demand on their own. |
 | Auth | Demo-grade (PBKDF2 + bearer sessions), not institutional SSO. |
-| Scale | CP-SAT proves the demo scales; the 361-section stress tier is a separate benchmark where CP-SAT may report `unknown` inside its 10 s budget. |
+| Scale | CP-SAT proves the default 271-section institution; the 361-section stress tier is a separate benchmark where CP-SAT may report `unknown` inside its 60 s budget. |
 | Auto-publish | Removed from Save options; it was stored but not acted on. |
 | Engines | Two real engines (CP-SAT, native C++) plus greedy. There is no Z3/SMT engine. |
+| Faculty load | Student-credit load (credits × sub-linear enrollment) with research/teaching tracks; coordinator-owned policy, audited from placements. |
+| Catalog decisions | Offered / not-offered / dormant / special-topic records with reason and timestamp. |
+| PhD reservations | PhD-only, Fall-only, 1-3 credits, 3-5 students per professor per Fall. |
+| Calendar | National-holiday and term-date suggestions; editable holidays and Friday-follows-Tuesday swaps. |
+| Time grid | Coordinator-editable periods/patterns stored in the scenario; solver uses the default four-slot grid for placement. |
 
 ## Claims removed in this audit
 

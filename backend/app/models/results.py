@@ -141,6 +141,8 @@ class StudentConstraints(BaseModel):
     completed_course_ids: list[str] = []  # "I've already passed CS 101..."
     avoid_days: list[int] = []      # days the student cannot attend at all
     avoid_periods: list[int] = []   # periods (0-3) the student cannot attend
+    preferred_days: list[int] = []  # soft: days the student prefers to visit campus
+    preferred_periods: list[int] = []  # soft: periods the student prefers
     prefer_morning: bool = False
     prefer_afternoon: bool = False
     target_courses: int = 4
@@ -160,6 +162,7 @@ class StudentProgress(BaseModel):
     mandatory_co_ready: list[str] = []  # eligible if a gating course is co-taken
     mandatory_locked: list[str] = []  # course codes: earlier courses unfinished
     optional_remaining: int = 0
+    projected_graduation: str = ""
 
 
 class StudentPlanCourse(BaseModel):
@@ -176,6 +179,7 @@ class StudentPlanCourse(BaseModel):
     end_time: str = ""
     room_name: str = ""
     required: bool = False          # on this term's degree-roadmap plan
+    credits: int = 3
     reason: str = ""
 
 
@@ -189,6 +193,9 @@ class StudentPlanResponse(BaseModel):
     courses: list[StudentPlanCourse] = []
     target_courses: int = 4
     target_met: bool = False
+    credits_selected: int = 0
+    full_time: bool = False
+    projected_graduation: str = ""
     notes: list[str] = []
     parser_mode: Literal["muse-spark", "mock"]
     model: Optional[str] = None
