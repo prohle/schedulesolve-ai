@@ -21,8 +21,9 @@ import {
   UserCheck,
 } from "lucide-react";
 import { EChart } from "./echart";
+import { CampusMatrix } from "./campus-matrix";
+import { CAMPUSES } from "./campus-data";
 import {
-  CALENDAR_ROWS,
   EMPTY_FILTERS,
   EXTRACT_FILTERS,
   EXTRACT_ROWS,
@@ -51,6 +52,22 @@ const TITLES: Record<Persona, string> = {
   student: "Student Cohort Degree Track & Working Fit Extract",
 };
 
+const CALENDAR_TITLE = "Campus Timetable Matrix & Heatmap";
+
+// Live totals from the campus model (the reference hard-codes slightly stale
+// numbers; deriving them keeps the KPI cards and footer in agreement).
+const CAMPUS_TOTALS = Object.values(CAMPUSES).reduce(
+  (acc, campus) => {
+    campus.buildings.forEach((b) => {
+      acc.buildings += 1;
+      acc.rooms += b.totalRooms;
+      acc.seats += b.totalSeats;
+    });
+    return acc;
+  },
+  { buildings: 0, rooms: 0, seats: 0 }
+);
+
 const DEPT_BADGE: Record<string, string> = {
   blue: "bg-blue-50 text-blue-700 border-blue-100",
   indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
@@ -62,13 +79,6 @@ const SLOT_BADGE: Record<string, string> = {
   Morning: "bg-slate-100 text-[9.5px] text-slate-600",
   Afternoon: "bg-slate-100 text-[9.5px] text-slate-600",
   Evening: "bg-purple-100 text-purple-700 text-[9.5px] font-semibold",
-};
-
-const CAL_TONE: Record<string, string> = {
-  blue: "bg-blue-100 text-blue-800 border-blue-200",
-  indigo: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  purple: "bg-purple-100 text-purple-800 border-purple-200",
-  amber: "bg-amber-100 text-amber-800 border-amber-200",
 };
 
 const PROOF_CARDS: { key: string; label: string; value: string; tone: string; labelTone?: string }[] = [
@@ -473,53 +483,6 @@ function StudentView() {
   );
 }
 
-function CalendarView() {
-  return (
-    <div className="w-full space-y-2">
-      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-        <span>Synchronized Weekly Calendar Grid (Mon – Fri):</span>
-        <span className="rounded bg-blue-50 px-2 py-0.5 font-mono text-[10px] text-blue-600">Zero Time Overlaps</span>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-[11px] shadow-xs">
-        <div className="grid grid-cols-6 border-b border-slate-200 bg-slate-100 py-1.5 text-center font-bold text-slate-700">
-          <div className="font-mono text-slate-400">Time</div>
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-        </div>
-
-        <div className="divide-y divide-slate-200/80 bg-white font-medium">
-          {CALENDAR_ROWS.map((row) => (
-            <div key={row.time} className="grid min-h-[48px] grid-cols-6 items-center text-center">
-              <div className="flex h-full items-center justify-center border-r border-slate-200 bg-slate-50 font-mono text-[10px] text-slate-400">
-                {row.time}
-              </div>
-              {row.cells.map((cell, i) => (
-                <div key={i} className="p-1">
-                  {cell.label ? (
-                    <span
-                      className={`block rounded-lg border p-1.5 text-[10px] font-bold shadow-xs transition-transform hover:scale-105 ${
-                        CAL_TONE[cell.tone ?? "blue"]
-                      }`}
-                    >
-                      {cell.label} ({cell.room})
-                    </span>
-                  ) : (
-                    <span className="text-slate-300">-</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function PreviewColumn({
   persona,
   onPersonaChange,
@@ -660,7 +623,9 @@ export function PreviewColumn({
                     Sample Deliverable
                   </span>
                 </div>
-                <h3 className="mt-1 text-lg font-bold text-slate-900">{TITLES[persona]}</h3>
+                <h3 className="mt-1 text-lg font-bold text-slate-900">
+                  {mode === "calendar" ? CALENDAR_TITLE : TITLES[persona]}
+                </h3>
               </div>
               <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 shadow-xs">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> 100% Satisfied
@@ -670,7 +635,7 @@ export function PreviewColumn({
             <div className="flex flex-grow flex-col justify-center">
               <div key={`${persona}-${mode}`} className="animate-chart-card w-full">
                 {mode === "calendar" ? (
-                  <CalendarView />
+                  <CampusMatrix onToast={onToast} />
                 ) : persona === "coordinator" ? (
                   <CoordinatorView onInspect={onInspect} onToast={onToast} />
                 ) : persona === "instructor" ? (
@@ -695,7 +660,9 @@ export function PreviewColumn({
                 <div className="font-medium text-slate-500">
                   System Status:{" "}
                   <strong className="font-mono text-slate-800">
-                    361 Sections Conflict-Free • All Enterprise Constraints Satisfied
+                    {mode === "calendar"
+                      ? `4 Quads • ${CAMPUS_TOTALS.buildings} Buildings • ${CAMPUS_TOTALS.rooms} Rooms • ${CAMPUS_TOTALS.seats.toLocaleString()} Seats`
+                      : "361 Sections Conflict-Free • All Enterprise Constraints Satisfied"}
                   </strong>
                 </div>
               )}

@@ -257,3 +257,65 @@ export const modalSpeedOption: EChartsOption = {
     },
   ],
 };
+
+// --- Campus matrix analytics (calendar-matrix-campus design) ----------------
+
+const interAxis = {
+  axisLine: { lineStyle: { color: "#94a3b8" } },
+  axisLabel: { color: "#475569", fontSize: 9, fontWeight: "bold" as const },
+};
+
+export const campusTrafficOption: EChartsOption = {
+  backgroundColor: "transparent",
+  tooltip: {
+    trigger: "axis",
+    backgroundColor: "#ffffff",
+    borderColor: "#cbd5e1",
+    textStyle: { color: "#0f172a", fontSize: 10 },
+  },
+  grid: { top: 15, bottom: 20, left: 42, right: 12 },
+  xAxis: {
+    type: "category",
+    data: ["08:30", "10:00 Peak", "11:30", "13:00 Recess", "14:00", "16:00", "18:00 Eve"],
+    ...interAxis,
+  },
+  yAxis: {
+    type: "value",
+    max: 16000,
+    splitNumber: 4,
+    ...interAxis,
+    splitLine: { lineStyle: { color: "#f1f5f9" } },
+  },
+  series: [
+    { name: "Main Campus", type: "line", smooth: true, data: [4600, 6800, 6000, 800, 5100, 3900, 2200], lineStyle: { color: "#2563eb", width: 2.5 }, symbolSize: 4 },
+    { name: "Engineering", type: "line", smooth: true, data: [1500, 2150, 1900, 300, 1750, 1200, 750], lineStyle: { color: "#10b981", width: 2.5 }, symbolSize: 4 },
+    { name: "Business", type: "line", smooth: true, data: [1600, 2250, 2050, 250, 1850, 1400, 850], lineStyle: { color: "#8b5cf6", width: 2.5 }, symbolSize: 4 },
+    { name: "Life Sciences", type: "line", smooth: true, data: [1800, 2600, 2300, 350, 2100, 1550, 950], lineStyle: { color: "#f59e0b", width: 2.5 }, symbolSize: 4 },
+  ],
+};
+
+export const campusQuadOption: EChartsOption = {
+  backgroundColor: "transparent",
+  tooltip: { trigger: "axis", formatter: "{b}: {c}%", textStyle: { fontSize: 10 } },
+  grid: { top: 10, bottom: 15, left: 94, right: 15 },
+  xAxis: { type: "value", max: 100, splitLine: { lineStyle: { color: "#f1f5f9" } }, axisLabel: { color: "#475569", fontSize: 9 } },
+  yAxis: {
+    type: "category",
+    data: ["Main Core", "Engineering", "Business & Law", "Life Sciences"],
+    axisLabel: { color: "#475569", fontSize: 9, fontWeight: "bold" as const },
+  },
+  series: [
+    {
+      type: "bar",
+      data: [
+        { value: 81.5, itemStyle: { color: "#2563eb" } },
+        { value: 76.8, itemStyle: { color: "#10b981" } },
+        { value: 84.2, itemStyle: { color: "#8b5cf6" } },
+        { value: 79.1, itemStyle: { color: "#f59e0b" } },
+      ],
+      barWidth: "40%",
+      itemStyle: { borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: "right", formatter: "{c}%", fontSize: 9, fontWeight: "bold" },
+    },
+  ],
+};

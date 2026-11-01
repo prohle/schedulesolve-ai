@@ -268,62 +268,6 @@ export const STUDENT_COURSES: StudentCourse[] = [
   { code: "GEN 201", title: "Ethics in AI", slot: "Evening 18:30", kind: "elective", note: "Working Prof. Friendly" },
 ];
 
-// --- Weekly calendar matrix -------------------------------------------------
-
-export interface CalendarCell {
-  label?: string;
-  room?: string;
-  tone?: "blue" | "indigo" | "purple" | "amber";
-}
-
-export interface CalendarRow {
-  time: string;
-  cells: [CalendarCell, CalendarCell, CalendarCell, CalendarCell, CalendarCell];
-}
-
-export const CALENDAR_ROWS: CalendarRow[] = [
-  {
-    time: "09:00",
-    cells: [
-      { label: "CS 101", room: "Sci 201", tone: "blue" },
-      {},
-      { label: "CS 101", room: "Sci 201", tone: "blue" },
-      {},
-      { label: "CS 101", room: "Sci 201", tone: "blue" },
-    ],
-  },
-  {
-    time: "10:30",
-    cells: [
-      {},
-      { label: "MATH 204", room: "Hall A", tone: "indigo" },
-      {},
-      { label: "MATH 204", room: "Hall A", tone: "indigo" },
-      {},
-    ],
-  },
-  {
-    time: "14:00",
-    cells: [
-      {},
-      { label: "CS 401", room: "Eng 104", tone: "purple" },
-      {},
-      { label: "CS 401", room: "Eng 104", tone: "purple" },
-      {},
-    ],
-  },
-  {
-    time: "18:30",
-    cells: [
-      { label: "BUS 490", room: "Annex", tone: "amber" },
-      {},
-      { label: "BUS 490", room: "Annex", tone: "amber" },
-      {},
-      {},
-    ],
-  },
-];
-
 // --- Analytics workspace modal ---------------------------------------------
 
 export interface MasterRow {
