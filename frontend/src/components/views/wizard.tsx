@@ -1037,6 +1037,39 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
                   {copilot.parser_latency_ms != null && <span>{Math.round(copilot.parser_latency_ms / 100) / 10}s</span>}
                   {copilot.summary}
                 </div>
+                {/* Who proposed, who accepted, who proved — at the point of decision. */}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 p-2.5">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-sky-800">
+                      Muse Spark · proposed
+                    </div>
+                    <div className="mt-0.5 text-sm font-black">
+                      {copilot.operations.length} typed operation{copilot.operations.length === 1 ? "" : "s"}
+                    </div>
+                    <div className="text-[10px] text-sky-900/70">schema: ParsedRequest</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+                      Validator · accepted
+                    </div>
+                    <div className="mt-0.5 text-sm font-black">
+                      {copilot.applied_operations.length} applied
+                      {copilot.dropped_operations.length ? ` · ${copilot.dropped_operations.length} dropped` : ""}
+                    </div>
+                    <div className="text-[10px] text-slate-500">schema + scenario rules</div>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                      CP-SAT · proved
+                    </div>
+                    <div className="mt-0.5 text-sm font-black">
+                      {copilot.result?.status ?? "—"} · {copilot.options.length} repair{copilot.options.length === 1 ? "" : "s"} re-proven
+                    </div>
+                    <div className="text-[10px] text-emerald-900/70">
+                      {copilot.result?.solve_time_ms != null ? `${copilot.result.solve_time_ms} ms` : "solver verdict"}
+                    </div>
+                  </div>
+                </div>
                 {copilot.operations.map((op, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs bg-card border border-border rounded p-2">
                     <CircleCheck className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
