@@ -20,6 +20,7 @@ from app import config
 from app.data.realism import audit_scenario
 from app.db import init_db
 from app.ingestion import check_completeness, ingest
+from app.ingestion.batch import batch_chunks, merge_institution_data
 from app.ingestion.conflicts import detect_conflicts, diff_data, resolve_conflicts
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
@@ -262,28 +263,50 @@ class IngestResponse(BaseModel):
 _last_ingested_data: Optional[InstitutionData] = None
 
 
-def _ingest_text(text: str) -> IngestResponse:
-    """Shared ingest core: parse, assemble, store the current scenario, audit."""
+def _ingest_batches(batches: list[str], submission: str | None = None) -> IngestResponse:
+    """Shared ingest core: parse every batch, merge, assemble, audit.
+
+    One batch is the normal path. Large dumps are split by
+    `app.ingestion.batch`; the model extracts each batch and the deterministic
+    merger concatenates the typed entities before normalization.
+    """
     global _current_scenario, _last_ingested_data
     parser = IngestionParser()
-    data = parser.parse(text)
+    parts = []
+    modes: list[str] = []
+    latency_ms = 0
+    for text in batches:
+        # parse() flips to deterministic on a fallback; reset per batch so one
+        # failed call does not mislabel the batches that did run live.
+        parser.mode = "muse-spark" if config.MUSE_API_KEY else "deterministic"
+        parts.append(parser.parse(text))
+        modes.append(parser.mode)
+        latency_ms += parser.last_latency_ms or 0
+    data = merge_institution_data(parts)
+    mode = "muse-spark" if modes and all(m == "muse-spark" for m in modes) else "deterministic"
     # Build from the parse we already have — never parse the same dump twice.
     scenario = build_scenario(data)
     changes = diff_data(_last_ingested_data, data)
     conflicts = detect_conflicts(data)
     _last_ingested_data = data
     _set_current_scenario(scenario)
-    audit.record_submission(text[:500], data.summary, parser.mode)
+    audit.record_submission((submission or batches[0])[:500], data.summary, mode)
     audit.record_event("ingest",
                        f"Ingested {len(data.courses)} courses, {len(data.instructors)} instructors, "
                        f"{len(data.cohorts)} cohorts, {len(data.rooms)} rooms",
                        {"courses": len(data.courses), "instructors": len(data.instructors),
                         "cohorts": len(data.cohorts), "rooms": len(data.rooms),
-                        "conflicts": len(conflicts), "changes": len(changes.changes)})
-    return IngestResponse(scenario=scenario, parsed=data, parser_mode=parser.mode,
+                        "conflicts": len(conflicts), "changes": len(changes.changes),
+                        "batches": len(batches)})
+    return IngestResponse(scenario=scenario, parsed=data, parser_mode=mode,
                           completeness=check_completeness(data),
                           conflicts=conflicts, changes=changes,
-                          model=parser.model, parser_latency_ms=parser.last_latency_ms)
+                          model=config.MUSE_MODEL if mode == "muse-spark" else None,
+                          parser_latency_ms=latency_ms or None)
+
+
+def _ingest_text(text: str) -> IngestResponse:
+    return _ingest_batches([text], submission=text)
 
 
 @app.get("/status")
@@ -317,12 +340,13 @@ async def ingest_files(files: list[UploadFile] = File(...)) -> IngestResponse:
     (app.ingestion.extract), concatenated, and autocleaned; the response
     reports which of the six required inputs were found and which are missing."""
     from app.ingestion.extract import extract_text
-    chunks: list[str] = []
+    chunks: list[tuple[str, str]] = []
     for f in files:
         content = await f.read()
         name = f.filename or "file"
-        chunks.append(f"\n--- {name} ---\n" + extract_text(name, content))
-    return _ingest_text("".join(chunks))
+        chunks.append((name, extract_text(name, content)))
+    submission = "".join(f"\n--- {name} ---\n{text}" for name, text in chunks)
+    return _ingest_batches(batch_chunks(chunks), submission=submission)
 
 
 @app.post("/ingest/apply", response_model=IngestResponse)
