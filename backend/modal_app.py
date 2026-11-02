@@ -48,8 +48,8 @@ volume = modal.Volume.from_name("schedulesolve-data", create_if_missing=True)
         "DEMO_DAILY_MODEL_BUDGET": "300",
     },
     timeout=300,          # Muse calls can take 30-90s
-    cpu=2,
-    memory=4096,
+    cpu=1,                # 1 core is enough: department solve ~20ms, 361-section ~12s
+    memory=4096,          # keep 4 GiB: pymupdf page rendering for scanned PDFs
     max_containers=1,     # cap cost and concurrency; the demo is single-tenant
     min_containers=0,     # scale to zero; warm only around judging
 )

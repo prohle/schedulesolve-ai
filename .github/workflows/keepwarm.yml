@@ -5,14 +5,14 @@ name: Keep demo warm (manual only)
 # Modal is scale-to-zero and idles a container after ~60s without traffic, so
 # a ping every 15 minutes does NOT keep the app warm: each ping pays a cold
 # start, then the container idles again for the next 14 minutes. Measured
-# rates for this stack (backend 2 core / 4 GiB, UI 1 core / 1 GiB):
+# rates for this stack (backend 1 core / 4 GiB, UI 1 core / 1 GiB):
 #
-#   backend warm: 2 * $0.0473/h + 4 * $0.008/h  = $0.127/h
+#   backend warm: 1 * $0.0473/h + 4 * $0.008/h  = $0.079/h
 #   UI warm:      1 * $0.0473/h + 1 * $0.008/h  = $0.055/h
 #
-# 480 pings over judging week (Nov 5-9) costs roughly $1.50-2.20 in cold
-# starts, which is more than the remaining workspace credit. Sparse judge
-# traffic is far cheaper: one 2-minute session with both apps warm is ~$0.006.
+# 480 pings over judging week (Nov 5-9) costs roughly $1.00-1.50 in cold
+# starts, which is more than a small credit balance. Sparse judge
+# traffic is far cheaper: one 2-minute session with both apps warm is ~$0.004.
 #
 # So: no schedule. Run this manually only when you are about to demo live and
 # want the containers hot, e.g. 60 seconds before a call:
