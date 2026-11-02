@@ -22,8 +22,8 @@
 
 ## Narration — 100% the final pitch
 
-The narration is the pitch script, one paragraph per beat, 12 beats. It is
-not edited, grouped, or paraphrased for the video. The shipped cut is
+The narration is [the pitch script](./final_pitch.md), one paragraph per beat,
+12 beats. It is not edited, grouped, or paraphrased for the video. The shipped cut is
 **181.4 s (3:01)** end to end — 1.4 s
 over the 3:00 guidance, all of it trailing end-card hold. The assembly step
 enforces `total <= 180.0` before assembling, so a rebuild produces a compliant
@@ -79,8 +79,8 @@ cut; the shipped file was held 1.4 s longer at the end card.
 
 - [ ] Backend on the Baseten env (above) + frontend on :3021
       (`BACKEND_URL=http://localhost:8012`), scenario reset
-- [ ] Narration read from the pitch script, one paragraph per beat — no
-      edits, no regrouping
+- [ ] Narration read from [the pitch script](./final_pitch.md), one paragraph
+      per beat — no edits, no regrouping
 - [ ] Every live-model gate passes while recording (no fallback; the
       open-weights model name is on screen at every Muse beat)
 - [ ] Spot-check frames (text only): engine verdict, term-change After grid,
