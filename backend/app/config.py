@@ -80,7 +80,7 @@ MIN_COURSES_PER_COHORT = int(os.getenv("MIN_COURSES_PER_COHORT", "4"))
 # call. The hosted demo is keyless, so this is a cost/DoS boundary as well as
 # a UX one. Per-batch Muse limits live in app/ingestion/batch.py and vision.py.
 MAX_INGEST_TEXT_CHARS = int(os.getenv("MAX_INGEST_TEXT_CHARS", "200000"))
-MAX_INGEST_FILES = int(os.getenv("MAX_INGEST_FILES", "40"))
+MAX_INGEST_FILES = int(os.getenv("MAX_INGEST_FILES", "24"))
 MAX_INGEST_BYTES = int(os.getenv("MAX_INGEST_BYTES", str(25 * 1024 * 1024)))
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 MAX_MESSAGE_CHARS = int(os.getenv("MAX_MESSAGE_CHARS", "8000"))

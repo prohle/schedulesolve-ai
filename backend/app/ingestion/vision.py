@@ -32,7 +32,7 @@ MAX_IMAGES_PER_CALL = min(
     max(1, int(os.getenv("INGEST_MAX_IMAGES_PER_CALL", "16"))),
     PROVIDER_MAX_IMAGES,
 )
-MAX_PDF_PAGES = max(1, int(os.getenv("INGEST_MAX_PDF_PAGES", "40")))
+MAX_PDF_PAGES = max(1, int(os.getenv("INGEST_MAX_PDF_PAGES", "24")))
 MAX_IMAGE_DIM = max(400, int(os.getenv("INGEST_MAX_IMAGE_DIM", "1800")))
 RENDER_DPI = max(72, int(os.getenv("INGEST_RENDER_DPI", "130")))
 JPEG_QUALITY = min(95, max(50, int(os.getenv("INGEST_JPEG_QUALITY", "82"))))
