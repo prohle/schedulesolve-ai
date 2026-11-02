@@ -27,10 +27,22 @@ Open `/status` and `/docs` to verify it.
 audit trail survives restarts. `POST /scenario/reset` returns the demo to the
 seed term.
 
-**Cost:** `min_containers=0` scales to zero. Warm it for the judging window
-with a request (or temporarily set `min_containers=1` and redeploy). An
-always-warm 2 CPU / 4 GB container for two weeks can consume most of the $100
-credit; scale-to-zero is the default for a reason.
+**Cost, measured (Modal rates, this stack):** `min_containers=0` scales to
+zero and a container idles after ~60 s without traffic.
+
+| Warm component | Rate | Cost/hour |
+|---|---|---:|
+| Backend (2 core / 4 GiB) | $0.0473/core/h + $0.008/GiB/h | **$0.127** |
+| UI (1 core / 1 GiB) | same | **$0.055** |
+
+So a judge's 2-minute session with both warm is ~**$0.006**, and an
+always-warm stack is ~$4.40/day. That is why `keepwarm.yml` is
+**manual-only**: pinging every 15 minutes does not keep a scale-to-zero app
+warm (each ping pays a cold start, then idles), and 480 pings over judging
+week cost ~$1.50–2.20 — more than a small credit balance. A cold start is
+~10–20 s with a cached image, which is the better trade. Run
+`gh workflow run keepwarm.yml` manually right before a live demo if you want
+the containers hot.
 
 **Safety:** the endpoint is public. Set a Meta API spend limit and a Modal
 spend limit. If you want a hard gate, put the Modal URL behind a Vercel

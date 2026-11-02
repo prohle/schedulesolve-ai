@@ -1,12 +1,28 @@
-name: Keep demo warm (judging week)
+name: Keep demo warm (manual only)
 
-# Modal is scale-to-zero: a cold start during judging (Nov 5-8) or the
-# Nov 9 final would make the live demo look broken. Ping the API and UI
-# every 15 minutes across judging week so both stay warm. Manual runs
-# (workflow_dispatch) work any time.
+# COST NOTE — why this is no longer scheduled.
+#
+# Modal is scale-to-zero and idles a container after ~60s without traffic, so
+# a ping every 15 minutes does NOT keep the app warm: each ping pays a cold
+# start, then the container idles again for the next 14 minutes. Measured
+# rates for this stack (backend 2 core / 4 GiB, UI 1 core / 1 GiB):
+#
+#   backend warm: 2 * $0.0473/h + 4 * $0.008/h  = $0.127/h
+#   UI warm:      1 * $0.0473/h + 1 * $0.008/h  = $0.055/h
+#
+# 480 pings over judging week (Nov 5-9) costs roughly $1.50-2.20 in cold
+# starts, which is more than the remaining workspace credit. Sparse judge
+# traffic is far cheaper: one 2-minute session with both apps warm is ~$0.006.
+#
+# So: no schedule. Run this manually only when you are about to demo live and
+# want the containers hot, e.g. 60 seconds before a call:
+#
+#   gh workflow run keepwarm.yml
+#
+# A cold start is ~10-20s (the image is cached), and the README already tells
+# judges the first request may take a few seconds. That is a much better trade
+# than exhausting the credit mid-judging.
 on:
-  schedule:
-    - cron: "*/15 * 5-9 11 *"
   workflow_dispatch:
 
 jobs:
