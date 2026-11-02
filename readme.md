@@ -72,7 +72,7 @@ This project is entered in the **Indie Developer track** (solo entrant, team-siz
 
 - **Best Build on Meta Open Weight Models ($10K) — claim.** All four structured roles run on `meta-models/muse-spark-open-1026` via Baseten, captured live at 18/18 in `backend/muse-verification-open.json`; the hosted demo is **deployed on this exact path** (verified Nov 2: provider Baseten, model `meta-models/muse-spark-open-1026`, live=true) and protected by a daily budget/rate guard; the swap is env-only (`MUSE_BASE_URL` + `MUSE_MODEL` + key). One honest boundary: the *hosted* Baseten path is remote inference with real, captured latencies — it is not a "0 ms, on-premise" claim, and this README does not make one. What the endpoint-agnostic client proves is that a university *can* self-host the same open weights for on-premise privacy over FERPA-scoped student records by configuration alone; the code path judges run is identical either way.
 - **Best Agentic Use-Case ($5K) — claim.** An autonomous multi-step agent with a visible trace naming every actor: `parse (Muse Spark) → validate → solve → minimal-conflict-core → explain (Muse Spark) → verify every resolution (CP-SAT) → auto-apply the least-disruptive proven fix → audit`, plus the term-change loop `parse → impact → probe every qualified candidate → choose → re-solve → audit`. Self-correction is bounded and proven: no repair, coverage name, or student plan is shown until a solver has verified it.
-- **Most Viral ($20K) / Community Vote ($10K) — eligible, account actions.** Ready X copy and the gallery path are in `docs/submission.md`; posting and voting are human steps after submission, not code claims.
+- **Most Viral ($20K) / Community Vote ($10K) — eligible, account actions.** Ready X copy and the gallery path are prepared for the submission form; posting and voting are human steps after submission, not code claims.
 - **Best Creative Build ($5K) — explicitly not claimed.** No Muse Image / Wonder surface exists in this project; flagging it would waste reviewer attention.
 
 ## Architecture — who proposes, who proves
@@ -263,7 +263,7 @@ At department scale every cohort still gets its four-course guarantee, every cou
 
 ### The pitch, measured against this repo (and against the rules)
 
-The final pitch was audited line by line against the implementation — the full audit is [docs/pitch_audit.md](./docs/pitch_audit.md) (13 claims, all **True**, two with stated boundaries below). The numbers a judge will hear, re-measured 2026-11-01 with `backend/scripts/benchmark.py` on the dev laptop (single-worker deterministic contract; timings vary by machine, rerun the script for local numbers):
+The final pitch was audited line by line against the implementation — 13 claims, all **True**, two with stated boundaries below. The numbers a judge will hear, re-measured 2026-11-01 with `backend/scripts/benchmark.py` on the dev laptop (single-worker deterministic contract; timings vary by machine, rerun the script for local numbers):
 
 | Pitch figure | Re-measured in this repo | Verdict |
 |---|---|---|
@@ -385,7 +385,7 @@ docker compose up --build
 # open http://localhost:3000 — landing → Sign In (sample-account evaluation) → Import → Intake → Build → Review → Term Change
 ```
 
-Without a key the model roles degrade to a deterministic parser, so every beat (parse → solve → self-heal → term-change reassignment → department scale) is clickable offline at zero cost. Add `MODEL_API_KEY` (see below) and the same clicks run live Muse Spark with on-screen model + latency badges. Submission details, track, and bonus-prize flags: [docs/submission.md](./docs/submission.md).
+Without a key the model roles degrade to a deterministic parser, so every beat (parse → solve → self-heal → term-change reassignment → department scale) is clickable offline at zero cost. Add `MODEL_API_KEY` (see below) and the same clicks run live Muse Spark with on-screen model + latency badges. Submission details, track and bonus-prize flags are prepared for the submission form.
 
 **University setup (coordinator, before the term):** the **University** tab is the institution's durable model — **Facility · Map · People · Degree Map · Course Catalog · Student bodies · Holidays · Number of weeks · Campus-wide constraints · University Calendar · Settings · Save schedule options**. Faculty enter hard constraints and soft preferences against a real deadline; the coordinator watches submissions, accepts the set, then reviews or edits every campus/building/room/hall, load cap, holiday, degree map and course. The shipped sample institution is full: 9 campus quads, 14 buildings, 62 rooms, 118 faculty, 201 courses/sections, 25 majors + 8 minors, 100 cohorts, 4 periods/day. It lives in **Postgres 18** (`institution_state`), so the university does not re-upload the same data each term; **Settings → Update institution data** replaces/extend it.
 
