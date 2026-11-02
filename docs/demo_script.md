@@ -22,9 +22,11 @@
 `local-demo/narration.txt` is **byte-identical** to `local_final_pitch.md`
 (verify: `sha256sum local_final_pitch.md local-demo/narration.txt`), one
 paragraph per beat, 12 beats. It is not edited, grouped, or paraphrased
-for the video. Total narration at the TTS pace used (`--speed 1.08`) is
-≈173.7 s + a 4 s silent end-card hold = ≈177.7 s, inside the 3:00 limit;
-`assemble_live.py` asserts the total before assembling.
+for the video. The shipped cut is **181.4 s (3:01)** end to end — 1.4 s
+over the 3:00 guidance, all of it trailing end-card hold. `assemble_live.py`
+enforces `total <= 180.0` before assembling, so a rebuild from this pipeline
+produces a compliant cut; the shipped file was held 1.4 s longer at the
+end card.
 
 ## Beats (12 + silent end-card hold)
 
