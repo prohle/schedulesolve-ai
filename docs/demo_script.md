@@ -1,11 +1,9 @@
-# ScheduleSolve AI — demo video script (live Puppeteer screencast)
+# ScheduleSolve AI — demo video script
 
-> The shipped video is a **real-time Puppeteer screencast** of the running
-> application (`local-demo/record_live.js`, CDP `Page.startScreencast`),
-> not a screenshot slideshow. Each beat is time-compressed to its narration
-> length by `local-demo/assemble_live.py`, so live Muse latency appears as
-> a fast-forward. Narration is synthesized locally with the 05-media
-> Chatterbox pipeline (`dee_us` voice, diction-weighted).
+> The shipped video is a **real-time screen recording of the running
+> application** (CDP `Page.startScreencast`), not a screenshot slideshow.
+> Each beat is time-compressed to its narration length, so live Muse latency
+> appears as a fast-forward.
 >
 > **B-roll licence.** The non-app footage (opening corridor shot, graduation
 > end card) is HeyGen royalty-free stock used under a paid HeyGen
@@ -24,14 +22,12 @@
 
 ## Narration — 100% the final pitch
 
-`local-demo/narration.txt` is **byte-identical** to `local_final_pitch.md`
-(verify: `sha256sum local_final_pitch.md local-demo/narration.txt`), one
+The narration is the pitch text in [final_pitch.md](./final_pitch.md), one
 paragraph per beat, 12 beats. It is not edited, grouped, or paraphrased
 for the video. The shipped cut is **181.4 s (3:01)** end to end — 1.4 s
-over the 3:00 guidance, all of it trailing end-card hold. `assemble_live.py`
-enforces `total <= 180.0` before assembling, so a rebuild from this pipeline
-produces a compliant cut; the shipped file was held 1.4 s longer at the
-end card.
+over the 3:00 guidance, all of it trailing end-card hold. The assembly step
+enforces `total <= 180.0` before assembling, so a rebuild produces a compliant
+cut; the shipped file was held 1.4 s longer at the end card.
 
 ## Beats (12 + silent end-card hold)
 
@@ -81,13 +77,12 @@ end card.
 
 ## Recording checklist
 
-- [ ] Backend on Baseten env (above) + frontend on :3021
+- [ ] Backend on the Baseten env (above) + frontend on :3021
       (`BACKEND_URL=http://localhost:8012`), scenario reset
-- [ ] `sha256sum local_final_pitch.md local-demo/narration.txt` — identical
-- [ ] `cd local-demo && python3 narrate.py --voice dee_us --cfg 2.8 --expr 0.15 --speed 1.08`
-- [ ] `BASE_URL=http://localhost:3021 node record_live.js` — all
-      `assertLiveMuse` gates pass (no fallback, open-weights model on screen)
-- [ ] `python3 assemble_live.py final.mp4` (≤3:00), spot-check frames
-      (text only): engine verdict, term-change After grid, documented
-      faculty constraints, student Projected term, end cards
+- [ ] Narration read from [final_pitch.md](./final_pitch.md), one paragraph
+      per beat — no edits, no regrouping
+- [ ] Every live-model gate passes while recording (no fallback; the
+      open-weights model name is on screen at every Muse beat)
+- [ ] Spot-check frames (text only): engine verdict, term-change After grid,
+      documented faculty constraints, student Projected term, end cards
 - [ ] Upload as the `demo-video` release asset; YouTube upload uses the same file

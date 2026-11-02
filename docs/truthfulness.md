@@ -78,8 +78,8 @@ Everything in the demo video and the README images, with its source:
 | Asset | Source | Rights |
 |---|---|---|
 | B-roll and end-card footage (opening corridor, graduation) | HeyGen stock/avatar library | royalty-free under a paid HeyGen subscription; used unmodified as B-roll only |
-| All app footage in the video | captured from the running product with Puppeteer (`local-demo/record_live.js`) | ours |
-| README screenshots (`docs/screenshot-*.png`) | captured from the running product at 1440×900 (`local-demo/shots_new_ui.js`) | ours |
+| All app footage in the video | captured from the running product | ours |
+| README screenshots (`docs/screenshot-*.png`) | captured from the running product at 1440×900 | ours |
 | Logo and wordmark | original artwork (`frontend/public/logo.png`) | ours |
 | UI type | Geist via `next/font` (SIL OFL) | OFL |
 

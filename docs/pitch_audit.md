@@ -1,4 +1,4 @@
-# Pitch audit — `local_final_pitch.md` vs. the repository
+# Pitch audit — [final_pitch.md](./final_pitch.md) vs. the repository
 
 Measured **2026-11-01** against the current repo (pitch file untouched).
 The benchmark below was re-run with `backend/scripts/benchmark.py`; every
