@@ -262,6 +262,10 @@ class InstructorPreference(BaseModel):
     day: Optional[int] = Field(default=None, ge=0, le=4)
     period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)
     course_id: Optional[str] = None
+    # Meeting-shape wish ("a 3-hour block works better for me"): the solver
+    # pays/rewards when this instructor is placed on a section of a course
+    # with this pattern. Soft by construction — a shape is never a hard ban.
+    pattern: Optional[Pattern] = None
     weight: int = 10
 
 
@@ -508,6 +512,7 @@ class Operation(BaseModel):
     section_id: Optional[str] = None
     room_id: Optional[str] = None
     course_id: Optional[str] = None  # course preference
+    pattern: Optional[Pattern] = None  # meeting-shape preference (block/MWF/TTh)
     day: Optional[int] = Field(default=None, ge=0, le=4)
     period: Optional[int] = Field(default=None, ge=0, le=PERIOD_COUNT - 1)
     kind: Optional[Literal["prefer", "avoid"]] = None

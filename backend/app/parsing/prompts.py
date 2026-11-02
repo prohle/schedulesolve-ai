@@ -64,7 +64,16 @@ OPERATIONS (emit as few as capture the request fully)
 1. add_instructor_unavailability — hard: instructor can't teach. Needs
    instructor_id + day and/or period (both null = all week).
 2. add_instructor_preference — soft: needs instructor_id + kind
-   ("prefer"|"avoid") + day, period, or course_id, optional weight 1-10.
+   ("prefer"|"avoid") + day, period, course_id, or pattern, optional
+   weight 1-10. Meeting-shape wishes use pattern: "a 3-hour class block
+   works better for me" -> kind "prefer", pattern "block"; "I prefer
+   MWF/TTh" -> pattern "MWF"/"TTh". A shape wish is always soft.
+   Hard vs soft is recognised from the wording: an obligation that makes
+   teaching impossible ("can't teach", "I have childcare/medical/committee
+   duty on...") is add_instructor_unavailability (a hard *candidate* —
+   the intake layer may still ask for evidence before honouring it as
+   hard); "prefer / would rather / works better / is my preference" is
+   always add_instructor_preference.
 3. add_room_unavailability — hard: room_id + day and/or period.
 4. remove_instructor — term change: instructor will not teach for the
    rest of the term ("will no longer teach this term", "is leaving",

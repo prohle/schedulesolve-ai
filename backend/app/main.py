@@ -661,6 +661,12 @@ class IntakeSubmitIn(BaseModel):
     hard_unavailable: list[dict] = []
     preferences: list[dict] = []
     note: str = ""
+    # Plain-English request, parsed by Muse Spark with the professor as
+    # speaker into documented constraints (see services/term.submit_intake).
+    message: str = ""
+    # Evidence for hard requests: {kind, file_name} metadata only — the
+    # document itself is never uploaded to or stored by this service.
+    evidence: Optional[dict] = None
     instructor_id: Optional[str] = None  # coordinator submitting on behalf
 
 
@@ -1065,9 +1071,10 @@ def set_term_closures(req: ClosuresIn,
 def _window_payload(scenario: Scenario, user) -> dict:
     state = term_service.window_state(scenario)
     if user.role == "instructor":
+        resolved = term_service.resolve_instructor_id(scenario, user.instructor_id)
         state["submissions"] = [
             row for row in state["submissions"]
-            if row["instructor_id"] == user.instructor_id
+            if row["instructor_id"] in (user.instructor_id, resolved)
         ]
     state["role"] = user.role
     state["instructor_id"] = user.instructor_id
@@ -1167,14 +1174,21 @@ def term_window_submit(req: IntakeSubmitIn,
             hard_unavailable=req.hard_unavailable,
             preferences=req.preferences,
             note=req.note,
+            message=req.message,
+            evidence=req.evidence,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     audit.record_event(
         "faculty-intake",
         f"{submission['instructor_name']} submitted {submission['hard_count']} hard "
-        f"and {submission['preference_count']} soft constraint(s)",
-        {"instructor_id": instructor_id},
+        f"and {submission['preference_count']} soft constraint(s) "
+        f"(evidence: {submission['evidence_status']}"
+        + (f", {submission['downgraded_hard_count']} hard slot(s) downgraded "
+           "to soft for lack of evidence)" if submission["downgraded_hard_count"] else ")"),
+        {"instructor_id": instructor_id,
+         "evidence_status": submission["evidence_status"],
+         "parser_mode": submission["parser_mode"]},
     )
     return {"submission": submission,
             "window": _window_payload(get_current_scenario(), user)}

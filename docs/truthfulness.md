@@ -16,6 +16,8 @@ code or by calling the API.
 | Building utilization can drive the solve | `building_balance` objective in `scheduling_model.py`; minimized max simultaneous building occupancy |
 | Published schedules are real solves | `POST /schedule/publish` calls `solve(...)` and stores the placements |
 | Intake window + submissions are durable | `term_windows`, `faculty_intake` in Postgres |
+| Hard means verified (evidence gate) | A hard request — picked Off in the grid or parsed from plain English as an obligation — stays hard only with evidence attached (kind + file name + SHA-256 recorded; the document itself is never stored). Without evidence it is downgraded to the strongest soft preference (avoid, weight 10) and the professor is told. `backend/app/services/term.py` (`_apply_evidence_gate`), `backend/tests/test_intake.py` |
+| Plain English becomes documented constraints | A professor's typed request before the deadline is parsed by Muse Spark with that professor as speaker; the validated operations (hard candidates, soft day/period/course/**pattern** wishes) are stored and shown back as documented constraints with parser mode + model. A course not in the catalog is omitted with the reason, never invented. `submit_intake`, `backend/tests/test_pattern_preference.py` |
 | Institution model is durable | `institution_state` in Postgres; survives restarts |
 | Auth is real PBKDF2 + hashed bearer sessions | `backend/app/services/auth.py` |
 | Audit trail records submissions/events | `submissions`, `events` tables; `GET /history` |

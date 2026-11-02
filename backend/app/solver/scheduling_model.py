@@ -485,7 +485,8 @@ def solve(
             if op.op == "add_instructor_preference" and op.instructor_id:
                 prefs.append((op.instructor_id, InstructorPreference(
                     kind=op.kind or "avoid", day=op.day, period=op.period,
-                    course_id=op.course_id, weight=op.weight or 10)))
+                    course_id=op.course_id, pattern=op.pattern,
+                    weight=op.weight or 10)))
 
         for iid, p in prefs:
             inst_vars = vars_by_instructor.get(iid, [])
@@ -508,6 +509,13 @@ def solve(
                     cv = m.NewIntVar(0, len(covering), f"ic_{iid}_{p.course_id}")
                     m.Add(cp_model.LinearExpr.Sum(covering) == cv)
                     obj_terms.append(p.weight * cv if p.kind == "avoid" else -p.weight * cv)
+            if p.pattern is not None:
+                covering = [v for k, v in inst_vars
+                            if sec_pattern[k[0]] == p.pattern]
+                if covering:
+                    pv = m.NewIntVar(0, len(covering), f"ipat_{iid}_{p.pattern}")
+                    m.Add(cp_model.LinearExpr.Sum(covering) == pv)
+                    obj_terms.append(p.weight * pv if p.kind == "avoid" else -p.weight * pv)
         if obj_terms:
             m.Minimize(cp_model.LinearExpr.Sum(obj_terms))
 

@@ -111,8 +111,12 @@ def mock_parse(message: str, scenario: Scenario,
                                      explanation=f"{inst.name} personally takes over {c.code}."))
                 parts.append(f"pin {c.code} to {inst.name}")
 
-    # hard unavailability: "can't teach Tuesdays"
-    elif inst and re.search(r"\b(?:can'?t|cannot)\b", lower):
+    # hard unavailability: "can't teach Tuesdays", or an obligation that
+    # makes teaching impossible that day ("I have childcare on Mondays").
+    # This is a hard *candidate*: the intake evidence gate decides whether
+    # it is honoured as hard or downgraded to a strong soft preference.
+    elif inst and re.search(
+            r"\b(?:can'?t|cannot|childcare|caregiving|medical|committee)\b", lower):
         day = _first_day(lower)
         if day is not None:
             ops.append(Operation(op="add_instructor_unavailability", instructor_id=inst.id,
@@ -137,6 +141,22 @@ def mock_parse(message: str, scenario: Scenario,
                                  kind=kind, period=period, weight=6,
                                  explanation=f"{inst.name} {kind}s the {period} period."))
             parts.append(f"{inst.name} {kind}s period {period}")
+
+    # meeting-shape preference: "a 3-hour class block works better for me"
+    if inst and re.search(r"\b3[-\s]?hour\b.{0,30}\bblock\b|\bblock\b.{0,30}\bworks better\b", lower):
+        ops.append(Operation(op="add_instructor_preference", instructor_id=inst.id,
+                             kind="prefer", pattern="block", weight=6,
+                             explanation=f"{inst.name} prefers 3-hour block meetings."))
+        parts.append(f"{inst.name} prefers block pattern")
+
+    # course preference: "CS 301 is my preference" / "I'd love CS 310"
+    if inst and courses and re.search(r"\b(?:preference|prefer|love)\b", lower):
+        for c in courses:
+            if not any(o.course_id == c.id for o in ops):
+                ops.append(Operation(op="add_instructor_preference", instructor_id=inst.id,
+                                     kind="prefer", course_id=c.id, weight=6,
+                                     explanation=f"{inst.name} prefers to teach {c.code}."))
+                parts.append(f"{inst.name} prefers {c.code}")
 
     # active enrollment: "CS 350 enrollment jumped to 45 after registration ended"
     enroll = re.search(r"enrollment (?:jumped|hit|rose|climbed) to (\d+)", lower)

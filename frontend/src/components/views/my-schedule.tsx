@@ -49,7 +49,13 @@ interface TermWindowState {
       day?: number | null;
       period?: number | null;
       course_id?: string | null;
+      pattern?: string | null;
     }[];
+    evidence_status?: string;
+    downgraded_hard_count?: number;
+    documented_constraints?: { kind: string; explanation: string }[];
+    parser_mode?: string | null;
+    model?: string | null;
   }[];
 }
 
@@ -121,11 +127,15 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
   load?: InstructorLoad | null;
   intakeWindow?: TermWindowState | null;
   busy: boolean;
-  onSend: (operations: IntakeOperation[], note: string) => void;
+  onSend: (operations: IntakeOperation[], note: string,
+           extra?: { message?: string; evidence?: { kind: string; file_name: string; sha256?: string } }) => void;
 }) {
   const [cells, setCells] = useState<Record<string, number>>({});
   const [brush, setBrush] = useState(3);
   const [note, setNote] = useState("");
+  const [plainMsg, setPlainMsg] = useState("");
+  const [evKind, setEvKind] = useState("committee");
+  const [evFile, setEvFile] = useState<{ name: string; sha256?: string } | null>(null);
   const [maxSections, setMaxSections] = useState(3);
   const [maxPreps, setMaxPreps] = useState(2);
   const [loadTouched, setLoadTouched] = useState(false);
@@ -166,7 +176,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
   useEffect(() => {
     if (intakePrefilled.current || dirty.current) return;
     const mine = intakeWindow?.submissions?.find(
-      (s) => s.instructor_id === user.instructor_id);
+      (s) => s.instructor_id === user.instructor_id || (!!user.instructor_id && s.instructor_id.replaceAll("-", "").endsWith(user.instructor_id.replaceAll("-", ""))));
     if (!mine) return;
     intakePrefilled.current = true;
     if (mine.hard_unavailable || mine.preferences) {
@@ -211,7 +221,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
             {" · "}deadline {new Date(intakeWindow.deadline).toLocaleString()}
           </span>
           {intakeWindow.open && <span className="opacity-80">{intakeWindow.days_left} day{intakeWindow.days_left === 1 ? "" : "s"} left</span>}
-          {intakeWindow.submissions?.some((s) => s.instructor_id === user.instructor_id) ? (
+          {intakeWindow.submissions?.some((s) => s.instructor_id === user.instructor_id || (!!user.instructor_id && s.instructor_id.replaceAll("-", "").endsWith(user.instructor_id.replaceAll("-", "")))) ? (
             <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
               You submitted
             </span>
@@ -303,8 +313,79 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
         placeholder='Optional note — e.g. "Conference in week 6, flexible otherwise."'
         value={note} onChange={(e) => { dirty.current = true; setNote(e.target.value); }}
       />
-      <button disabled={busy || (ops.length === 0 && !note.trim())}
-        onClick={() => onSend(ops, note.trim())}
+
+      <div className="space-y-1.5 rounded-xl border border-border bg-background p-3">
+        <p className="text-[11px] font-bold">…or say it in plain English</p>
+        <textarea
+          aria-label="My constraints in plain English"
+          className="min-h-14 w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
+          placeholder='e.g. "I have childcare on Mondays. A 3-hour class block works better for me. CS 301 is my preference."'
+          value={plainMsg} onChange={(e) => { dirty.current = true; setPlainMsg(e.target.value); }}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Muse Spark turns this into documented constraints for you: an obligation
+          (“I have childcare on Mondays”) is a <strong>hard candidate</strong>;
+          “works better / is my preference” is <strong>soft</strong>. Hard is
+          honoured only with evidence below — without it, the request is kept
+          as the strongest soft preference (avoid, weight 10), never dropped.
+        </p>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="evidence-kind">
+            Evidence for hard requests
+          </label>
+          <select id="evidence-kind" value={evKind} onChange={(e) => setEvKind(e.target.value)}
+            className="min-h-9 rounded-lg border border-border bg-card px-2 text-[11px] font-semibold">
+            <option value="committee">Committee duty</option>
+            <option value="medical">Medical</option>
+            <option value="contract">Contract / workload</option>
+            <option value="caregiving">Caregiving</option>
+            <option value="religious">Religious observance</option>
+            <option value="other">Other</option>
+          </select>
+          <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border">
+            {evFile ? evFile.name : "Attach evidence…"}
+            <input type="file" className="hidden" aria-label="Attach evidence"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) { setEvFile(null); return; }
+                // Privacy-preserving evidence: the document never leaves
+                // this device. Only its kind, name, and SHA-256 are
+                // recorded, so the coordinator can verify the original
+                // against the hash out of band.
+                let sha256: string | undefined;
+                try {
+                  const digest = await crypto.subtle.digest("SHA-256", await f.arrayBuffer());
+                  sha256 = Array.from(new Uint8Array(digest))
+                    .map((b) => b.toString(16).padStart(2, "0")).join("");
+                } catch { /* hash is best-effort; name+kind still record */ }
+                setEvFile({ name: f.name, sha256 });
+              }} />
+          </label>
+          {evFile && <span className="text-[10px] text-muted-foreground">recorded as metadata + hash — the file itself is not stored</span>}
+        </div>
+      </div>
+
+      {(() => {
+        const mine = intakeWindow?.submissions?.find((s) => s.instructor_id === user.instructor_id || (!!user.instructor_id && s.instructor_id.replaceAll("-", "").endsWith(user.instructor_id.replaceAll("-", ""))));
+        if (!mine?.documented_constraints?.length) return null;
+        return (
+          <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[11px] text-sky-900">
+            <p className="font-bold">
+              What Muse documented from your words
+              {mine.parser_mode && <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 font-mono text-[10px] uppercase">{mine.parser_mode}{mine.model ? ` · ${mine.model}` : ""}</span>}
+              {mine.evidence_status === "missing_downgraded" && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">hard → soft (no evidence)</span>}
+              {mine.evidence_status === "provided" && <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900">evidence on record</span>}
+            </p>
+            {mine.documented_constraints.map((d, i) => <p key={i}>• {d.explanation}</p>)}
+          </div>
+        );
+      })()}
+
+      <button disabled={busy || (ops.length === 0 && !note.trim() && !plainMsg.trim())}
+        onClick={() => onSend(ops, note.trim(), {
+          message: plainMsg.trim() || undefined,
+          evidence: evFile ? { kind: evKind, file_name: evFile.name, sha256: evFile.sha256 } : undefined,
+        })}
         className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-50">
         <Send className="h-3.5 w-3.5" /> Send
       </button>
@@ -741,8 +822,9 @@ export function MyScheduleView({ user, onToast }: {
     } finally { setBusy(false); }
   }
 
-  async function sendIntake(operations: IntakeOperation[], note: string) {
-    if (operations.length === 0 && !note) return;
+  async function sendIntake(operations: IntakeOperation[], note: string,
+                            extra?: { message?: string; evidence?: { kind: string; file_name: string; sha256?: string } }) {
+    if (operations.length === 0 && !note && !extra?.message) return;
     setBusy(true);
     try {
       const capOps = operations.filter(
@@ -773,19 +855,29 @@ export function MyScheduleView({ user, onToast }: {
             hard_unavailable: hard,
             preferences,
             note,
+            message: extra?.message,
+            evidence: extra?.evidence,
           }),
         });
-        if (!res.ok) throw new Error((await res.json()).detail || "Intake failed");
-        onToast(
-          `Submitted ${hard.length} hard and ${preferences.length} soft constraint(s) before the deadline`,
-          "success");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Intake failed");
+        const sub = data.submission;
+        if (sub?.evidence_status === "missing_downgraded") {
+          onToast(
+            `${sub.downgraded_hard_count} hard slot(s) had no evidence — recorded as strong soft preferences (avoid, weight 10). Attach evidence to make them hard.`,
+            "warning");
+        } else {
+          onToast(
+            `Submitted ${sub?.hard_count ?? hard.length} hard and ${sub?.preference_count ?? preferences.length} soft constraint(s) before the deadline`,
+            "success");
+        }
         await load();
         return;
       }
       const res = await authFetch("/api/me/change-requests", {
         method: "POST",
         body: JSON.stringify({
-          message: note,
+          message: [note, extra?.message].filter(Boolean).join("\n"),
           operations: operations.length ? operations : undefined,
         }),
       });

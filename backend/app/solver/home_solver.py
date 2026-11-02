@@ -72,7 +72,8 @@ def _prepare(sc: Scenario, request_ops: list[Operation],
         if o.op == "add_instructor_preference" and o.instructor_id:
             prefs.append((o.instructor_id, InstructorPreference(
                 kind=o.kind or "avoid", day=o.day, period=o.period,
-                course_id=o.course_id, weight=o.weight or 10)))
+                course_id=o.course_id, pattern=o.pattern,
+                weight=o.weight or 10)))
 
     def penalty(sid: str, iid: str, key: int, rid: str) -> int:
         if objective == "room_fit":
@@ -95,6 +96,8 @@ def _prepare(sc: Scenario, request_ops: list[Operation],
                 if pref.day in days:
                     total += pref.weight if pref.kind == "avoid" else -pref.weight
             if pref.course_id is not None and pref.course_id == course_id:
+                total += pref.weight if pref.kind == "avoid" else -pref.weight
+            if pref.pattern is not None and pref.pattern == pattern:
                 total += pref.weight if pref.kind == "avoid" else -pref.weight
         return total
 

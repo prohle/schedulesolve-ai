@@ -125,6 +125,12 @@ def close_window(scenario: Scenario) -> TermWindow:
 def _submission_dict(row: FacultyIntake, instructor_name: str = "") -> dict:
     hard = json.loads(row.hard_unavailable) if row.hard_unavailable else []
     prefs = json.loads(row.preferences) if row.preferences else []
+    meta = {}
+    if getattr(row, "evidence_json", None):
+        try:
+            meta = json.loads(row.evidence_json) or {}
+        except (TypeError, ValueError):
+            meta = {}
     return {
         "id": row.id,
         "instructor_id": row.instructor_id,
@@ -135,9 +141,50 @@ def _submission_dict(row: FacultyIntake, instructor_name: str = "") -> dict:
         "preferences": prefs,
         "hard_count": len(hard),
         "preference_count": len(prefs),
+        # Evidence gate: was a hard request backed by evidence, and what
+        # did Muse document from any plain-English request?
+        "evidence": meta.get("evidence"),
+        "evidence_status": meta.get("status", "not_required"),
+        "downgraded_hard_count": meta.get("downgraded_hard_count", 0),
+        "documented_constraints": meta.get("documented_constraints", []),
+        "parser_mode": meta.get("parser_mode"),
+        "model": meta.get("model"),
         "submitted_at": _iso(row.submitted_at),
         "updated_at": _iso(row.updated_at),
     }
+
+
+def _apply_evidence_gate(
+    hard: list[dict], prefs: list[dict], evidence: Optional[dict],
+) -> tuple[list[dict], list[dict], dict]:
+    """Hard means verified. A hard request (picked Off in the grid, or
+    parsed from plain English as an obligation) is honoured as hard only
+    with evidence attached (kind + file name, recorded as metadata — the
+    document itself is never stored). Without evidence it is not dropped:
+    it is downgraded to the strongest soft preference (avoid, weight 10),
+    so the solver still pays heavily to violate it but a single
+    unevidenced claim cannot make the whole term infeasible."""
+    if not hard:
+        return hard, prefs, {"status": "not_required", "evidence": None,
+                             "downgraded_hard_count": 0}
+    if evidence and evidence.get("kind") and evidence.get("file_name"):
+        return hard, prefs, {
+            "status": "provided",
+            "evidence": {"kind": str(evidence["kind"]),
+                         "file_name": str(evidence["file_name"])},
+            "downgraded_hard_count": 0}
+    downgraded = [dict(p) for p in prefs]
+    seen = {(p.get("kind"), p.get("day"), p.get("period"), p.get("course_id"),
+             p.get("pattern")) for p in downgraded}
+    for slot in hard:
+        pref = {"kind": "avoid", "day": slot["day"], "period": slot["period"],
+                "course_id": None, "pattern": None, "weight": 10}
+        key = (pref["kind"], pref["day"], pref["period"], None, None)
+        if key not in seen:
+            downgraded.append(pref)
+            seen.add(key)
+    return [], downgraded, {"status": "missing_downgraded", "evidence": None,
+                            "downgraded_hard_count": len(hard)}
 
 
 def _options(window: TermWindow) -> dict:
@@ -203,6 +250,28 @@ def window_state(scenario: Scenario) -> dict:
     }
 
 
+def resolve_instructor_id(scenario: Scenario, instructor_id: str) -> str:
+    """Map an account's instructor link onto the current scenario.
+
+    Ingestion re-ids people from the files it reads ("Prof. Patel" may
+    become `prof-patel`) while accounts keep their seed link (`patel`).
+    An exact id wins; otherwise a unique id/name slug ending with the
+    link resolves it. Ambiguous or unknown links are returned unchanged
+    so the caller can refuse them honestly."""
+    if any(i.id == instructor_id for i in scenario.instructors):
+        return instructor_id
+
+    def slug(text: str) -> str:
+        return "".join(ch for ch in text.lower() if ch.isalnum())
+
+    link = slug(instructor_id)
+    candidates = {
+        i.id for i in scenario.instructors
+        if slug(i.id).endswith(link) or slug(i.name).endswith(link)
+    }
+    return candidates.pop() if len(candidates) == 1 else instructor_id
+
+
 def submit_intake(
     scenario: Scenario,
     instructor_id: str,
@@ -210,21 +279,89 @@ def submit_intake(
     hard_unavailable: list[dict],
     preferences: list[dict],
     note: str = "",
+    message: str = "",
+    evidence: Optional[dict] = None,
 ) -> dict:
+    """One professor's election, before the deadline, two ways in:
+
+    - picked from the schedule grid (Off = hard candidate, Avoid/Prefer =
+      soft, load steppers), and/or
+    - typed in plain English (`message`): Muse Spark parses it with the
+      professor as speaker into typed operations, validated before they
+      may document a constraint. Load/prep caps are not intake fields —
+      a parsed cap is reported back, not silently stored.
+
+    Either way, hard candidates pass the evidence gate: evidence attached
+    (kind + file name) keeps them hard; no evidence downgrades them to
+    the strongest soft preference instead of dropping them.
+    """
     window = get_window(scenario)
     if window.status != "open":
         raise ValueError("The intake window is not open.")
     if _utcnow() > window.deadline:
         raise ValueError("The intake deadline has passed.")
-    instructor = next((i for i in scenario.instructors if i.id == instructor_id), None)
+    instructor = next(
+        (i for i in scenario.instructors
+         if i.id == resolve_instructor_id(scenario, instructor_id)), None)
     if instructor is None:
         raise ValueError("Unknown instructor.")
+    instructor_id = instructor.id
 
     hard = [SlotRef.model_validate(item).model_dump() for item in hard_unavailable]
     prefs = [
         InstructorPreference.model_validate(item).model_dump()
         for item in preferences
     ]
+
+    documented: list[dict] = []
+    parser_mode = model = None
+    if message.strip():
+        from app.parsing.parser import ConstraintParser, validate_operations
+
+        parser = ConstraintParser()
+        parsed = parser.parse(message.strip(), scenario, speaker_id=instructor_id)
+        parser_mode, model = parser.mode, parser.model
+        ops, _notes = validate_operations(list(parsed.operations), scenario)
+        for op in ops:
+            if op.instructor_id not in (None, instructor_id):
+                continue  # a professor constrains only themselves
+            if op.op == "add_instructor_unavailability":
+                days = [op.day] if op.day is not None else list(range(5))
+                periods = ([op.period] if op.period is not None
+                           else list(range(PERIOD_COUNT)))
+                for day in days:
+                    for period in periods:
+                        slot = {"day": day, "period": period}
+                        if slot not in hard:
+                            hard.append(slot)
+                documented.append({"kind": "hard_candidate",
+                                     "explanation": op.explanation})
+            elif op.op == "add_instructor_preference":
+                pref = InstructorPreference(
+                    kind=op.kind or "prefer", day=op.day, period=op.period,
+                    course_id=op.course_id, pattern=op.pattern,
+                    weight=op.weight or 8).model_dump()
+                if pref not in prefs:
+                    prefs.append(pref)
+                documented.append({"kind": "soft", "explanation": op.explanation})
+            else:
+                documented.append({
+                    "kind": "noted_not_stored",
+                    "explanation": (f"{op.explanation} (set caps with the "
+                                    "load steppers — the coordinator verifies "
+                                    "cap changes separately.)")})
+
+    hard, prefs, gate = _apply_evidence_gate(hard, prefs, evidence)
+    if gate["downgraded_hard_count"]:
+        documented.append({
+            "kind": "downgraded_no_evidence",
+            "explanation": (
+                f"{gate['downgraded_hard_count']} hard slot(s) had no "
+                "evidence attached, so they were recorded as strong soft "
+                "preferences (avoid, weight 10) instead of hard bans. "
+                "Attach evidence (e.g. committee letter) to make them hard.")})
+    meta = {**gate, "documented_constraints": documented,
+            "parser_mode": parser_mode, "model": model}
 
     with SessionLocal() as session:
         row = (
@@ -240,6 +377,7 @@ def submit_intake(
             session.add(row)
         row.hard_unavailable = json.dumps(hard)
         row.preferences = json.dumps(prefs)
+        row.evidence_json = json.dumps(meta)
         row.note = note.strip()
         row.status = "submitted"
         row.submitted_at = row.submitted_at or _utcnow()
@@ -378,6 +516,10 @@ def simulate_intake(
             row.hard_unavailable = json.dumps(hard)
             row.preferences = json.dumps(preferences)
             row.note = "Simulated faculty feedback (demo)."
+            row.evidence_json = json.dumps(
+                {"status": "simulated_demo", "evidence": None,
+                 "downgraded_hard_count": 0, "documented_constraints": [],
+                 "parser_mode": None, "model": None})
             row.status = "submitted"
             row.submitted_at = row.submitted_at or _utcnow()
             row.updated_at = _utcnow()

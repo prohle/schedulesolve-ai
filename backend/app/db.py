@@ -69,6 +69,7 @@ def init_db() -> None:
             Base.metadata.create_all(bind=engine)
             _migrate_change_requests()
             _migrate_term_windows()
+            _migrate_faculty_intake()
             _initialized = True
             return
         except Exception as exc:  # noqa: BLE001
@@ -92,6 +93,20 @@ def _migrate_change_requests() -> None:
     if "operations" not in columns:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE change_requests ADD COLUMN operations TEXT"))
+
+
+def _migrate_faculty_intake() -> None:
+    """Add the evidence-gate / documented-constraints column where the
+    faculty_intake table predates it."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "faculty_intake" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("faculty_intake")}
+    if "evidence_json" not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE faculty_intake ADD COLUMN evidence_json TEXT"))
 
 
 def _migrate_term_windows() -> None:

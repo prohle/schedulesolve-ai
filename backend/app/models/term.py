@@ -45,6 +45,10 @@ class FacultyIntake(Base):
     instructor_id = Column(String(100), nullable=False, index=True)
     hard_unavailable = Column(Text)  # JSON list[SlotRef]
     preferences = Column(Text)       # JSON list[InstructorPreference]
+    # JSON: evidence gate + Muse-documented constraints for this submission.
+    # {status: provided|missing_downgraded|not_required|simulated_demo,
+    #  kind, file_name, documented_constraints, parser_mode, model}
+    evidence_json = Column(Text)
     note = Column(Text)
     status = Column(String(20), default="submitted")  # submitted | accepted | returned
     submitted_at = Column(DateTime, default=_utcnow)

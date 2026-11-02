@@ -130,6 +130,8 @@ def test_faculty_individual_can_elect_constraints_before_deadline(client):
             {"kind": "avoid", "period": 0, "weight": 5},
         ],
         "note": "Committee duty Friday afternoon.",
+        # Hard stays hard only with evidence (see the evidence-gate tests).
+        "evidence": {"kind": "committee", "file_name": "committee-roster.pdf"},
     })
     assert submitted.status_code == 200, submitted.text
     submission = submitted.json()["submission"]
@@ -149,6 +151,103 @@ def test_faculty_individual_can_elect_constraints_before_deadline(client):
     denied = client.post("/term/window/submit", headers=chen, json={
         "hard_unavailable": [], "preferences": [], "note": "late"})
     assert denied.status_code == 409
+
+
+def _open_window(client, coordinator):
+    future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+    client.post("/term/window", headers=coordinator,
+                json={"deadline": future, "status": "open"})
+
+
+def test_hard_without_evidence_is_downgraded_to_strong_soft(client):
+    """Hard means verified: an unevidenced hard pick is not dropped and
+    does not stay hard — it becomes the strongest soft preference."""
+    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    chen = _login(client, "chen@schedulesolve.demo")
+    _open_window(client, coordinator)
+
+    submitted = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [{"day": 0, "period": 1}, {"day": 0, "period": 2}],
+        "preferences": [], "note": "Childcare Mondays."})
+    assert submitted.status_code == 200, submitted.text
+    submission = submitted.json()["submission"]
+    assert submission["evidence_status"] == "missing_downgraded"
+    assert submission["downgraded_hard_count"] == 2
+    assert submission["hard_count"] == 0
+    downgraded = [p for p in submission["preferences"] if p["kind"] == "avoid"]
+    assert len(downgraded) == 2
+    assert all(p["weight"] == 10 and p["day"] == 0 for p in downgraded)
+
+
+def test_hard_with_evidence_stays_hard(client):
+    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    chen = _login(client, "chen@schedulesolve.demo")
+    _open_window(client, coordinator)
+
+    submitted = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [{"day": 0, "period": 1}],
+        "preferences": [],
+        "evidence": {"kind": "committee", "file_name": "committee-duty.pdf"}})
+    assert submitted.status_code == 200, submitted.text
+    submission = submitted.json()["submission"]
+    assert submission["evidence_status"] == "provided"
+    assert submission["evidence"] == {"kind": "committee",
+                                      "file_name": "committee-duty.pdf"}
+    assert submission["hard_count"] == 1
+    assert submission["downgraded_hard_count"] == 0
+
+
+def test_plain_english_intake_is_documented_and_gated(client):
+    """A professor types plain English before the deadline; the parser
+    (mock here, Muse Spark live) documents typed constraints from it:
+    childcare Monday = hard candidate, 3-hour block = soft pattern wish,
+    CS 301 = soft course wish. No evidence -> the hard candidate is
+    downgraded, and the documented list says exactly what happened."""
+    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    chen = _login(client, "chen@schedulesolve.demo")
+    _open_window(client, coordinator)
+
+    submitted = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [], "preferences": [],
+        "message": ("I have childcare on Mondays. A 3-hour class block "
+                    "works better for me. CS 301 is my preference.")})
+    assert submitted.status_code == 200, submitted.text
+    submission = submitted.json()["submission"]
+    kinds = [d["kind"] for d in submission["documented_constraints"]]
+    assert "hard_candidate" in kinds
+    assert "downgraded_no_evidence" in kinds
+    assert submission["evidence_status"] == "missing_downgraded"
+    assert submission["hard_count"] == 0  # Monday is soft until evidenced
+    prefs = submission["preferences"]
+    assert any(p.get("pattern") == "block" and p["kind"] == "prefer" for p in prefs)
+    assert any(p.get("course_id") == "cs301" and p["kind"] == "prefer" for p in prefs)
+    assert any(p["kind"] == "avoid" and p["day"] == 0 and p["weight"] == 10
+               for p in prefs)
+
+    # With evidence, the same sentence keeps Monday hard.
+    submitted = client.post("/term/window/submit", headers=chen, json={
+        "hard_unavailable": [], "preferences": [],
+        "message": "I have childcare on Mondays.",
+        "evidence": {"kind": "caregiving", "file_name": "care-plan.pdf"}})
+    assert submitted.status_code == 200, submitted.text
+    submission = submitted.json()["submission"]
+    assert submission["evidence_status"] == "provided"
+    assert submission["hard_count"] == 4  # all Monday periods, hard
+
+
+def test_ingested_instructor_ids_resolve_from_account_links():
+    """Ingest re-ids people from files (prof-patel); accounts keep their
+    seed link (patel). The intake resolver maps one onto the other, and
+    leaves unknown links honestly unresolved."""
+    from app.services.term import resolve_instructor_id
+
+    sc = load_seed_scenario()
+    renamed = sc.model_copy(deep=True)
+    for inst in renamed.instructors:
+        inst.id = f"prof-{inst.id}"
+    assert resolve_instructor_id(renamed, "patel") == "prof-patel"
+    assert resolve_instructor_id(renamed, "prof-patel") == "prof-patel"
+    assert resolve_instructor_id(renamed, "nobody") == "nobody"
 
 
 def test_dated_holiday_and_day_swap_are_real_calendar_days(client):
