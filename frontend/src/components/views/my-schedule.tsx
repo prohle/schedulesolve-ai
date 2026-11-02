@@ -487,6 +487,8 @@ function ClosuresCard({ onToast }: {
   );
 }
 
+const DEFAULT_STUDENT_MESSAGE = "I work Tuesdays and Thursdays. Help me choose my classes.";
+
 /* ---------------- student: Muse Voice Transcribe ---------------- */
 
 type VoiceState = "idle" | "recording" | "transcribing";
@@ -688,7 +690,7 @@ function StudentPlanPanel({ user, onToast }: {
   const [programId, setProgramId] = useState("");
   const [recordMode, setRecordMode] = useState<"lookup" | "record">("lookup");
   const [recordText, setRecordText] = useState("Completed: CS 101, CS 201, MATH 201");
-  const [message, setMessage] = useState("I work Tuesdays and Thursdays. Help me choose my classes.");
+  const [message, setMessage] = useState(DEFAULT_STUDENT_MESSAGE);
   const [transcriptName, setTranscriptName] = useState("");
   const [uploadBusy, setUploadBusy] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -751,8 +753,7 @@ function StudentPlanPanel({ user, onToast }: {
     }
   }
 
-  const defaultMessage = "I work Tuesdays and Thursdays. Help me choose my classes.";
-  const requestTouched = message.trim().length > 0 && message.trim() !== defaultMessage;
+  const requestTouched = message.trim().length > 0 && message.trim() !== DEFAULT_STUDENT_MESSAGE;
   const planStep = plan ? 3
     : requestTouched ? 2
       : recordMode === "record" ? (transcriptName ? 2 : 1) : 0;
