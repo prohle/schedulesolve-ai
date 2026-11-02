@@ -11,9 +11,11 @@ def offline_muse(monkeypatch):
     monkeypatch.setattr(config, "MUSE_API_KEY", None)
     # Voice ASR is a hosted Meta endpoint even when chat runs on Baseten.
     monkeypatch.setattr(config, "MUSE_ASR_API_KEY", None)
-    # Keep the suite fast; the app default is 60 s (0 disables the cap).
-    monkeypatch.setattr(config, "SOLVER_TIME_LIMIT_S", 10.0)
-    monkeypatch.setattr(config, "HOME_SOLVER_TIME_LIMIT_S", 5.0)
+    # Keep the suite bounded, but leave headroom: a 10 s cap made the
+    # comprehensive-instance tests flaky on slower CI runners, where CP-SAT
+    # can return "unknown" just before the optimum. The app default is 60 s.
+    monkeypatch.setattr(config, "SOLVER_TIME_LIMIT_S", 30.0)
+    monkeypatch.setattr(config, "HOME_SOLVER_TIME_LIMIT_S", 15.0)
 
 
 @pytest.fixture()
