@@ -31,7 +31,8 @@ and student's personal plan before it can stand.
 **Short description (form):**
 Every term, a department coordinator burns a week reconciling instructor
 constraints, degree roadmaps, room capacities, and campus walk times in a
-spreadsheet that is wrong the moment reality changes. ScheduleSolve AI replaces
+spreadsheet that is wrong the moment reality changes. This is not an
+"AI for education" chatbot: the model never writes the schedule. ScheduleSolve AI replaces
 that week: paste or drop the institution's messy data and Muse Spark
 autocleans it into a typed model; type one sentence ("Prof. Patel can't teach
 Mondays — committee duty") and Muse parses it into validated constraints

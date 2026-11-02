@@ -173,7 +173,10 @@ our word for it. Scoped claims are stronger than broad ones.
   sized for a hackathon demo and a single coordinator office — not an
   institutional SSO story. Demo accounts ship with password `demo1234`
   and are labeled as such on the login screen.
-- **Persistence is Postgres 18 in Docker (required; no SQLite mode).**
+- **Persistence is Postgres 18 in Docker** for the repo and the Docker
+  stack. The hosted single-tenant demo runs SQLite on a Modal volume
+  (`ALLOW_SQLITE=1`) so the public URL needs no database service; it is
+  the same SQLAlchemy models, not a separate code path.
   The audit ledger is append-only by design; resetting a scenario
   returns the term to seed but keeps the provenance history.
 - **The audit trail records submissions and change events**, not
