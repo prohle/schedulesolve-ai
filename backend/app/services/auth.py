@@ -5,9 +5,9 @@ tokens stored as SHA-256 hashes with a 7-day expiry. Demo accounts are
 seeded from the scenario's own instructors/cohorts so every scale of the
 demo (seed / department / university) has working logins:
 
-    coordinator@schedulesolve.demo / demo1234   (coordinator)
-    <instructor-id>@schedulesolve.demo / demo1234
-    <cohort-id>@schedulesolve.demo / demo1234
+    coordinator@northgate.edu / demo1234   (coordinator)
+    <instructor-id>@northgate.edu / demo1234
+    <cohort-id>@northgate.edu / demo1234
 """
 
 from __future__ import annotations
@@ -109,13 +109,13 @@ def public_user(user: User) -> dict:
 
 def seed_demo_users(scenario: Scenario) -> None:
     """Idempotent: create the demo logins for this scenario's people."""
-    if find_user("coordinator@schedulesolve.demo"):
+    if find_user("coordinator@northgate.edu"):
         return
-    create_user("coordinator@schedulesolve.demo", DEMO_PASSWORD, "coordinator",
+    create_user("coordinator@northgate.edu", DEMO_PASSWORD, "coordinator",
                 "Term Coordinator")
     for inst in scenario.instructors:
-        create_user(f"{inst.id}@schedulesolve.demo", DEMO_PASSWORD, "instructor",
+        create_user(f"{inst.id}@northgate.edu", DEMO_PASSWORD, "instructor",
                     inst.name, instructor_id=inst.id)
     for cohort in scenario.cohorts:
-        create_user(f"{cohort.id}@schedulesolve.demo", DEMO_PASSWORD, "student",
+        create_user(f"{cohort.id}@northgate.edu", DEMO_PASSWORD, "student",
                     f"{cohort.id.upper()} cohort", cohort_id=cohort.id)

@@ -28,8 +28,8 @@ def _op(op, **kw):
 
 
 def test_structured_intake_verified_apply_and_load(client):
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
     client.post("/schedule/publish", json={"engine": "cpsat"}, headers=coordinator)
 
     created = client.post("/me/change-requests", headers=chen, json={
@@ -65,7 +65,7 @@ def test_structured_intake_verified_apply_and_load(client):
 
 
 def test_structured_intake_infeasible_is_rejected_with_reason(client):
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
     # Every professor declares a zero teaching load (sabbatical). One or two
     # are absorbable by colleagues; at some point the remaining contract
     # capacity is below the 8 sections and the solver must reject the request
@@ -73,7 +73,7 @@ def test_structured_intake_infeasible_is_rejected_with_reason(client):
     instructor_ids = [i.id for i in load_seed_scenario().instructors]
     request_ids = []
     for instructor_id in instructor_ids:
-        token = _login(client, f"{instructor_id}@schedulesolve.demo")
+        token = _login(client, f"{instructor_id}@northgate.edu")
         created = client.post("/me/change-requests", headers=token, json={
             "operations": [
                 _op("set_load_cap", value=0,
@@ -95,7 +95,7 @@ def test_structured_intake_infeasible_is_rejected_with_reason(client):
 
 
 def test_structured_intake_whitelist_and_self_only(client):
-    chen = _login(client, "chen@schedulesolve.demo")
+    chen = _login(client, "chen@northgate.edu")
     # Campus closures are the coordinator's, not a professor's pick.
     only_forbidden = client.post("/me/change-requests", headers=chen, json={
         "operations": [_op("add_term_closure", day=4, label="Holiday",
@@ -116,9 +116,9 @@ def test_structured_intake_whitelist_and_self_only(client):
 def test_faculty_individual_can_elect_constraints_before_deadline(client):
     """Every professor logs in, sees only their own submission, and elects
     hard + soft constraints until the deadline — then the window refuses."""
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
-    diaz = _login(client, "diaz@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
+    diaz = _login(client, "diaz@northgate.edu")
     future = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
     client.post("/term/window", headers=coordinator,
                 json={"deadline": future, "status": "open"})
@@ -162,8 +162,8 @@ def _open_window(client, coordinator):
 def test_hard_without_evidence_is_downgraded_to_strong_soft(client):
     """Hard means verified: an unevidenced hard pick is not dropped and
     does not stay hard — it becomes the strongest soft preference."""
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
     _open_window(client, coordinator)
 
     submitted = client.post("/term/window/submit", headers=chen, json={
@@ -180,8 +180,8 @@ def test_hard_without_evidence_is_downgraded_to_strong_soft(client):
 
 
 def test_hard_with_evidence_stays_hard(client):
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
     _open_window(client, coordinator)
 
     submitted = client.post("/term/window/submit", headers=chen, json={
@@ -203,8 +203,8 @@ def test_plain_english_intake_is_documented_and_gated(client):
     childcare Monday = hard candidate, 3-hour block = soft pattern wish,
     CS 301 = soft course wish. No evidence -> the hard candidate is
     downgraded, and the documented list says exactly what happened."""
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
     _open_window(client, coordinator)
 
     submitted = client.post("/term/window/submit", headers=chen, json={
@@ -253,7 +253,7 @@ def test_ingested_instructor_ids_resolve_from_account_links():
 def test_dated_holiday_and_day_swap_are_real_calendar_days(client):
     """A holiday removes one real date; a swap makes another date follow a
     different weekday (e.g. Friday classes meet on a Tuesday schedule)."""
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
     saved = client.post("/term/calendar", headers=coordinator, json={
         "start_date": "2026-08-24",
         "weeks": 16,
@@ -294,8 +294,8 @@ def test_term_closure_blocks_slots_in_solver(client):
 
 
 def test_term_closure_endpoint_coordinator_only(client):
-    coordinator = _login(client, "coordinator@schedulesolve.demo")
-    chen = _login(client, "chen@schedulesolve.demo")
+    coordinator = _login(client, "coordinator@northgate.edu")
+    chen = _login(client, "chen@northgate.edu")
     body = {"closures": [{"day": 3, "period": 2, "label": "Convocation"}]}
     assert client.post("/term/closures", json=body, headers=chen).status_code == 403
     set_resp = client.post("/term/closures", json=body, headers=coordinator)

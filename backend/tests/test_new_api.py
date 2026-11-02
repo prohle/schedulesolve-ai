@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-def _login(client, email="coordinator@schedulesolve.demo"):
+def _login(client, email="coordinator@northgate.edu"):
     response = client.post("/auth/login", json={"email": email, "password": "demo1234"})
     assert response.status_code == 200, response.text
     return {"Authorization": f"Bearer {response.json()['token']}"}

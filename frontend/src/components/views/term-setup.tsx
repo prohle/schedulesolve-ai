@@ -412,6 +412,7 @@ export function TermSetupView({
   const [termEnd, setTermEnd] = useState("");
   const [uploadText, setUploadText] = useState("");
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [showEvalTools, setShowEvalTools] = useState(false);
 
   const isCoordinator = user.role === "coordinator";
 
@@ -834,6 +835,18 @@ export function TermSetupView({
 
       {section === "people" && (
         <>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2">
+        <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+          Next step
+        </span>
+        <span className="text-[11px] font-semibold text-blue-900">
+          {window.submitted_count < window.total_faculty
+            ? "Collect the remaining faculty submissions, then accept the set."
+            : window.status !== "accepted"
+              ? "Accept the set and build the model."
+              : "Review the deadline evaluation, then publish the term."}
+        </span>
+      </div>
       <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-sm backdrop-blur">
         <span className="px-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
           On this page
@@ -928,46 +941,62 @@ export function TermSetupView({
                   Accept all input &amp; build model
                 </button>
               </div>
-              <div className="col-span-full rounded-xl border border-blue-200 bg-blue-50/70 p-3">
-                <div className="text-[11px] font-bold text-blue-900">
-                  Sample faculty input
-                </div>
-                <p className="mt-0.5 text-[10.5px] text-blue-800">
-                  For evaluation environments: populate the remaining submissions from a representative sample, then accept and publish when ready. Real faculty can also submit through their own intake window.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+              <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold text-slate-700">Evaluation tools</p>
+                    <p className="text-[10px] text-slate-500">
+                      Populate representative faculty submissions for a dry run. Not part of the production intake flow.
+                    </p>
+                  </div>
                   <button
-                    onClick={() => void fillSample(false, false)}
-                    disabled={busy !== null}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                    onClick={() => setShowEvalTools((value) => !value)}
+                    className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10.5px] font-bold text-slate-700 hover:bg-slate-100"
                   >
-                    Fill all
-                  </button>
-                  <button
-                    onClick={() => void fillSample(false, false, true)}
-                    disabled={busy !== null}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                  >
-                    {busy === "Fill missing" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Fill missing
-                  </button>
-                  <button
-                    onClick={() => void fillSample(true, false)}
-                    disabled={busy !== null}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {busy === "Fill & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Fill &amp; accept
-                  </button>
-                  <button
-                    onClick={() => void fillSample(true, true)}
-                    disabled={busy !== null}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {busy === "Fill & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Fill, accept &amp; publish
+                    {showEvalTools ? "Hide evaluation tools" : "Open evaluation tools"}
                   </button>
                 </div>
+                {showEvalTools && (
+                  <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3">
+                    <div className="text-[11px] font-bold text-blue-900">Sample faculty input</div>
+                    <p className="mt-0.5 text-[10.5px] text-blue-800">
+                      Fill the remaining submissions from a representative sample, then accept and publish when ready. Real faculty can also submit through their own intake window.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => void fillSample(false, false)}
+                        disabled={busy !== null}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        Fill all
+                      </button>
+                      <button
+                        onClick={() => void fillSample(false, false, true)}
+                        disabled={busy !== null}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {busy === "Fill missing" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Fill missing
+                      </button>
+                      <button
+                        onClick={() => void fillSample(true, false)}
+                        disabled={busy !== null}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {busy === "Fill & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Fill &amp; accept
+                      </button>
+                      <button
+                        onClick={() => void fillSample(true, true)}
+                        disabled={busy !== null}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {busy === "Fill & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Fill, accept &amp; publish
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

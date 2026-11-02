@@ -1441,8 +1441,69 @@ export function MyScheduleView({ user, onToast }: {
         </div>
       )}
 
+      {user.role === "instructor" && (
+        <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-white to-violet-50 px-3.5 py-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-black uppercase tracking-wider text-blue-700">Next step</p>
+            <p className="text-xs font-bold text-slate-900">
+              {termWindow?.submissions?.some((submission) => submission.instructor_id === user.instructor_id)
+                ? "Your intake is submitted — review it while the window is open."
+                : "Submit your availability and preferences before the deadline."}
+            </p>
+          </div>
+          <button
+            onClick={() => document.getElementById("instructor-intake")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="inline-flex min-h-8 items-center rounded-lg bg-blue-600 px-2.5 text-[10.5px] font-bold text-white shadow-sm hover:bg-blue-700"
+          >
+            {termWindow?.submissions?.some((submission) => submission.instructor_id === user.instructor_id) ? "Review intake" : "Go to intake"}
+          </button>
+        </div>
+      )}
+
+      {user.role === "student" && (
+        <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-violet-200 bg-gradient-to-r from-violet-50 via-white to-blue-50 px-3.5 py-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 text-white shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-black uppercase tracking-wider text-violet-700">Next step</p>
+            <p className="text-xs font-bold text-slate-900">Upload your transcript or describe your week — get a verified plan.</p>
+          </div>
+          <button
+            onClick={() => document.getElementById("student-advising")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="inline-flex min-h-8 items-center rounded-lg bg-violet-600 px-2.5 text-[10.5px] font-bold text-white shadow-sm hover:bg-violet-700"
+          >
+            Start advising
+          </button>
+        </div>
+      )}
+
+      {user.role === "coordinator" && (
+        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-sm backdrop-blur">
+          <span className="px-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+            On this page
+          </span>
+          {[
+            ["schedule-timetable", "Timetable"],
+            ["schedule-closures", "Closures"],
+            ["schedule-requests", "Requests"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="rounded-lg px-2 py-1 text-[10.5px] font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {mine && mine.placements.length > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm sm:p-3">
+        <div id="schedule-timetable" className="rounded-2xl border border-border bg-card p-2.5 shadow-sm sm:p-3">
           {view === "matrix" ? (
             liveCampus ? (
               <CampusMatrix onToast={onToast} live={liveCampus} />
@@ -1465,16 +1526,26 @@ export function MyScheduleView({ user, onToast }: {
 
       <MuseStandby user={user} mine={mine} requests={requests} />
 
-      {user.role === "coordinator" && <ClosuresCard onToast={onToast} />}
-
-      {(user.role === "instructor") && (
-        <IntakePanel user={user} load={mine?.load} intakeWindow={termWindow} busy={busy} onSend={sendIntake} />
+      {user.role === "coordinator" && (
+        <div id="schedule-closures">
+          <ClosuresCard onToast={onToast} />
+        </div>
       )}
 
-      {user.role === "student" && <StudentPlanPanel user={user} onToast={onToast} />}
+      {(user.role === "instructor") && (
+        <div id="instructor-intake">
+          <IntakePanel user={user} load={mine?.load} intakeWindow={termWindow} busy={busy} onSend={sendIntake} />
+        </div>
+      )}
+
+      {user.role === "student" && (
+        <div id="student-advising">
+          <StudentPlanPanel user={user} onToast={onToast} />
+        </div>
+      )}
 
       {requests.length > 0 && (
-        <div className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div id="schedule-requests" className="space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h3 className="text-xs font-bold uppercase tracking-wide">
             {user.role === "coordinator" ? "Intake & change requests" : "My requests"}
           </h3>

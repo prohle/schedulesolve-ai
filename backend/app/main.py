@@ -977,7 +977,7 @@ def auth_login(req: LoginRequest) -> dict:
     from app.services.auth import create_session, find_user, public_user, verify_password
     init_db()
     user = find_user(req.email)
-    if user is None and req.email.lower().endswith("@schedulesolve.demo"):
+    if user is None and req.email.lower().endswith("@northgate.edu"):
         from app.services.auth import seed_demo_users
         seed_demo_users(get_current_scenario())
         user = find_user(req.email)

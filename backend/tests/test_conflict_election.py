@@ -111,7 +111,7 @@ def test_degree_map_disagreement_is_a_detected_electable_conflict():
 
 def test_tightener_election_reverifies_before_applying(client):
     login = client.post("/auth/login", json={
-        "email": "coordinator@schedulesolve.demo", "password": "demo1234"})
+        "email": "coordinator@northgate.edu", "password": "demo1234"})
     assert login.status_code == 200, login.text
     headers = {"Authorization": f"Bearer {login.json()['token']}"}
     r = client.post("/intelligence/tighten", json={}, headers=headers)
