@@ -32,12 +32,23 @@ class Timetable(BaseModel):
     sections_per_instructor: dict[str, int]
 
 
+def operation_source(op) -> str:  # noqa: ANN001 — an Operation
+    """One line naming where a conflicting request came from."""
+    src = (getattr(op, "source", "") or "").strip() or "the submitted request"
+    return f"'{op.explanation}' — source: {src}"
+
+
 class ConflictReport(BaseModel):
     """Minimal conflicting subset of the requested operations (CP-SAT IIS)."""
 
     conflicting_operation_indices: list[int]
     explanation: str
     suggestion: str
+    # One entry per conflicting index, naming the request and the source it
+    # came from (speaker / intake submission / institution model), so the
+    # user can see *whose* information created the conflict before electing
+    # what wins.
+    sources: list[str] = []
 
 
 class SolveResult(BaseModel):
@@ -74,6 +85,9 @@ class CandidateProposal(BaseModel):
     objective_delta: Optional[int] = None
     load_after: Optional[int] = None
     reason: str
+    # Where the candidacy came from (faculty roster + published timetable),
+    # so the coordinator can see the source before electing who covers.
+    source: str = ""
 
 
 class Resolution(BaseModel):
@@ -97,6 +111,13 @@ class ResolutionOption(BaseModel):
     dropped_explanation: str
     tradeoff: str
     result: SolveResult
+    # Provenance of the choice: the dropped request's source, the sources of
+    # the conflicting requests it was weighed against, and the exact
+    # operations that stand if the user elects this fix (so electing a
+    # different winner never has to re-derive indices).
+    source: str = ""
+    sources: list[str] = []
+    operations: list = []
 
 
 class AgentStep(BaseModel):
@@ -185,6 +206,10 @@ class StudentPlanConflict(BaseModel):
     options: list[str] = []      # machine choices the client sends back
     default_option: str = ""
     chosen_option: str = ""
+    # One line per side, naming the source and what it says (the student's
+    # record, the cohort lookup, the published timetable, the request), so
+    # the student elects a winner knowing where each side came from.
+    sources: list[str] = []
 
 
 class StudentPlanCourse(BaseModel):
@@ -241,6 +266,12 @@ class CopilotResponse(BaseModel):
     explanation: Optional[str] = None
     explanation_mode: Optional[str] = None
     options: list[ResolutionOption] = []
+    # The solver's conflict report (indices + per-request sources) when the
+    # request proved infeasible, and which verified option was auto-applied
+    # as the least-disruptive default (the user may elect another option;
+    # every option carries the operations that would stand instead).
+    conflicts: Optional[ConflictReport] = None
+    applied_option_index: Optional[int] = None
     result: Optional[SolveResult] = None
     parser_mode: Literal["muse-spark", "mock"]
     model: Optional[str] = None

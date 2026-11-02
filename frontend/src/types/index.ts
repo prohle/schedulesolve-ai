@@ -184,6 +184,7 @@ export interface Operation {
   weight?: number;
   value?: number;
   explanation: string;
+  source?: string;
 }
 
 export interface ResolutionOption {
@@ -191,6 +192,9 @@ export interface ResolutionOption {
   dropped_explanation: string;
   tradeoff: string;
   result: SolveResult;
+  source?: string;
+  sources?: string[];
+  operations?: Operation[];
 }
 
 export interface CompareResult {
@@ -226,12 +230,15 @@ export interface CopilotResponse {
   model?: string;
   parser_latency_ms?: number;
   agent_trace?: AgentStep[];
+  conflicts?: ConflictReport;
+  applied_option_index?: number | null;
 }
 
 export interface ConflictReport {
   conflicting_operation_indices: number[];
   explanation: string;
   suggestion: string;
+  sources?: string[];
 }
 
 export interface CandidateProposal {
@@ -243,6 +250,7 @@ export interface CandidateProposal {
   objective_delta?: number;
   load_after?: number;
   reason: string;
+  source?: string;
 }
 
 export interface TermChangeResponse {
@@ -302,6 +310,7 @@ export interface StudentPlanConflict {
   options: string[];
   default_option?: string;
   chosen_option?: string;
+  sources?: string[];
 }
 
 export interface StudentPlanResponse {

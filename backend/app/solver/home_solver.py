@@ -26,7 +26,7 @@ import time
 from typing import Optional
 
 from app import config
-from app.models.results import ConflictReport, Placement, SolveResult, Timetable
+from app.models.results import ConflictReport, Placement, SolveResult, Timetable, operation_source
 from app.models.scenario import (
     BLOCK_PERIODS,
     InstructorPreference,
@@ -532,7 +532,8 @@ def solve_home(sc: Scenario, request_ops: Optional[list[Operation]] = None,
                 conflicts=ConflictReport(
                     conflicting_operation_indices=core_idx,
                     explanation=f"These requests cannot hold together (with the base rules): {named}.",
-                    suggestion="Drop or relax one of the conflicting requests and re-solve."),
+                    suggestion="Drop or relax one of the conflicting requests and re-solve.",
+                    sources=[operation_source(ops[i]) for i in core_idx]),
                 solve_time_ms=int((time.perf_counter() - t0) * 1000))
     if search.timed_out:
         # Budget expired with no incumbent and no proof: "unknown",
@@ -543,5 +544,7 @@ def solve_home(sc: Scenario, request_ops: Optional[list[Operation]] = None,
         conflicts=ConflictReport(
             conflicting_operation_indices=[],
             explanation="Infeasible against the base scenario (no request could fix this).",
-            suggestion="Relax room inventory, loads, or hard unavailability."),
+            suggestion="Relax room inventory, loads, or hard unavailability.",
+            sources=["Institution model (base scenario): the conflict is in "
+                     "the standing rules, not in any submitted request."]),
         solve_time_ms=elapsed_ms)

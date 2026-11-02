@@ -515,6 +515,10 @@ class Operation(BaseModel):
     value: Optional[int] = None  # update_enrollment / set_*_cap: new number
     label: Optional[str] = None  # add_term_closure: holiday/closure name
     explanation: str
+    # Provenance: who/where this request came from (stamped by the backend
+    # after parsing, never trusted from the model), so a conflict can name
+    # the source of every request that created it.
+    source: str = ""
 
 
 class ParsedRequest(BaseModel):

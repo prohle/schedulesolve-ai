@@ -36,6 +36,7 @@ from app.models.results import (
     Placement,
     SolveResult,
     Timetable,
+    operation_source,
 )
 from app.models.scenario import (
     BLOCK_DAYS,
@@ -176,7 +177,10 @@ def solve(
                 conflicting_operation_indices=[],
                 explanation=(f"{len(empty)} section(s) have no legal placement "
                              f"under the current rules (e.g. {', '.join(empty[:3])})."),
-                suggestion="Relax room/blackout/qualification constraints."),
+                suggestion="Relax room/blackout/qualification constraints.",
+                sources=["Institution model (base scenario): these sections have "
+                         "no qualified instructor, fitting room, and open slot "
+                         "under the current hard rules."]),
             solve_time_ms=int((time.perf_counter() - t0) * 1000))
 
     if slot_hints is None:
@@ -566,12 +570,15 @@ def solve(
             conflicting_operation_indices=op_indices,
             explanation=f"These requests cannot hold together (with the base rules): {named}.",
             suggestion="Drop or relax one of the conflicting requests and re-solve.",
+            sources=[operation_source(request_ops[i]) for i in op_indices],
         )
     else:
         conflict = ConflictReport(
             conflicting_operation_indices=[],
             explanation="Infeasible against the base scenario (no request could fix this).",
             suggestion="Relax room inventory, loads, or hard unavailability.",
+            sources=["Institution model (base scenario): the conflict is in "
+                     "the standing rules, not in any submitted request."],
         )
     return SolveResult(status="infeasible", conflicts=conflict, solve_time_ms=elapsed_ms)
 
@@ -619,6 +626,9 @@ def propose_candidates(sc: Scenario, base: SolveResult, removed_instructor_id: s
                 instructor_id=cand.id, instructor_name=cand.name,
                 feasible=feasible, objective_delta=delta,
                 load_after=current + 1, reason=reason,
+                source=(f"Faculty roster (institution model): {cand.name} is "
+                        f"qualified for {lost.course_code}; published timetable "
+                        f"load {current}/{cand.max_sections} sections."),
             ))
     proposals.sort(key=lambda p: (not p.feasible, p.objective_delta if p.objective_delta is not None else 9999))
     return proposals

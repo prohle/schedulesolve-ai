@@ -112,8 +112,8 @@ our word for it. Scoped claims are stronger than broad ones.
   general-purpose solver and still powers the term change feasibility
   probes; we claim no general superiority.
 - **The Python reference search cannot prove optimality at scale.** It
-  reaches the same penalty but exhausts its 5 s budget unproven at
-  department/university scale (`HOME_SOLVER_TIME_LIMIT_S`) — that
+  reaches the same penalty but exhausts its budget unproven at
+  department/university scale (`HOME_SOLVER_TIME_LIMIT_S`, default 30 s) — that
   measured gap is why the search core is native C++. If the native
   binary is unbuilt, the system transparently falls back to the Python
   reference (`backend/app/solver/native_solver.py`).

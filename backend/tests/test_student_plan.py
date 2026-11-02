@@ -121,7 +121,7 @@ def test_projection_is_on_track_for_an_on_time_cohort():
     assert resp.projection_status == "on_track"
     assert resp.graduation_delay_terms == 0
     assert "On track for Spring 2029" in resp.projection_note
-    assert resp.projected_graduation
+    assert resp.projected_graduation == "Spring 2029"
     assert resp.expected_graduation == "Spring 2029"
     # The projection is visible on the progress object too.
     assert resp.progress is not None

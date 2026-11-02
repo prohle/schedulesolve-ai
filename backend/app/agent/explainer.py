@@ -106,7 +106,10 @@ Respond with:
 
 
 def _build_case_prompt(scenario: Scenario, message: str, ops: list[Operation], core: list[int]) -> str:
-    ops_listing = "\n".join(f"[{i}] {op.op} — {op.explanation}" for i, op in enumerate(ops))
+    ops_listing = "\n".join(
+        f"[{i}] {op.op} — {op.explanation}"
+        + (f" (source: {op.source})" if op.source else "")
+        for i, op in enumerate(ops))
     core_listing = ", ".join(f"[{i}] {ops[i].explanation}" for i in core)
     instructors = "; ".join(
         f"{i.name} (max {i.max_sections} sections, qualified: {', '.join(i.qualified_courses)})"

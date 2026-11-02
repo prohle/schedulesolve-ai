@@ -551,6 +551,13 @@ function StudentPlanPanel({ user, onToast }: {
             <div key={c.kind} className="space-y-1">
               <p className="font-semibold">{c.summary}</p>
               {c.detail && <p className="text-[11px] opacity-90">{c.detail}</p>}
+              {c.sources && c.sources.length > 0 && (
+                <ul className="space-y-0.5 text-[11px] opacity-90">
+                  {c.sources.map((source, i) => (
+                    <li key={i}><span className="font-semibold">Source {i + 1}:</span> {source}</li>
+                  ))}
+                </ul>
+              )}
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {c.options.map((opt) => (
                   <button key={opt} disabled={busy}

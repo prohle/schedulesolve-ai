@@ -31,8 +31,9 @@
    co-pilot re-solves, schedule re-publishes, her grid updates.
 6. **Term change** — "Prof. Chen will no longer teach this term" (the
    change lasts through the end of the term) → feasibility probes over
-   every qualified instructor → ranked zero-ripple reassignment →
-   before/after grids, agent trace visible.
+   every qualified instructor → ranked zero-ripple reassignment with the
+   roster source per candidate → coordinator elects a proven cover per
+   section → Apply elected coverage → before/after grids, agent trace visible.
 7. **Impossible override + capacity** — Diaz overload → minimal conflict
    core → Muse explanation → every repair re-proven before it is shown;
    then Intelligence → Planning → "20% growth" what-if re-solved with

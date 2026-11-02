@@ -28,9 +28,20 @@ def run_term_change(
     scenario: Scenario,
     message: str,
     parser: ConstraintParser | None = None,
+    elected: dict[str, str] | None = None,
 ) -> TermChangeResponse:
+    """Rank verified coverage for a departing instructor.
+
+    The best feasible candidate per section is the default (`chosen`), but
+    the coordinator may elect any other *feasible* proposal per section via
+    `elected` (section_id -> instructor_id). An election the solver did not
+    prove feasible for that section raises ValueError — an unproven name is
+    never silently substituted.
+    """
     parser = parser or ConstraintParser()
     parsed = parser.parse(message, scenario)
+    from app.services.copilot import stamp_sources
+    stamp_sources(parsed.operations, scenario, None, message)
     record_submission(message, parsed.summary, parser.mode)  # type: ignore[arg-type]
     ops, notes = validate_operations(parsed.operations, scenario)
     muse = {"model": parser.model, "parser_latency_ms": parser.last_latency_ms}
@@ -111,7 +122,7 @@ def run_term_change(
         detail=f"Probed every qualified instructor per affected section: "
                f"{len(proposals)} candidate probe(s), {n_feasible} proven zero-ripple feasible."))
 
-    # Auto-pick: best feasible candidate per affected section, tracking load.
+    # Default pick: best feasible candidate per affected section, tracking load.
     loads = dict(base.timetable.sections_per_instructor)
     chosen: dict[str, str] = {}
     for sid in affected_ids:
@@ -129,6 +140,40 @@ def run_term_change(
             )
         else:
             healing_notes.append(f"No verified candidate found for section {sid}; leaving it to re-solve freely.")
+
+    # Coordinator election: any other solver-proven candidate may win a
+    # section instead of the default. Unproven elections are refused, and
+    # electing a second section to the same instructor re-checks the load.
+    if elected:
+        feasible = {(p.section_id, p.instructor_id) for p in proposals if p.feasible}
+        for sid, iid in elected.items():
+            if sid not in affected_ids:
+                raise ValueError(f"Section {sid} is not affected by this term change.")
+            if (sid, iid) not in feasible:
+                name = next((i.name for i in scenario.instructors if i.id == iid), iid)
+                raise ValueError(
+                    f"{name} is not a solver-proven cover for {sid}; "
+                    f"elect one of the feasible proposals for that section.")
+        # Re-check caps with the elected set as a whole.
+        counts: dict[str, int] = dict(base.timetable.sections_per_instructor)
+        merged = {**chosen, **elected}
+        for sid, iid in elected.items():
+            previous = chosen.get(sid)
+            if previous == iid:
+                continue
+            counts[iid] = counts.get(iid, 0) + 1
+            if counts[iid] > scenario.instructor(iid).max_sections:
+                raise ValueError(
+                    f"Elected coverage puts {scenario.instructor(iid).name} over "
+                    f"the {scenario.instructor(iid).max_sections}-section load cap; "
+                    f"elect a different cover for one section.")
+            if previous:
+                counts[previous] = counts.get(previous, 0) - 1
+        chosen = merged
+        healing_notes.append(
+            "Coordinator elected coverage: "
+            + ", ".join(f"{sid} -> {scenario.instructor(iid).name}"
+                        for sid, iid in elected.items()) + ".")
 
     # The absent instructor must be gone from the result, even for a section
     # with no verified candidate. Otherwise the "after" timetable quietly puts
@@ -165,8 +210,11 @@ def run_term_change(
     chosen_txt = ", ".join(
         f"{sid} -> {scenario.instructor(iid).name}" for sid, iid in chosen.items()) or "none"
     trace.append(AgentStep(
-        step="choose", actor="Agent (auto-pick)",
-        detail=f"Best verified candidate per section: {chosen_txt}."))
+        step="choose",
+        actor="Coordinator (elected)" if elected else "Agent (auto-pick)",
+        detail=(f"Elected verified candidate per section: {chosen_txt}."
+                if elected else
+                f"Best verified candidate per section: {chosen_txt}.")))
     trace.append(AgentStep(
         step="re-solve", actor="CP-SAT",
         detail=f"Re-solved with {scenario.instructor(removed_id).name} removed and coverage pinned: "

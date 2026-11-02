@@ -100,6 +100,12 @@ def _room_type(t: str) -> str:
 
 
 def build_scenario(data: InstitutionData) -> Scenario:
+    # Duplicate records (same slug id) collapse to the first copy. Records
+    # that merely share an id but *disagree* are a data conflict: the
+    # ingestion layer (app.ingestion.conflicts) flags them with their
+    # sources and the user elects the winner before this builder runs on
+    # the reviewed data — the first-wins collapse here only keeps an
+    # unreviewed preview buildable, it never invents a new record.
     # --- buildings ----------------------------------------------------------
     names: list[str] = list(dict.fromkeys(data.buildings))
     for r in data.rooms:
@@ -115,6 +121,8 @@ def build_scenario(data: InstitutionData) -> Scenario:
     code_to_id: dict[str, str] = {}
     for c in data.courses:
         cid = slug(c.code) or f"course-{len(courses)}"
+        if cid in {existing.id for existing in courses}:
+            continue  # duplicate record: first copy wins (see note above)
         code_to_id[c.code.strip()] = cid
         code_to_id[slug(c.code)] = cid
         courses.append(Course(
@@ -131,6 +139,8 @@ def build_scenario(data: InstitutionData) -> Scenario:
     instructors: list[Instructor] = []
     for inst in data.instructors:
         iid = slug(inst.name) or f"instructor-{len(instructors)}"
+        if iid in {existing.id for existing in instructors}:
+            continue  # duplicate record: first copy wins (see note above)
         qualified = [c for c in (resolve_code(q) for q in inst.qualified_courses) if c]
         hard, prefs = _availability(inst.availability)
         instructors.append(Instructor(
@@ -142,6 +152,8 @@ def build_scenario(data: InstitutionData) -> Scenario:
     # --- rooms --------------------------------------------------------------
     rooms: list[Room] = []
     for r in data.rooms:
+        if slug(r.name) in {existing.id for existing in rooms}:
+            continue  # duplicate record: first copy wins (see note above)
         b = slug(r.building) if r.building else buildings[0].id
         rooms.append(Room(
             id=slug(r.name), name=r.name, building_id=b, capacity=r.capacity,
@@ -162,13 +174,18 @@ def build_scenario(data: InstitutionData) -> Scenario:
             cid = resolve_code(req.course)
             if not cid:
                 continue
-            roadmap.setdefault(str(req.term), []).append(
+            entries = roadmap.setdefault(str(req.term), [])
+            if any(entry.course_id == cid for entry in entries):
+                continue  # duplicate entry: first copy wins (see note above)
+            entries.append(
                 RoadmapRequirement(course_id=cid, required=req.required))
         programs.append(Program(id=slug(pname), name=pname, roadmap=roadmap))
 
     # --- cohorts ------------------------------------------------------------
     cohorts: list[Cohort] = []
     for c in data.cohorts:
+        if (slug(c.name) or "") in {existing.id for existing in cohorts} and c.name:
+            continue  # duplicate record: first copy wins (see note above)
         prog = slug(c.program) if c.program else programs[0].id
         cohorts.append(Cohort(
             id=slug(c.name) or f"cohort-{len(cohorts)}", program_id=prog,

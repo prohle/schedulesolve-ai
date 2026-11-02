@@ -16,7 +16,8 @@ The grammar is the safety envelope: a move cannot invent rooms, delete
 sections, or touch anyone's hard constraints. Every move is verified before
 it is shown — a full CP-SAT re-solve of the mutated scenario (and, for
 open_elective, a recomputed C39 margin) — so Muse can propose boldly but
-only solver-verified moves reach the coordinator.
+only solver-verified moves can be *elected and applied* (re-verified again
+at apply time); rejected moves are returned labelled as rejected.
 
 Frugal by default: a deterministic template generator plays the Muse role
 whenever no API key is configured, so development and tests burn zero

@@ -22,6 +22,7 @@ code or by calling the API.
 | Muse Spark is live when a key is set | `MUSE_API_KEY` set in the running container; `parser.mode = "muse-spark"`; mock fallback is visibly labelled |
 | Import/autoclean is bounded by the source | no OCR; unreadable files produce `[unreadable]`; completeness check names missing inputs |
 | Tests pass | `backend/tests` (realism, randomized, policy, API, solver parity) |
+| Conflicts name their sources and are electable | ingestion `InstitutionConflict.sources/options` + `resolve_conflicts`; copilot `ConflictReport.sources` + verified `ResolutionOption`s (least-disruptive default, any verified option electable); term-change `CandidateProposal.source` + elected `chosen`; student `StudentPlanConflict.sources` + `resolutions`; tightener moves re-verified at `/intelligence/tighten/apply` before applying (`backend/tests/test_conflict_election.py`) |
 
 ## Synthetic or simulated — labelled as such
 
@@ -65,8 +66,8 @@ The preview no longer presents `361 / 48 / 88.6%` as live results; it is
 labelled illustrative sample data. The public marketing page (`/`) follows the
 same rule: its procedural campus is labelled **Demo telemetry / Illustrative
 campus**, its ROI is labelled an illustrative projection, and the engine copy
-names CP-SAT plus the native C++ solver (29 ms university solve; 3.3 s at the
-361-section stress tier).
+names CP-SAT plus the native C++ solver (39 ms university solve; 5.8 s at the
+361-section stress tier, re-measured 2026-11-01).
 
 ## How to verify
 

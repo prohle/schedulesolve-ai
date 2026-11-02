@@ -37,6 +37,7 @@ from app.models.intelligence import (
     MatricesReport,
     SpectralReport,
     TightenResponse,
+    TighteningMove,
     UtilizationReport,
     WhatIfReport,
 )
@@ -571,10 +572,22 @@ def student_plan(req: StudentPlanRequest) -> StudentPlanResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class TermChangeRequest(BaseModel):
+    message: str
+    scenario: Optional[Scenario] = None
+    # Optional elected winners: section_id -> instructor_id, exactly as
+    # ranked in the proposals. Each must be a solver-proven feasible cover
+    # for that section; anything else is refused with the reason.
+    chosen: dict[str, str] = {}
+
+
 @app.post("/term-change", response_model=TermChangeResponse)
-def term_change(req: MessageRequest) -> TermChangeResponse:
+def term_change(req: TermChangeRequest) -> TermChangeResponse:
     scenario = req.scenario or get_current_scenario()
-    return run_term_change(scenario, req.message)
+    try:
+        return run_term_change(scenario, req.message, elected=req.chosen or None)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 class TranscriptDraft(BaseModel):
@@ -1597,3 +1610,51 @@ def intelligence_tighten(req: TightenRequest) -> TightenResponse:
     ops, _ = validate_operations(
         [Operation.model_validate(o) for o in (req.operations or [])], scenario)
     return run_tightener(scenario, ops)
+
+
+class TightenApplyRequest(BaseModel):
+    move: "TighteningMove"
+    operations: Optional[list] = None
+
+
+@app.post("/intelligence/tighten/apply")
+def intelligence_tighten_apply(req: TightenApplyRequest,
+                               authorization: Optional[str] = Header(None)) -> dict:
+    """Elect one tightener repair and commit it — after re-verifying it.
+
+    The client sends the move it picked; the server re-runs the same
+    verification the Tighten tab used (a full re-solve of the mutated
+    scenario) and only then makes the mutated scenario current. A move
+    that no longer verifies is refused, never applied on the client's say.
+    """
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    from app.intelligence.tightener import apply_move, verify_move
+    scenario = get_current_scenario()
+    ops, _ = validate_operations(
+        [Operation.model_validate(o) for o in (req.operations or [])], scenario)
+    base = solve(scenario, ops)
+    baseline = {}
+    if base.timetable is not None:
+        margins = compute_margins(scenario, base.timetable, config.MIN_COURSES_PER_COHORT)
+        baseline = {m.cohort_id: m.margin for m in margins.cohorts}
+    move = req.move.model_copy(update={"verified": False, "detail": ""})
+    ok, detail, result, _mg = verify_move(scenario, ops, move, base, baseline)
+    if not ok or result is None or result.status not in ("optimal", "feasible"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"This repair no longer verifies ({detail}); nothing was applied.")
+    if move.kind == "drop_request":
+        # Dropping a request is a decision about the request set, not the
+        # institution model; the caller commits the remaining operations
+        # through /apply. Report the proven result without mutating state.
+        return {"applied": False, "kind": move.kind, "detail": detail,
+                "result": result.model_dump(),
+                "note": "Re-submit with the remaining operations to commit this election."}
+    mutated = apply_move(scenario, move)
+    _set_current_scenario(mutated)
+    audit.record_event("tighten-apply",
+                       f"Elected repair {move.kind}: {move.rationale}",
+                       {"move": move.model_dump()})
+    return {"applied": True, "kind": move.kind, "detail": detail,
+            "result": result.model_dump()}

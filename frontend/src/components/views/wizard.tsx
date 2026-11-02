@@ -180,7 +180,7 @@ export function WizardView({ onToast }: WizardViewProps) {
   const [lastEngine, setLastEngine] = useState<string>("cpsat");
   const [engineList, setEngineList] = useState<{ id: string; label: string; kind?: string; description: string }[]>([
     { id: "cpsat", label: "OR-Tools CP-SAT", kind: "industrial", description: "Google's C++ constraint solver — proven optima in milliseconds." },
-    { id: "ours", label: "ScheduleSolve solver (ours)", kind: "ai-crafted", description: "From-scratch pure-Python solver built for this problem." },
+    { id: "ours", label: "ScheduleSolve solver (ours)", kind: "ai-crafted", description: "AI-authored native C++ search core built for this problem (Python reference search when the binary is unbuilt)." },
     { id: "greedy", label: "Greedy descent (ours, fast)", kind: "ai-crafted", description: "First descent only — shows what the optimization phases buy." },
   ]);
   useEffect(() => {
@@ -208,6 +208,10 @@ export function WizardView({ onToast }: WizardViewProps) {
   const [termChangeBusy, setTermChangeBusy] = useState(false);
   const [termChange, setTermChange] = useState<TermChangeResponse | null>(null);
   const [scaleBusy, setScaleBusy] = useState(false);
+  // Conflict elections: which verified fix / coverage winner stands.
+  const [electedFix, setElectedFix] = useState<number | null>(null);
+  const [fixCommitted, setFixCommitted] = useState(false);
+  const [electedCoverage, setElectedCoverage] = useState<Record<string, string>>({});
 
   const stepOrder: StepId[] = ["import", "intake", "build", "review", "term-change"];
   const currentIndex = stepOrder.indexOf(step);
@@ -425,7 +429,14 @@ export function WizardView({ onToast }: WizardViewProps) {
         speaker_id: speakerId || undefined,
       });
       setCopilot(r);
-      if (r.result?.status === "infeasible") {
+      setElectedFix(r.applied_option_index ?? null);
+      setFixCommitted(false);
+      if (r.options?.length) {
+        // The least-disruptive verified fix is selected by default, but
+        // nothing is committed to the term until the coordinator elects a
+        // winner and confirms — electing another fix must not stack on top.
+        onToast("Conflict — verified fixes are ranked below. The least disruptive is selected; elect your winner, then confirm.", "warning");
+      } else if (r.result?.status === "infeasible") {
         onToast("Infeasible — the solver named the conflict and self-healed", "warning");
       } else if (r.applied_operations?.length) {
         // Commit the verified request so Build/Review/Term Change build on it
@@ -439,6 +450,23 @@ export function WizardView({ onToast }: WizardViewProps) {
     } finally {
       setIntakeBusy(false);
     }
+  };
+
+  const electFix = (idx: number) => {
+    if (!copilot) return;
+    const option = copilot.options[idx];
+    if (!option) return;
+    setElectedFix(idx);
+    setFixCommitted(false);
+    setCopilot({ ...copilot, result: option.result, applied_operations: option.operations ?? copilot.applied_operations });
+  };
+
+  const confirmFix = async () => {
+    if (!copilot) return;
+    await post("/api/apply", { operations: copilot.applied_operations });
+    await reload();
+    setFixCommitted(true);
+    onToast("Elected fix applied to the term — later steps build on it", "success");
   };
 
   const commitTermChange = async (r: TermChangeResponse) => {
@@ -464,7 +492,39 @@ export function WizardView({ onToast }: WizardViewProps) {
     setTermChangeBusy(true);
     setTermChange(null);
     try {
-      await commitTermChange(await post("/api/term-change", { message: termChangeMsg }));
+      const r: TermChangeResponse = await post("/api/term-change", { message: termChangeMsg });
+      setTermChange(r);
+      setElectedCoverage(r.chosen);
+      onToast("Coverage ranked — elect a proven cover per section, then apply", "success");
+    } finally {
+      setTermChangeBusy(false);
+    }
+  };
+
+  const electCover = async (sectionId: string, instructorId: string) => {
+    const next = { ...electedCoverage, [sectionId]: instructorId };
+    setElectedCoverage(next);
+    setTermChangeBusy(true);
+    try {
+      // Re-prove the whole coverage with the elected winner before it can
+      // be applied; an election the solver cannot prove is refused (422).
+      const r: TermChangeResponse = await post("/api/term-change", { message: termChangeMsg, chosen: next });
+      if ((r as unknown as { detail?: string }).detail) throw new Error((r as unknown as { detail: string }).detail);
+      setTermChange(r);
+      setElectedCoverage(r.chosen);
+    } catch {
+      setElectedCoverage(termChange?.chosen ?? {});
+      onToast("That cover could not be proven for this section — pick a feasible one", "error");
+    } finally {
+      setTermChangeBusy(false);
+    }
+  };
+
+  const applyTermChange = async () => {
+    if (!termChange) return;
+    setTermChangeBusy(true);
+    try {
+      await commitTermChange({ ...termChange, chosen: electedCoverage });
     } finally {
       setTermChangeBusy(false);
     }
@@ -813,24 +873,43 @@ export function WizardView({ onToast }: WizardViewProps) {
                     <strong>Explanation ({copilot.explanation_mode}):</strong> {copilot.explanation}
                   </div>
                 )}
+                {copilot.conflicts && copilot.conflicts.sources && copilot.conflicts.sources.length > 0 && (
+                  <Section title="Where this conflict came from" hint="Every request in the solver's minimal conflict core, with the source it was submitted from — so you can see whose information clashes before electing what wins." icon={<AlertTriangle className="w-5 h-5 text-amber-600" />} tone="amber">
+                    <ul className="space-y-1 text-xs text-amber-900">
+                      {copilot.conflicts.sources.map((source, i) => (
+                        <li key={i}><span className="font-semibold">Source {i + 1}:</span> {source}</li>
+                      ))}
+                    </ul>
+                  </Section>
+                )}
                 <AgentTrace steps={copilot.agent_trace} />
                 {copilot.options.length > 0 && (
-                  <Section title="Verified fixes" hint="Muse proposed each fix; the solver re-solved it. Only proven options show — the least disruptive one was applied to the term." icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />} tone="emerald">
+                  <Section title="Verified fixes — elect what wins" hint="Muse proposed each fix; the solver re-solved it. Only proven options show. The least disruptive is selected by default; elect any other verified fix instead, then confirm to apply it to the term." icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />} tone="emerald">
                     <div className="space-y-1.5">
                       {copilot.options.map((o, i) => (
-                        <div key={i} className="bg-white border border-emerald-200 rounded p-2 text-xs">
+                        <button key={i} type="button" onClick={() => electFix(i)}
+                          className={cn("w-full text-left bg-white border rounded p-2 text-xs transition-all",
+                            electedFix === i ? "border-emerald-500 ring-1 ring-emerald-500" : "border-emerald-200 hover:border-emerald-400")}>
                           <div className="flex items-center gap-2">
                             <CircleCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span className="font-semibold">Drop</span>
                             <span className="text-muted-foreground">{o.dropped_explanation}</span>
-                            <span className="ml-auto font-mono text-emerald-700">
+                            <span className={cn("ml-auto rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                              electedFix === i ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")}>
+                              {electedFix === i ? "Elected" : "Elect this fix"}
+                            </span>
+                            <span className="font-mono text-emerald-700">
                               {o.result.status} · penalty {o.result.objective ?? "—"}
                             </span>
                           </div>
                           <div className="text-muted-foreground mt-0.5 pl-5">{o.tradeoff}</div>
-                        </div>
+                          {o.source && <div className="text-muted-foreground mt-0.5 pl-5">Dropped request — {o.source}</div>}
+                        </button>
                       ))}
                     </div>
+                    <Button variant="primary" size="sm" onClick={confirmFix} disabled={fixCommitted} className="mt-2">
+                      {fixCommitted ? "Elected fix applied to the term" : "Confirm elected fix"}
+                    </Button>
                   </Section>
                 )}
                 {intakePlacements.length > 0 && (
@@ -1040,7 +1119,7 @@ export function WizardView({ onToast }: WizardViewProps) {
               />
 <Button variant="primary" size="md" onClick={handleTermChange} disabled={termChangeBusy} className="mt-3 flex items-center gap-2">
                 {termChangeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                Apply Term Change
+                Rank coverage options
               </Button>
             </Section>
 
@@ -1058,14 +1137,43 @@ export function WizardView({ onToast }: WizardViewProps) {
                   </div>
                 )}
                 <AgentTrace steps={termChange.agent_trace} />
-                {termChange.proposals.map((p, i) => (
-                  <div key={i} className={cn("flex items-center gap-2 text-xs border rounded p-2", p.feasible ? "bg-white border-emerald-200" : "bg-muted/40 border-border")}>
-                    {p.feasible ? <CircleCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <CircleX className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                    <span className="font-semibold">{p.course_code}</span>
-                    <span>→ {p.instructor_name}</span>
-                    <span className="text-muted-foreground flex-1">{p.reason}</span>
-                  </div>
-                ))}
+                {termChange.affected_section_ids.map((sid) => {
+                  const sectionProposals = termChange.proposals.filter((x) => x.section_id === sid);
+                  if (!sectionProposals.length) return null;
+                  return (
+                    <div key={sid} className="space-y-1.5">
+                      <p className="text-[11px] font-bold text-muted-foreground">
+                        {sectionProposals[0].course_code} ({sid}) — elect who covers it
+                      </p>
+                      {sectionProposals.map((x, i) => (
+                        <button key={i} type="button" disabled={!x.feasible || termChangeBusy}
+                          onClick={() => void electCover(sid, x.instructor_id)}
+                          className={cn("flex w-full items-center gap-2 text-left text-xs border rounded p-2 transition-all disabled:opacity-60",
+                            !x.feasible ? "bg-muted/40 border-border"
+                              : electedCoverage[sid] === x.instructor_id
+                                ? "bg-white border-emerald-500 ring-1 ring-emerald-500"
+                                : "bg-white border-emerald-200 hover:border-emerald-400")}>
+                          {x.feasible ? <CircleCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <CircleX className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                          <span className="font-semibold">{x.course_code}</span>
+                          <span>→ {x.instructor_name}</span>
+                          <span className="text-muted-foreground flex-1">{x.reason}{x.source ? ` · ${x.source}` : ""}</span>
+                          {x.feasible && (
+                            <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                              electedCoverage[sid] === x.instructor_id ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")}>
+                              {electedCoverage[sid] === x.instructor_id ? "Elected" : "Elect"}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+                {termChange.result && termChange.result.status !== "infeasible" && (
+                  <Button variant="primary" size="md" onClick={() => void applyTermChange()} disabled={termChangeBusy} className="flex items-center gap-2">
+                    {termChangeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
+                    Apply elected coverage
+                  </Button>
+                )}
                 {termChangePlacements.length > 0 && (
                   <div className="space-y-3">
                     <div className="grid gap-3 2xl:grid-cols-2">

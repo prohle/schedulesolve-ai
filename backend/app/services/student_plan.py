@@ -142,8 +142,10 @@ def project_graduation(
     projected_term = term if not remaining else term + 1
     projected_label = _term_label(cohort, student, projected_term)
     if projected_term <= expected_term:
+        # On track means graduating at the expected term; an earlier
+        # simulated finish is not an early-graduation promise.
         return GraduationProjection(
-            "on_track", projected_label, expected_label,
+            "on_track", expected_label, expected_label,
             f"On track for {expected_label}", 0, "")
 
     delay = projected_term - expected_term
@@ -238,6 +240,26 @@ def resolve_completed(
     if cohort is not None:
         return sorted(sources.lookup), sources.source
     return [], sources.source
+
+
+_DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+
+
+def _availability_sources(scenario: Scenario, code: str, sections: list,
+                          c: StudentConstraints) -> list[str]:
+    """The two sources behind a course-vs-availability clash, named."""
+    blocked = []
+    if c.avoid_days:
+        blocked.append("days " + ", ".join(_DAY_SHORT[d] for d in sorted(c.avoid_days)))
+    if c.avoid_periods:
+        blocked.append("periods " + ", ".join(str(p + 1) for p in sorted(c.avoid_periods)))
+    yours = ("Your availability (from your message): unavailable "
+             + ("; ".join(blocked) if blocked else "at the requested times"))
+    placed = "; ".join(
+        f"{code} meets {', '.join(_DAY_SHORT[d] for d in pl.days)} "
+        f"{pl.start_time}-{pl.end_time} with {pl.instructor_name} in {pl.room_name}"
+        for pl in sections) or f"no placed section of {code}"
+    return [yours, f"Published timetable (solver-placed): {placed}"]
 
 
 def suggest_student_plan(
@@ -343,7 +365,14 @@ def suggest_student_plan(
             detail="; ".join(parts) + ". Choose which source wins.",
             options=["record", "lookup"],
             default_option="record",
-            chosen_option=chosen))
+            chosen_option=chosen,
+            sources=[
+                "Your study record (what you supplied): completed "
+                + (", ".join(scenario.course_code(c) for c in sorted(record)) or "nothing"),
+                f"Cohort lookup for {cohort.name} (degree-map terms before "
+                f"term {cohort.current_term}): completed "
+                + (", ".join(scenario.course_code(c) for c in sorted(lookup)) or "nothing"),
+            ]))
         if chosen == "lookup":
             completed_set = lookup
             source = (f"progress lookup for {cohort.name} "
@@ -460,7 +489,11 @@ def suggest_student_plan(
                 detail="You chose to retake it this term.",
                 options=["completed", "retake"],
                 default_option="completed",
-                chosen_option="retake"))
+                chosen_option="retake",
+                sources=[
+                    f"Your study record: {code} is already completed.",
+                    f"Your request in this message: you asked to take {code} this term.",
+                ]))
             notes.append(f"You chose to retake {code}; it is treated as a "
                          f"request this term even though it is on your record.")
             if cid in ready_set or cid in co_ready:
@@ -477,7 +510,11 @@ def suggest_student_plan(
                         "retake it deliberately."),
                 options=["completed", "retake"],
                 default_option="completed",
-                chosen_option="completed"))
+                chosen_option="completed",
+                sources=[
+                    f"Your study record: {code} is already completed.",
+                    f"Your request in this message: you asked to take {code} this term.",
+                ]))
             notes.append(f"{code} is already on your record — "
                          f"no need to take it again.")
         elif cid in locked_mandatory:
@@ -552,7 +589,8 @@ def suggest_student_plan(
                             "commitment; keeping your availability may delay it."),
                     options=["availability", "course"],
                     default_option="availability",
-                    chosen_option="course"))
+                    chosen_option="course",
+                    sources=_availability_sources(scenario, code, all_sections, constraints)))
             else:
                 notes.append(f"{code} has no section outside your "
                              f"unavailable times — taking it this term would clash "
@@ -566,7 +604,8 @@ def suggest_student_plan(
                             "commitment; keeping your availability may delay it."),
                     options=["availability", "course"],
                     default_option="availability",
-                    chosen_option="availability"))
+                    chosen_option="availability",
+                    sources=_availability_sources(scenario, code, all_sections, constraints)))
         elif cid in ready_mandatory and cid in by_course:
             notes.append(f"{scenario.course_code(cid)} (mandatory) only meets inside "
                          f"your unavailable times this term.")

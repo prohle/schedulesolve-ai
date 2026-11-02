@@ -21,7 +21,7 @@ optima* — with the receipts below — plus a standardized interface that
 lets the two cross-check each other live.
 
 **Why not pure Python?** We measured it: the Python search reaches
-CP-SAT's penalty at department/university scale but hits its 5 s budget
+CP-SAT's penalty at department/university scale but hits its 30 s budget
 **unproven** (`feasible`, not `optimal`). Language was not the goal —
 proof was. The hot loop (branch-and-bound) moved to C++; everything
 else (domains, penalties, validation, output) stays in the shared
@@ -31,15 +31,15 @@ Python layer, which is what makes the comparison fair.
 CI all gain a second runtime) buy nothing at 8–41 sections; C++ compiles
 with the `g++` already present in every build image we use.
 
-## Measured head-to-head (`backend/scripts/benchmark.py`, dev laptop)
+## Measured head-to-head (`backend/scripts/benchmark.py`, dev laptop, re-measured 2026-11-01 — timings vary by machine; the Northgate row is from `backend/scripts/solver_audit.py`)
 
 | Scenario | CP-SAT | Ours (native C++) | Ours (Python ref) |
 |---|---|---|---|
-| Story seed (8 sections) | optimal · −6 · 76 ms | **optimal · −6 · 6 ms** | optimal · −6 · 57 ms |
-| Department (25 sections) | optimal · −40 · 162 ms | **optimal · −40 · 35 ms** | feasible · −40 · 30,003 ms |
-| University (41 sections) | optimal · −40 · 143 ms | **optimal · −40 · 36 ms** | feasible · −40 · 30,025 ms |
+| Story seed (8 sections) | optimal · −6 · 72 ms | **optimal · −6 · 12 ms** | optimal · −6 · 46 ms |
+| Department (25 sections) | optimal · −40 · 154 ms | **optimal · −40 · 19 ms** | feasible · −40 · 30,002 ms |
+| University (41 sections) | optimal · −40 · 147 ms | **optimal · −40 · 39 ms** | feasible · −40 · 30,018 ms |
 | Northgate default (271 sections, 148 instructors, 110 cohorts, 35 PhD students) | optimal · −40 · 8,070 ms | **optimal · −40 · 2,402 ms** | not benchmarked |
-| Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.4 s | **optimal · −40 · 5,915 ms** | unknown (budget) |
+| Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.3 s | **optimal · −40 · 5,832 ms** | unknown (budget) |
 
 Same proven objective at every demo scale; the native core proves it
 faster than CP-SAT on this problem class (faster on every row above).

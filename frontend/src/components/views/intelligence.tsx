@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/tip";
 import { TimetableGrid } from "@/components/timetable-grid";
 import { useAudit, useIntelligence } from "@/hooks/use-api";
+import { authFetch } from "@/lib/auth";
 import {
   DAY_NAMES, PERIOD_NAMES, PATTERN_DAYS,
   type Placement, type SparseMatrixPayload, type SolveResult, type WhatIfReport,
@@ -75,6 +76,27 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
   const [busyOptions, setBusyOptions] = useState(false);
   const [whatif, setWhatif] = useState<WhatIfReport | null>(null);
   const [whatifBusy, setWhatifBusy] = useState(false);
+  const [applyingMove, setApplyingMove] = useState<number | null>(null);
+  const [appliedMove, setAppliedMove] = useState<number | null>(null);
+
+  const applyMove = async (idx: number) => {
+    if (!tighten) return;
+    const move = tighten.moves[idx];
+    setApplyingMove(idx);
+    try {
+      const res = await authFetch("/api/intelligence/tighten/apply", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ move }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "This repair could not be applied");
+      setAppliedMove(idx);
+      onToast(data.applied ? "Elected repair re-verified and applied" : data.note ?? "Election recorded", "success");
+      await reload();
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Sign in as the coordinator to apply a repair", "error");
+    } finally { setApplyingMove(null); }
+  };
 
   const runWhatif = async (changeId: string) => {
     setWhatifBusy(true);
@@ -412,7 +434,16 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                     <button key={o.objective_name} onClick={() => setSolveResult(o)}
                       className={cn("text-left border rounded-lg p-3 transition-colors", active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40")}>
                       <div className="font-bold text-sm text-foreground">{label}</div>
+                      {o.status === "infeasible" ? (
+                        <div className="text-[11px] text-red-700 mt-1">
+                          Infeasible — {o.conflicts?.explanation ?? "the solver named a conflict core"}
+                          {o.conflicts?.sources && o.conflicts.sources.length > 0 && (
+                            <span className="block mt-0.5">Source: {o.conflicts.sources.join(" · ")}</span>
+                          )}
+                        </div>
+                      ) : (
                       <div className="text-[11px] text-muted-foreground mt-1">max load {maxLoad} · {idle} idle · {o.solve_time_ms} ms</div>
+                      )}
                       <div className="text-[10px] font-mono text-muted-foreground mt-1 truncate">
                         {Object.entries(loads).sort().map(([k, v]) => `${k}:${v}`).join("  ")}
                       </div>
@@ -521,6 +552,14 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                           </div>
                           <p className="text-[11px] text-muted-foreground mb-1">{mv.rationale}</p>
                           <p className={cn("text-[11px] font-medium", mv.verified ? "text-emerald-700" : "text-muted-foreground")}>{mv.detail}</p>
+                          {mv.verified ? (
+                            <Button variant="primary" size="sm" disabled={applyingMove !== null || appliedMove === i}
+                              onClick={() => void applyMove(i)} className="mt-2">
+                              {applyingMove === i ? "Re-verifying…" : appliedMove === i ? "Elected repair applied" : "Elect this repair"}
+                            </Button>
+                          ) : (
+                            <p className="text-[10px] font-semibold text-muted-foreground mt-1">Rejected by the solver — shown for transparency, cannot be applied.</p>
+                          )}
                         </div>
                       ))}
                     </div>

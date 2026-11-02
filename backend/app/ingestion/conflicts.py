@@ -104,7 +104,7 @@ def _duplicate_conflicts(
             continue
         if len({_signature(item) for _, item in group}) <= 1:
             continue
-        key_text = " ↔ ".join(key) if isinstance(key, tuple) else str(key)
+        key_text = " ↔ ".join(str(part) for part in key) if isinstance(key, tuple) else str(key)
         indices = [index for index, _ in group]
         sources = [
             f"{_source(item, fallback_source)} — {describe(item)}"
@@ -151,6 +151,12 @@ def detect_conflicts(data: InstitutionData) -> list[InstitutionConflict]:
         data, "distances", data.distances,
         lambda d: tuple(sorted((_key(d.from_building), _key(d.to_building)))),
         _distance_desc, "Walk time", "campus map"))
+    # Two degree maps (or two printings of one) that disagree about whether
+    # the same course is required in the same term of the same program.
+    conflicts.extend(_duplicate_conflicts(
+        data, "degree_map", data.degree_map,
+        lambda r: ((r.program or "").strip().lower(), r.term, _key(r.course)),
+        _requirement_desc, "Degree-map entry", "degree map"))
 
     # Degree-map requirements with no catalog course.
     catalog = {_key(c.code) for c in data.courses}
