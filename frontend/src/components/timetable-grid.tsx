@@ -42,20 +42,20 @@ function Block({ placement, changed, compact }: {
       title={`${placement.course_code} · ${placement.instructor_name} · ${placement.room_name}`}
     >
       <div className="flex items-start justify-between gap-1">
-        <span className="text-[11px] font-extrabold leading-tight truncate">
+        <span className="text-xs font-extrabold leading-tight truncate">
           {placement.course_code}
           {compact && (
-            <span className="ml-1 text-[9px] font-semibold opacity-75">
+            <span className="ml-1 text-[10px] font-semibold opacity-75">
               {shortName(placement.instructor_name)}
             </span>
           )}
         </span>
         <span className="flex items-center gap-1 shrink-0">
           {placement.periods.length > 1 && (
-            <span className="text-[8px] font-bold text-muted-foreground">3h</span>
+            <span className="text-[10px] font-bold text-muted-foreground">3h</span>
           )}
           {changed && (
-            <span className="text-[8px] font-bold uppercase tracking-wide text-amber-700">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
               changed
             </span>
           )}
@@ -63,10 +63,10 @@ function Block({ placement, changed, compact }: {
       </div>
       {!compact && (
         <>
-          <div className="text-[10px] font-medium leading-tight truncate">
+          <div className="text-xs font-medium leading-tight truncate">
             {shortName(placement.instructor_name)}
           </div>
-          <div className="text-[9px] leading-tight opacity-70 truncate">
+          <div className="text-[10px] leading-tight opacity-70 truncate">
             {placement.room_name}
           </div>
         </>
@@ -104,7 +104,7 @@ export function TimetableGrid({ placements, changed, compact }: {
     <div className="space-y-2">
       <div className="custom-scrollbar overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <div
-          className="grid min-w-[430px] gap-px overflow-hidden rounded-2xl bg-border p-px sm:min-w-[520px]"
+          className="grid min-w-0 gap-px overflow-hidden rounded-2xl bg-border p-px sm:min-w-[520px]"
           style={{
             gridTemplateColumns: "44px repeat(5, minmax(0, 1fr))",
             gridTemplateRows: `28px repeat(${PERIOD_NAMES.length}, ${compact ? "60px" : "84px"})`,
@@ -114,7 +114,7 @@ export function TimetableGrid({ placements, changed, compact }: {
           {DAY_NAMES.map((day, i) => (
             <div
               key={day}
-              className="flex items-center justify-center bg-slate-100 px-0.5 text-[10px] font-extrabold tracking-widest text-slate-600 uppercase"
+              className="flex items-center justify-center bg-slate-100 px-0.5 text-xs font-extrabold tracking-widest text-slate-600 uppercase"
               style={{ gridColumn: i + 2, gridRow: 1 }}
             >
               <span className="sm:hidden">{day.slice(0, 3)}</span>
@@ -125,7 +125,7 @@ export function TimetableGrid({ placements, changed, compact }: {
           {PERIOD_NAMES.map((label, period) => (
             <Fragment key={period}>
               <div
-                className="bg-muted/40 flex items-center justify-center text-[10px] font-mono text-muted-foreground"
+                className="bg-muted/40 flex items-center justify-center text-xs font-mono text-muted-foreground"
                 style={{ gridColumn: 1, gridRow: period + 2 }}
               >
                 {label}
@@ -149,7 +149,7 @@ export function TimetableGrid({ placements, changed, compact }: {
                         </div>
                       ))}
                       {list.length > 2 && (
-                        <div className="text-[9px] font-bold text-muted-foreground">
+                        <div className="text-[10px] font-bold text-muted-foreground">
                           +{list.length - 2} more
                         </div>
                       )}
@@ -165,13 +165,13 @@ export function TimetableGrid({ placements, changed, compact }: {
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {courses.map(([id, code]) => (
-          <span key={id} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span key={id} className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <span className="w-2.5 h-2.5 rounded-sm border" style={colors(id)} />
             {code}
           </span>
         ))}
         {changed && changed.size > 0 && (
-          <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-semibold">
+          <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-semibold">
             <span className="w-2.5 h-2.5 rounded-sm ring-2 ring-amber-400" />
             changed this action
           </span>

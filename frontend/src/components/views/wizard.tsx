@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { InfoTip, Tip } from "@/components/ui/tip";
 import { TimetableGrid, changedSections } from "@/components/timetable-grid";
 import { useIntelligence, useScenario } from "@/hooks/use-api";
+import { markStep } from "@/lib/first-run";
 import {
   DAY_NAMES, PERIOD_NAMES, PATTERN_DAYS,
   type Placement, type CopilotResponse, type TermChangeResponse, type IngestResponse,
@@ -23,14 +24,15 @@ import {
 
 interface WizardViewProps {
   onToast: (message: string, type?: "info" | "success" | "warning" | "error") => void;
+  initialStep?: string | null;
 }
 
 const STEPS = [
-  { id: "import", label: "Import", desc: "Point the tool at your data — AI autocleans it", icon: Database },
-  { id: "intake", label: "Intake", desc: "Type a constraint → Muse parses it", icon: Users },
-  { id: "build", label: "Build", desc: "Run the CP-SAT solver", icon: Zap },
-  { id: "review", label: "Review", desc: "C39 audit + spectral radar", icon: ShieldCheck },
-  { id: "term-change", label: "Term Change", desc: "Reassignment proposals + re-solve", icon: AlertTriangle },
+  { id: "import", label: "Import", desc: "Point the tool at your data — AI cleans it", icon: Database },
+  { id: "intake", label: "Intake", desc: "Describe a constraint in plain language", icon: Users },
+  { id: "build", label: "Build", desc: "Build a proven timetable", icon: Zap },
+  { id: "review", label: "Review", desc: "Check every rule, one by one", icon: ShieldCheck },
+  { id: "term-change", label: "Term change", desc: "Reassign and re-prove the term", icon: AlertTriangle },
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
@@ -133,7 +135,7 @@ function PlacementsTable({ placements, dense }: { placements: Placement[]; dense
             <tr key={p.section_id} className="border-t border-border">
               <td className={cn("px-3 py-1.5 font-semibold text-foreground", dense && "py-1")}>{p.course_code}</td>
               <td className={cn("px-3 py-1.5 text-muted-foreground", dense && "py-1")}>{p.instructor_name}</td>
-              <td className={cn("px-3 py-1.5 text-muted-foreground", dense && "py-1")}>{p.room_name} <span className="text-[10px]">[{p.building_id}]</span></td>
+              <td className={cn("px-3 py-1.5 text-muted-foreground", dense && "py-1")}>{p.room_name} <span className="text-xs">[{p.building_id}]</span></td>
               <td className={cn("px-3 py-1.5 font-mono text-muted-foreground", dense && "py-1")}>{placementSlot(p)}</td>
               <td className={cn("px-3 py-1.5 text-right font-mono text-muted-foreground", dense && "py-1")}>{p.duration ?? 1.5}h</td>
             </tr>
@@ -176,7 +178,7 @@ function AgentTrace({ steps }: { steps?: AgentStep[] }) {
               ? <CircleX className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
               : <CircleCheck className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />}
             <span className="font-mono font-semibold shrink-0">{s.step}</span>
-            <span className={cn("px-1.5 py-0.5 rounded font-bold uppercase text-[9px] shrink-0",
+            <span className={cn("px-1.5 py-0.5 rounded font-bold uppercase text-[10px] shrink-0",
               s.actor.startsWith("Muse") ? "bg-sky-100 text-sky-800" : "bg-muted")}>
               {s.actor}
             </span>
@@ -188,7 +190,7 @@ function AgentTrace({ steps }: { steps?: AgentStep[] }) {
   );
 }
 
-export function WizardView({ onToast }: WizardViewProps) {
+export function WizardView({ onToast, initialStep }: WizardViewProps) {
   const { margins, spectral, solveResult, setSolveResult, busy, error, runSolve, reload } = useIntelligence();
   const [engine, setEngine] = useState<string>("cpsat");
   const [lastEngine, setLastEngine] = useState<string>("cpsat");
@@ -206,7 +208,10 @@ export function WizardView({ onToast }: WizardViewProps) {
   const [compare, setCompare] = useState<CompareResult | null>(null);
   const [compareBusy, setCompareBusy] = useState(false);
   const { scenario: currentScenario, refetch: refetchScenario } = useScenario();
-  const [step, setStep] = useState<StepId>("import");
+  const [step, setStep] = useState<StepId>(() => {
+    const match = STEPS.find((entry) => entry.id === initialStep);
+    return match ? match.id : "import";
+  });
   const [importText, setImportText] = useState(SAMPLE_DUMP);
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -392,6 +397,8 @@ export function WizardView({ onToast }: WizardViewProps) {
       }
     }
     setStep(stepOrder[idx]);
+    if (stepOrder[idx] === "import") markStep("import");
+    if (stepOrder[idx] === "review") markStep("review");
   };
 
   const handleNext = () => goToStep(currentIndex + 1);
@@ -399,6 +406,7 @@ export function WizardView({ onToast }: WizardViewProps) {
   const solveWith = async (eng: string) => {
     setLastEngine(eng);
     setSolveResult(await post("/api/solve", { operations: [], engine: eng }));
+    markStep("build");
     // The race is part of the proof, not an optional extra: after a solve,
     // run both engines on identical data so the coordinator always sees the
     // head-to-head result for CP-SAT and C-Solve.
@@ -449,6 +457,7 @@ export function WizardView({ onToast }: WizardViewProps) {
       setCopilot(r);
       setElectedFix(r.applied_option_index ?? null);
       setFixCommitted(false);
+      markStep("intake");
       if (r.options?.length) {
         // The least-disruptive verified fix is selected by default, but
         // nothing is committed to the term until the coordinator elects a
@@ -463,7 +472,7 @@ export function WizardView({ onToast }: WizardViewProps) {
         await reload();
         onToast("Applied to the term — later steps build on it", "success");
       } else {
-        onToast("Muse parsed it; CP-SAT re-solved", "success");
+        onToast("Muse parsed it; timetable re-proven", "success");
       }
     } finally {
       setIntakeBusy(false);
@@ -581,7 +590,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                     )}
                   >
                     <span className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold",
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold",
                       active ? "bg-white/20" : done ? "bg-emerald-500 text-white" : "bg-white ring-1 ring-border"
                     )}>
                       {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : idx + 1}
@@ -624,9 +633,9 @@ export function WizardView({ onToast }: WizardViewProps) {
             },
           ].map((kpi) => (
             <div key={kpi.label} title={`${kpi.value} — ${kpi.sub}`} className="min-w-0 rounded-xl border border-border bg-gradient-to-br from-white to-slate-50 px-2.5 py-2 shadow-sm">
-              <div className="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">{kpi.label}</div>
+              <div className="text-[10px] font-bold tracking-widest text-muted-foreground uppercase">{kpi.label}</div>
               <div className="mt-0.5 truncate text-[13px] leading-tight font-extrabold text-foreground">{kpi.value}</div>
-              <div className="truncate text-[10px] text-muted-foreground">{kpi.sub}</div>
+              <div className="truncate text-xs text-muted-foreground">{kpi.sub}</div>
             </div>
           ))}
         </div>
@@ -669,7 +678,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                 <p className="relative mt-2.5 text-sm font-bold tracking-tight">
                   {dragOver ? "Release to autoclean — any format" : "Drop files, or tap to browse"}
                 </p>
-                <p className="relative mt-1 text-[11px] text-muted-foreground">PDF · DOCX · XLSX · CSV · JSON · TXT · ZIP</p>
+                <p className="relative mt-1 text-xs text-muted-foreground">PDF · DOCX · XLSX · CSV · JSON · TXT · ZIP</p>
                 <input id="file-input" type="file" multiple className="hidden"
                   accept=".pdf,.docx,.xlsx,.csv,.tsv,.json,.txt,.md,.html,.zip"
                   onChange={(e) => e.target.files && addFiles(e.target.files)} />
@@ -679,10 +688,10 @@ export function WizardView({ onToast }: WizardViewProps) {
                 <div className="mt-3 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/15 bg-gradient-to-r from-blue-50 via-white to-violet-50 px-3 py-2">
                     <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[11px] font-bold text-slate-700">
+                    <span className="text-xs font-bold text-slate-700">
                       {files.length} files · Muse autocleans into one institution model
                     </span>
-                    <span className="ml-auto rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary ring-1 ring-primary/15">
+                    <span className="ml-auto rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary ring-1 ring-primary/15">
                       {new Set(files.map((f) => f.name.split(".").pop()?.toLowerCase() || "file")).size} formats
                     </span>
                   </div>
@@ -695,16 +704,16 @@ export function WizardView({ onToast }: WizardViewProps) {
                         className="group flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                       >
                         <span className={cn(
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[9px] font-black uppercase tracking-wide ring-1",
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-black uppercase tracking-wide ring-1",
                           FILE_TONES[ext] ?? "bg-slate-100 text-slate-600 ring-slate-200"
                         )}>
                           {ext.slice(0, 4)}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-semibold text-slate-800">{f.name}</span>
-                          <span className="block text-[10px] text-muted-foreground">{size} · ready for autoclean</span>
+                          <span className="block text-xs text-muted-foreground">{size} · ready for autoclean</span>
                         </span>
-                        <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 ring-1 ring-emerald-200 sm:inline-flex">
+                        <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200 sm:inline-flex">
                           <CircleCheck className="h-2.5 w-2.5" /> ready
                         </span>
                         <button
@@ -727,7 +736,7 @@ export function WizardView({ onToast }: WizardViewProps) {
               <details className="mt-3 text-xs">
                 <summary className="text-muted-foreground cursor-pointer">…or paste the data as text</summary>
                 <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={10} spellCheck={false}
-                  className="w-full border border-input rounded-lg p-2 text-[11px] font-mono bg-background mt-2" />
+                  className="w-full border border-input rounded-lg p-2 text-xs font-mono bg-background mt-2" />
                 <Button variant="outline" size="sm" onClick={handleImport} disabled={ingestBusy} className="mt-2">Auto-clean pasted text</Button>
               </details>
             </Section>
@@ -756,7 +765,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                         {chk.provided ? <CircleCheck className="w-4 h-4 text-emerald-600 shrink-0" /> : <CircleX className="w-4 h-4 text-amber-600 shrink-0" />}
                         <span className="flex-1">
                           <span className="block text-xs font-medium">{chk.label}</span>
-                          <span className="block text-[10px] text-muted-foreground">{chk.provided ? `${chk.count} kept` : "missing"}</span>
+                          <span className="block text-xs text-muted-foreground">{chk.provided ? `${chk.count} kept` : "missing"}</span>
                         </span>
                       </div>
                     ))}
@@ -775,9 +784,9 @@ export function WizardView({ onToast }: WizardViewProps) {
                         ? "No change detected"
                         : ingest.changes.initial ? "Initial import" : "Recognized change"}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-600">{ingest.changes.summary}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">{ingest.changes.summary}</p>
                     {ingest.changes.changes.length > 0 && (
-                      <ul className="mt-1 space-y-0.5 text-[11px] text-slate-600">
+                      <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
                         {ingest.changes.changes.slice(0, 6).map((change, i) => (
                           <li key={`${change.entity}-${change.key}-${i}`}>
                             <strong className="capitalize">{change.kind}</strong>{" "}
@@ -804,9 +813,9 @@ export function WizardView({ onToast }: WizardViewProps) {
                           <div key={conflict.id} className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
                             <p className="text-xs font-bold text-amber-950">{conflict.summary}</p>
                             {conflict.detail && (
-                              <p className="mt-0.5 text-[11px] text-amber-900/80">{conflict.detail}</p>
+                              <p className="mt-0.5 text-xs text-amber-900/80">{conflict.detail}</p>
                             )}
-                            <ul className="mt-1.5 space-y-0.5 text-[11px] text-amber-900">
+                            <ul className="mt-1.5 space-y-0.5 text-xs text-amber-900">
                               {conflict.sources.map((source, i) => (
                                 <li key={i}>
                                   <span className="font-semibold">Source {i + 1}:</span> {source}
@@ -820,7 +829,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                                   type="button"
                                   onClick={() => applyConflict(conflict, option.key)}
                                   className={cn(
-                                    "rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-all",
+                                    "rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-all",
                                     chosen === option.key
                                       ? "border-emerald-500 bg-emerald-600 text-white"
                                       : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100",
@@ -832,7 +841,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                               ))}
                             </div>
                             {chosen && (
-                              <p className="mt-1 text-[10px] font-semibold text-emerald-700">
+                              <p className="mt-1 text-xs font-semibold text-emerald-700">
                                 Resolved — this choice is applied when you continue.
                               </p>
                             )}
@@ -862,10 +871,10 @@ export function WizardView({ onToast }: WizardViewProps) {
                     if (items.length === 0) return null;
                     return (
                       <div key={String(label)} className="mb-3 last:mb-0">
-                        <div className="text-[11px] font-semibold text-muted-foreground mb-1">{label} ({items.length})</div>
+                        <div className="text-xs font-semibold text-muted-foreground mb-1">{label} ({items.length})</div>
                         <div className="flex flex-wrap gap-1.5">
                           {items.map((item, i) => (
-                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-[11px] font-mono">
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-xs font-mono">
                               {fmt(item)}
                               <button onClick={() => removeEntity(field as keyof InstitutionData, i)} className="text-muted-foreground hover:text-destructive" aria-label={`remove ${label}`}>
                                 <X className="w-3 h-3" />
@@ -955,7 +964,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                             <CircleCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span className="font-semibold">Drop</span>
                             <span className="text-muted-foreground">{o.dropped_explanation}</span>
-                            <span className={cn("ml-auto rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                            <span className={cn("ml-auto rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
                               electedFix === i ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")}>
                               {electedFix === i ? "Elected" : "Elect this fix"}
                             </span>
@@ -990,9 +999,9 @@ export function WizardView({ onToast }: WizardViewProps) {
 
         {step === "build" && (
           <div className="space-y-4 max-w-4xl mx-auto">
-            <Section title="Build the term" hint="Assigns every section an instructor, time, and room under all hard rules: capacity, loads, cohort conflicts, equipment, walk distance. Pick an engine — same input, same output contract." icon={<Zap className="w-5 h-5 text-emerald-600" />} tone="emerald">
+            <Section title="Build a proven timetable" hint="Every section gets an instructor, time and room under your hard rules — capacity, loads, cohort conflicts, equipment and walking distance. Pick an engine; the output contract is identical." icon={<Zap className="w-5 h-5 text-emerald-600" />} tone="emerald">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-emerald-900">Engine</span>
+                <span className="text-xs font-semibold text-emerald-900">Solver engine</span>
                 <Button variant="outline" size="sm" onClick={runCompare} disabled={compareBusy} className="ml-auto flex items-center gap-1.5">
                   {compareBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                   Head-to-head
@@ -1016,7 +1025,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                           <InfoTip text={e.description} />
                         </span>
                       </span>
-                      <span className={cn("shrink-0 text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded",
+                      <span className={cn("shrink-0 text-[10px] font-bold uppercase tracking-wide px-1 py-0.5 rounded",
                         engine === e.id ? "bg-white/25" : "bg-muted text-muted-foreground")}>
                         {e.kind ?? "engine"}
                       </span>
@@ -1026,7 +1035,7 @@ export function WizardView({ onToast }: WizardViewProps) {
               </div>
               <Button variant="primary" size="md" onClick={() => { solveWith(engine); onToast(engine === "ours" ? "Running C-Solve…" : "Running CP-SAT…", "info"); }} disabled={busy !== null} className="flex items-center gap-2">
                 {busy === "solve" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                Solve with {engineList.find((e) => e.id === engine)?.label ?? engine}
+                Build with {engineList.find((e) => e.id === engine)?.label ?? engine}
               </Button>
               {compare && (
                 <div className="mt-4 border-t border-emerald-200 pt-3">
@@ -1039,7 +1048,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                     <div className="bg-white border rounded p-2">
                       <div className="font-bold">{compare.cpsat.status} · {compare.cpsat.solve_time_ms} ms</div>
                       <div className="text-muted-foreground">CP-SAT · penalty {compare.cpsat.objective ?? "—"}</div>
-                      <div className={cn("mt-1 inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase",
+                      <div className={cn("mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
                         compare.winner === "cpsat" ? "bg-emerald-100 text-emerald-800" : compare.winner === "tie" ? "bg-sky-100 text-sky-800" : "bg-muted")}>
                         {compare.winner === "cpsat" ? "Rank 1" : compare.winner === "tie" ? "Tied 1st" : "Rank 2"}
                       </div>
@@ -1047,7 +1056,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                     <div className="bg-white border rounded p-2">
                       <div className="font-bold">{compare.ours.status} · {compare.ours.solve_time_ms} ms</div>
                       <div className="text-muted-foreground">C-Solve · penalty {compare.ours.objective ?? "—"}</div>
-                      <div className={cn("mt-1 inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase",
+                      <div className={cn("mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
                         compare.winner === "ours" ? "bg-emerald-100 text-emerald-800" : compare.winner === "tie" ? "bg-sky-100 text-sky-800" : "bg-muted")}>
                         {compare.winner === "ours" ? "Rank 1" : compare.winner === "tie" ? "Tied 1st" : "Rank 2"}
                       </div>
@@ -1061,7 +1070,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                       <div className="text-muted-foreground">penalty delta (C-Solve − CP-SAT)</div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-emerald-800 mb-2">
+                  <p className="text-xs text-emerald-800 mb-2">
                     Differing sections ringed on the right ({compare.differing_sections.length} of {compare.cpsat.timetable?.placements.length ?? 0}).
                   </p>
                   {compare.cpsat.timetable && compare.ours.timetable && (
@@ -1122,19 +1131,19 @@ export function WizardView({ onToast }: WizardViewProps) {
         {step === "review" && (
           <div className="space-y-4 max-w-4xl mx-auto">
             {spectral && (
-              <Section title="Spectral radar" hint="Conflict-graph health check. μ₂ = how tightly sections are coupled; Hoffman bound = minimum time bands needed; max clique = largest set of mutually conflicting sections. Warnings flag structural deadlocks before a solve is wasted." icon={<Radar className="w-5 h-5 text-sky-600" />} tone="sky">
+              <Section title="Conflict health" hint="A plain-language health check on the timetable: how tightly sections compete for the same time bands, and whether any group is structurally deadlocked. Technical proof (μ₂, Hoffman bound, max clique) sits in the labels below." icon={<Radar className="w-5 h-5 text-sky-600" />} tone="sky">
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-white border rounded p-2">
                     <div className="font-bold text-foreground">{spectral.algebraic_connectivity.toFixed(3)}</div>
-                    <div className="text-muted-foreground">connectivity μ₂</div>
+                    <div className="text-muted-foreground">connectivity (μ₂)</div>
                   </div>
                   <div className="bg-white border rounded p-2">
                     <div className="font-bold text-foreground">χ ≥ {spectral.hoffman_chromatic_lower_bound}</div>
-                    <div className="text-muted-foreground">Hoffman bound</div>
+                    <div className="text-muted-foreground">time bands needed</div>
                   </div>
                   <div className="bg-white border rounded p-2">
                     <div className="font-bold text-foreground">{spectral.max_clique.length}</div>
-                    <div className="text-muted-foreground">max clique</div>
+                    <div className="text-muted-foreground">largest conflict group</div>
                   </div>
                 </div>
                 {spectral.deadlock_warnings.length > 0 && (
@@ -1160,7 +1169,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {m.example_track.map((c) => (
-                          <span key={c} className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">{c}</span>
+                          <span key={c} className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">{c}</span>
                         ))}
                       </div>
                     </div>
@@ -1205,7 +1214,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                   if (!sectionProposals.length) return null;
                   return (
                     <div key={sid} className="space-y-1.5">
-                      <p className="text-[11px] font-bold text-muted-foreground">
+                      <p className="text-xs font-bold text-muted-foreground">
                         {sectionProposals[0].course_code} ({sid}) — elect who covers it
                       </p>
                       {sectionProposals.map((x, i) => (
@@ -1221,7 +1230,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                           <span>→ {x.instructor_name}</span>
                           <span className="text-muted-foreground flex-1">{x.reason}{x.source ? ` · ${x.source}` : ""}</span>
                           {x.feasible && (
-                            <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                            <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
                               electedCoverage[sid] === x.instructor_id ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")}>
                               {electedCoverage[sid] === x.instructor_id ? "Elected" : "Elect"}
                             </span>
@@ -1263,7 +1272,7 @@ export function WizardView({ onToast }: WizardViewProps) {
         <Button variant="outline" size="md" onClick={() => setStep(stepOrder[Math.max(0, currentIndex - 1)])} disabled={currentIndex === 0}>
           <ArrowLeft className="w-4 h-4" /> Back
         </Button>
-        <span className="text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+        <span className="text-xs font-medium whitespace-nowrap text-muted-foreground">
           {currentIndex + 1} / {STEPS.length} · <span className="font-semibold text-foreground">{STEPS[currentIndex].label}</span>
         </span>
         {currentIndex < stepOrder.length - 1 ? (

@@ -35,7 +35,7 @@ export function Tip({
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-[70] w-max max-w-[min(248px,72vw)] rounded-xl bg-slate-900/95 px-3 py-2",
-          "text-left text-[11px] font-normal leading-snug text-white shadow-2xl ring-1 ring-white/10 backdrop-blur",
+          "text-left text-xs font-normal leading-snug text-white shadow-2xl ring-1 ring-white/10 backdrop-blur",
           "invisible scale-95 opacity-0 transition-all duration-150",
           "group-hover/tip:visible group-hover/tip:scale-100 group-hover/tip:opacity-100",
           "group-focus-within/tip:visible group-focus-within/tip:scale-100 group-focus-within/tip:opacity-100",
@@ -55,7 +55,7 @@ export function InfoTip({ text, className }: { text: ReactNode; className?: stri
       <span
         tabIndex={0}
         aria-label={typeof text === "string" ? text : "More info"}
-        className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full text-muted-foreground/60 outline-none transition-colors hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-primary focus-visible:text-primary focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Info className="h-3.5 w-3.5" />
       </span>

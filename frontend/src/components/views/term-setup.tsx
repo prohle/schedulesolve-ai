@@ -245,12 +245,15 @@ interface TermCalendar {
   };
 }
 
+type DegreeRequirement = { course_id: string; required: boolean; seat_estimate?: number | null };
+type DegreeRoadmap = Record<string, DegreeRequirement[]>;
+
 type EditState =
   | { kind: "building"; id: string; name: string }
   | { kind: "room"; id: string; name: string; capacity: number; room_type: string; building_id: string; equipment: string }
   | { kind: "instructor"; id: string; name: string; max_sections: number; max_preps: number; qualified: string }
   | { kind: "cohort"; id: string; name: string; size: number; current_term: number; program_id: string }
-  | { kind: "program"; id: string; name: string; roadmap: string }
+  | { kind: "program"; id: string; name: string; roadmap: DegreeRoadmap }
   | {
       kind: "course";
       id: string;
@@ -305,9 +308,9 @@ function Countdown({ deadline }: { deadline: string }) {
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
-      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
       <div className="mt-0.5 text-lg font-black tracking-tight text-slate-900">{value}</div>
-      {hint && <div className="text-[10px] font-medium text-slate-500">{hint}</div>}
+      {hint && <div className="text-xs font-medium text-slate-500">{hint}</div>}
     </div>
   );
 }
@@ -336,7 +339,7 @@ function Section({
           {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
           <div className="min-w-0">
             <h3 className="truncate text-sm font-bold text-slate-900">{title}</h3>
-            {hint && <p className="mt-0.5 text-[11px] leading-snug text-slate-500">{hint}</p>}
+            {hint && <p className="mt-0.5 text-xs leading-snug text-slate-500">{hint}</p>}
           </div>
         </div>
         {action}
@@ -367,7 +370,7 @@ function IconButton({
         "rounded-lg p-1.5 transition-colors",
         tone === "rose"
           ? "text-rose-500 hover:bg-rose-50 hover:text-rose-700"
-          : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
       )}
     >
       {children}
@@ -479,9 +482,24 @@ export function TermSetupView({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!edit) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setEdit(null);
+    }
+    // `document` is not shadowed by the term-window payload.
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [edit]);
+
   const mine = useMemo(
     () => window?.submissions.find((s) => s.instructor_id === user.instructor_id) ?? null,
     [window, user.instructor_id]
+  );
+
+  const courseById = useMemo(
+    () => new globalThis.Map((overview?.courses ?? []).map((course) => [course.id, course] as const)),
+    [overview]
   );
 
   const act = async (name: string, path: string, body?: unknown) => {
@@ -575,12 +593,7 @@ export function TermSetupView({
       patch = { name: edit.name, size: edit.size, current_term: edit.current_term, program_id: edit.program_id };
     }
     if (edit.kind === "program") {
-      try {
-        patch = { name: edit.name, roadmap: JSON.parse(edit.roadmap) };
-      } catch {
-        onToast("Degree map must be valid JSON", "error");
-        return;
-      }
+      patch = { name: edit.name, roadmap: edit.roadmap };
     }
     if (edit.kind === "course") {
       patch = {
@@ -792,21 +805,21 @@ export function TermSetupView({
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-blue-600">
               Pre-term setup
             </span>
             <span
               className={cn(
-                "rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                "rounded-md border px-2 py-0.5 text-xs font-bold uppercase tracking-wider",
                 STATUS_TONE[window.status] ?? STATUS_TONE.draft
               )}
             >
               {window.status}
             </span>
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-slate-600">
               {window.weeks} weeks
             </span>
-            <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+            <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-700">
               Institution model
             </span>
           </div>
@@ -819,7 +832,7 @@ export function TermSetupView({
         <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-xs">
           <Clock className="h-4 w-4 text-blue-600" />
           <div>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               {window.deadline_passed ? "Deadline passed" : "Deadline in"}
             </div>
             {window.deadline_passed ? (
@@ -836,10 +849,10 @@ export function TermSetupView({
       {section === "people" && (
         <>
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2">
-        <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+        <span className="rounded-md bg-blue-600 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
           Next step
         </span>
-        <span className="text-[11px] font-semibold text-blue-900">
+        <span className="text-xs font-semibold text-blue-900">
           {window.submitted_count < window.total_faculty
             ? "Collect the remaining faculty submissions, then accept the set."
             : window.status !== "accepted"
@@ -848,7 +861,7 @@ export function TermSetupView({
         </span>
       </div>
       <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-sm backdrop-blur">
-        <span className="px-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+        <span className="px-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
           On this page
         </span>
         {[
@@ -859,7 +872,7 @@ export function TermSetupView({
           <button
             key={id}
             onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="rounded-lg px-2 py-1 text-[10.5px] font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+            className="rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
           >
             {label}
           </button>
@@ -876,11 +889,11 @@ export function TermSetupView({
         >
           {isCoordinator ? (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Term
                 <input value={term} onChange={(e) => setTerm(e.target.value)} className={cn(FIELD, "mt-1")} />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Opens
                 <input
                   type="datetime-local"
@@ -889,7 +902,7 @@ export function TermSetupView({
                   className={cn(FIELD, "mt-1")}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Deadline
                 <input
                   type="datetime-local"
@@ -898,7 +911,7 @@ export function TermSetupView({
                   className={cn(FIELD, "mt-1")}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Weeks
                 <input
                   type="number"
@@ -944,36 +957,36 @@ export function TermSetupView({
               <div className="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-slate-700">Evaluation tools</p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-xs font-bold text-slate-700">Evaluation tools</p>
+                    <p className="text-xs text-slate-500">
                       Populate representative faculty submissions for a dry run. Not part of the production intake flow.
                     </p>
                   </div>
                   <button
                     onClick={() => setShowEvalTools((value) => !value)}
-                    className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-[10.5px] font-bold text-slate-700 hover:bg-slate-100"
+                    className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                   >
                     {showEvalTools ? "Hide evaluation tools" : "Open evaluation tools"}
                   </button>
                 </div>
                 {showEvalTools && (
                   <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3">
-                    <div className="text-[11px] font-bold text-blue-900">Sample faculty input</div>
-                    <p className="mt-0.5 text-[10.5px] text-blue-800">
+                    <div className="text-xs font-bold text-blue-900">Sample faculty input</div>
+                    <p className="mt-0.5 text-xs text-blue-800">
                       Fill the remaining submissions from a representative sample, then accept and publish when ready. Real faculty can also submit through their own intake window.
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button
                         onClick={() => void fillSample(false, false)}
                         disabled={busy !== null}
-                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                       >
                         Fill all
                       </button>
                       <button
                         onClick={() => void fillSample(false, false, true)}
                         disabled={busy !== null}
-                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                       >
                         {busy === "Fill missing" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                         Fill missing
@@ -981,7 +994,7 @@ export function TermSetupView({
                       <button
                         onClick={() => void fillSample(true, false)}
                         disabled={busy !== null}
-                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
                       >
                         {busy === "Fill & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                         Fill &amp; accept
@@ -989,7 +1002,7 @@ export function TermSetupView({
                       <button
                         onClick={() => void fillSample(true, true)}
                         disabled={busy !== null}
-                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {busy === "Fill & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                         Fill, accept &amp; publish
@@ -1007,7 +1020,7 @@ export function TermSetupView({
               </div>
               <span
                 className={cn(
-                  "rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+                  "rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wider",
                   mine ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                 )}
               >
@@ -1025,9 +1038,9 @@ export function TermSetupView({
           <div className="flex items-end justify-between">
             <div className="text-2xl font-black text-slate-900">
               {window.submitted_count}
-              <span className="text-sm font-bold text-slate-400"> / {window.total_faculty}</span>
+              <span className="text-sm font-bold text-slate-500"> / {window.total_faculty}</span>
             </div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">faculty submitted</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">faculty submitted</div>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
             <div
@@ -1035,7 +1048,7 @@ export function TermSetupView({
               style={{ width: `${Math.round((100 * window.submitted_count) / Math.max(1, window.total_faculty))}%` }}
             />
           </div>
-          <div className="mt-2 text-[11px] text-slate-500">
+          <div className="mt-2 text-xs text-slate-500">
             {window.pending.length === 0
               ? "Everyone has submitted."
               : `Pending: ${window.pending.join(", ")}`}
@@ -1052,7 +1065,7 @@ export function TermSetupView({
           className="mt-3"
           action={
             <span className={cn(
-              "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+              "rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wider",
               window.status === "accepted"
                 ? "bg-emerald-50 text-emerald-700"
                 : "bg-amber-50 text-amber-700",
@@ -1110,14 +1123,14 @@ export function TermSetupView({
                   {row.ok
                     ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                     : <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">{row.label}</span>
-                  <span className="ml-auto text-[11px] font-black tabular-nums text-slate-900">{row.value}</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-600">{row.label}</span>
+                  <span className="ml-auto text-xs font-black tabular-nums text-slate-900">{row.value}</span>
                 </div>
-                <p className="mt-1 text-[10px] leading-snug text-slate-600">{row.detail}</p>
+                <p className="mt-1 text-xs leading-snug text-slate-600">{row.detail}</p>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-[10px] text-slate-600">
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
             <Clock className="h-3.5 w-3.5 text-slate-500" />
             {window.deadline_passed
               ? `Deadline passed · ${new Date(window.deadline).toLocaleString()}`
@@ -1138,7 +1151,7 @@ export function TermSetupView({
           hint="Click a cell to cycle: available → prefer → avoid → off. Off is a hard blackout; prefer/avoid are soft."
           icon={<Users className="h-4 w-4 text-purple-600" />}
           action={
-            <span className="rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-700">
+            <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-purple-700">
               {mine ? `${mine.hard_count} hard · ${mine.preference_count} soft` : "not submitted"}
             </span>
           }
@@ -1147,9 +1160,9 @@ export function TermSetupView({
             <table className="w-full min-w-[520px] border-collapse text-center text-xs">
               <thead>
                 <tr>
-                  <th className="p-1 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Day</th>
+                  <th className="p-1 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Day</th>
                   {PERIOD_NAMES.map((period) => (
-                    <th key={period} className="p-1 text-[10px] font-bold text-slate-600">
+                    <th key={period} className="p-1 text-xs font-bold text-slate-600">
                       {period}
                     </th>
                   ))}
@@ -1158,7 +1171,7 @@ export function TermSetupView({
               <tbody>
                 {DAY_NAMES.map((day, dayIndex) => (
                   <tr key={day}>
-                    <td className="p-1 text-left text-[11px] font-bold text-slate-700">{day}</td>
+                    <td className="p-1 text-left text-xs font-bold text-slate-700">{day}</td>
                     {PERIOD_NAMES.map((_, period) => {
                       const state = cells[`${dayIndex}-${period}`] ?? 0;
                       const label = ["", "Prefer", "Avoid", "Off"][state];
@@ -1170,8 +1183,8 @@ export function TermSetupView({
                               setCells((prev) => ({ ...prev, [`${dayIndex}-${period}`]: (state + 1) % 4 }))
                             }
                             className={cn(
-                              "h-9 w-full rounded-lg border text-[10px] font-bold transition-all",
-                              state === 0 && "border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100",
+                              "h-9 w-full rounded-lg border text-xs font-bold transition-all",
+                              state === 0 && "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100",
                               state === 1 && "border-emerald-300 bg-emerald-100 text-emerald-800",
                               state === 2 && "border-amber-300 bg-amber-100 text-amber-800",
                               state === 3 && "border-slate-700 bg-slate-700 text-white"
@@ -1187,7 +1200,7 @@ export function TermSetupView({
               </tbody>
             </table>
           </div>
-          <label className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <label className="mt-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
             Note to the coordinator
             <textarea
               value={note}
@@ -1206,7 +1219,7 @@ export function TermSetupView({
             {mine ? "Update submission" : "Submit constraints"}
           </button>
           {!window.open && (
-            <span className="ml-2 text-[11px] font-semibold text-amber-700">
+            <span className="ml-2 text-xs font-semibold text-amber-700">
               The window is {window.deadline_passed ? "past its deadline" : window.status}.
             </span>
           )}
@@ -1223,15 +1236,43 @@ export function TermSetupView({
           action={
             <button
               onClick={() => void load()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50"
             >
               <RefreshCw className="h-3 w-3" /> Refresh
             </button>
           }
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {window.submissions.map((submission) => (
+              <div key={submission.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-slate-900">{submission.instructor_name}</p>
+                  <span className={cn(
+                    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                    submission.status === "accepted" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                  )}>
+                    {submission.status}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+                  <span className="chip">{submission.hard_count} hard</span>
+                  <span className="chip">{submission.preference_count} soft</span>
+                  <span className="text-slate-500">
+                    {submission.updated_at ? new Date(submission.updated_at).toLocaleString() : "—"}
+                  </span>
+                </div>
+                {submission.note && <p className="mt-1.5 line-clamp-3 text-xs text-slate-600">{submission.note}</p>}
+              </div>
+            ))}
+            {window.submissions.length === 0 && (
+              <p className="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">
+                No submissions yet. Open the window and share the deadline with faculty.
+              </p>
+            )}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[640px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Faculty</th>
                   <th className="p-2.5">Status</th>
@@ -1248,7 +1289,7 @@ export function TermSetupView({
                     <td className="p-2.5">
                       <span
                         className={cn(
-                          "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                          "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
                           submission.status === "accepted"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-emerald-100 text-emerald-700"
@@ -1262,14 +1303,14 @@ export function TermSetupView({
                     <td className="max-w-[280px] truncate p-2.5 text-slate-600" title={submission.note}>
                       {submission.note || "—"}
                     </td>
-                    <td className="p-2.5 font-mono text-[10px] text-slate-500">
+                    <td className="p-2.5 font-mono text-xs text-slate-500">
                       {submission.updated_at ? new Date(submission.updated_at).toLocaleString() : "—"}
                     </td>
                   </tr>
                 ))}
                 {window.submissions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-[11px] text-slate-500">
+                    <td colSpan={6} className="p-4 text-center text-xs text-slate-500">
                       No submissions yet. Open the window and share the deadline with faculty.
                     </td>
                   </tr>
@@ -1305,12 +1346,12 @@ export function TermSetupView({
                 ["Walk limit", `${overview.load_rules.walk_limit_min} min`],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <dt className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
                   <dd className="font-mono text-sm font-bold text-slate-900">{value}</dd>
                 </div>
               ))}
             </dl>
-            <p className="mt-2 text-[11px] text-slate-500">
+            <p className="mt-2 text-xs text-slate-500">
               Meeting patterns:{" "}
               {Object.entries(overview.load_rules.patterns)
                 .map(([name, rule]) => `${name} ${rule.hours}h (${rule.days.map((d) => DAY_NAMES[d].slice(0, 3)).join("/")})`)
@@ -1328,12 +1369,12 @@ export function TermSetupView({
                 ["Active enrollment overrides", overview.constraints.active_enrollment],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <dt className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
                   <dd className="font-mono text-sm font-bold text-slate-900">{value}</dd>
                 </div>
               ))}
             </dl>
-            <p className="mt-2 text-[11px] text-slate-500">{overview.weeks.pattern}</p>
+            <p className="mt-2 text-xs text-slate-500">{overview.weeks.pattern}</p>
           </Section>
         </div>
       )}
@@ -1344,9 +1385,57 @@ export function TermSetupView({
           hint={`${overview.campuses[0]?.name ?? "Institution"} — every building the solver can place a section in.`}
           icon={<Building2 className="h-4 w-4 text-blue-600" />}
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {overview.buildings.map((building) => (
+              <div key={building.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900">{building.name}</p>
+                    <p className="font-mono text-[10px] text-slate-500">{building.id}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <IconButton
+                      label={`Edit ${building.name}`}
+                      onClick={() => setEdit({ kind: "building", id: building.id, name: building.name })}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton
+                      label={`Remove ${building.name}`}
+                      tone="rose"
+                      onClick={() => void removeEntity("building", building.id, building.name)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="chip">{building.rooms} rooms</span>
+                  <span className="chip">{building.seats.toLocaleString()} seats</span>
+                  <span className="chip">{(building.scheduled_sections ?? 0)} sections</span>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="w-9 font-mono text-xs font-bold">{building.utilization ?? 0}%</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={cn(
+                        "h-full rounded-full",
+                        (building.utilization ?? 0) > 90
+                          ? "bg-rose-500"
+                          : (building.utilization ?? 0) > 75
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                      )}
+                      style={{ width: `${Math.min(100, building.utilization ?? 0)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[520px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Building</th>
                   <th className="p-2.5">Rooms</th>
@@ -1360,13 +1449,13 @@ export function TermSetupView({
                   <tr key={building.id} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-bold text-slate-900">{building.name}</div>
-                      <div className="font-mono text-[10px] text-slate-500">{building.id}</div>
+                      <div className="font-mono text-xs text-slate-500">{building.id}</div>
                     </td>
                     <td className="p-2.5 font-mono">{building.rooms}</td>
                     <td className="p-2.5 font-mono">{building.seats.toLocaleString()}</td>
                     <td className="p-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="w-9 font-mono text-[11px] font-bold">{building.utilization ?? 0}%</span>
+                        <span className="w-9 font-mono text-xs font-bold">{building.utilization ?? 0}%</span>
                         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className={cn(
@@ -1380,7 +1469,7 @@ export function TermSetupView({
                             style={{ width: `${Math.min(100, building.utilization ?? 0)}%` }}
                           />
                         </div>
-                        <span className="text-[9px] text-slate-500">
+                        <span className="text-[10px] text-slate-500">
                           {building.scheduled_sections ?? 0} sections
                         </span>
                       </div>
@@ -1416,9 +1505,55 @@ export function TermSetupView({
           hint={`${overview.rooms.length} rooms · ${overview.halls.length} large halls (capacity ≥ 100). Edit capacity/equipment or remove a room.`}
           icon={<DoorOpen className="h-4 w-4 text-indigo-600" />}
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {overview.rooms.map((room) => (
+              <div key={room.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-bold text-slate-900">
+                      {room.name}
+                      {room.hall && <span className="rounded bg-purple-100 px-1 text-[10px] font-bold text-purple-700">HALL</span>}
+                    </p>
+                    <p className="font-mono text-[10px] text-slate-500">{room.id}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <IconButton
+                      label={`Edit ${room.name}`}
+                      onClick={() =>
+                        setEdit({
+                          kind: "room",
+                          id: room.id,
+                          name: room.name,
+                          capacity: room.capacity,
+                          room_type: room.room_type,
+                          building_id: room.building_id,
+                          equipment: room.equipment.join(", "),
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton
+                      label={`Remove ${room.name}`}
+                      tone="rose"
+                      onClick={() => void removeEntity("room", room.id, room.name)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="chip">{room.building_name}</span>
+                  <span className="chip">{room.room_type}</span>
+                  <span className="chip">{room.capacity} seats</span>
+                  {room.equipment.length > 0 && <span className="text-slate-600">{room.equipment.join(", ")}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[720px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Room</th>
                   <th className="p-2.5">Building</th>
@@ -1433,14 +1568,14 @@ export function TermSetupView({
                   <tr key={room.id} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-bold text-slate-900">
-                        {room.name} {room.hall && <span className="rounded bg-purple-100 px-1 text-[9px] font-bold text-purple-700">HALL</span>}
+                        {room.name} {room.hall && <span className="rounded bg-purple-100 px-1 text-[10px] font-bold text-purple-700">HALL</span>}
                       </div>
-                      <div className="font-mono text-[10px] text-slate-500">{room.id}</div>
+                      <div className="font-mono text-xs text-slate-500">{room.id}</div>
                     </td>
                     <td className="p-2.5">{room.building_name}</td>
                     <td className="p-2.5 capitalize">{room.room_type}</td>
                     <td className="p-2.5 font-mono">{room.capacity}</td>
-                    <td className="p-2.5 text-[10px] text-slate-600">{room.equipment.join(", ") || "—"}</td>
+                    <td className="p-2.5 text-xs text-slate-600">{room.equipment.join(", ") || "—"}</td>
                     <td className="p-2.5 text-right">
                       <div className="inline-flex items-center gap-1">
                         <IconButton
@@ -1482,9 +1617,69 @@ export function TermSetupView({
           hint="Contract caps, qualifications and the current placed load. Edits apply to the next solve."
           icon={<Users className="h-4 w-4 text-purple-600" />}
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {overview.faculty.map((member) => {
+              const submission = window.submissions.find((s) => s.instructor_id === member.id);
+              return (
+                <div key={member.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-900">{member.name}</p>
+                      <p className="font-mono text-xs text-slate-500">{member.id}</p>
+                    </div>
+                    <span className={cn(
+                      "shrink-0 rounded px-1.5 py-0.5 text-xs font-bold",
+                      submission ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    )}>
+                      {submission ? "submitted" : "pending"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="font-mono font-bold">{member.assigned_sections}/{member.max_sections}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={cn("h-full rounded-full", member.load_pct > 100 ? "bg-rose-500" : "bg-emerald-500")}
+                        style={{ width: `${Math.min(100, member.load_pct)}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-500">{member.max_preps} preps</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-slate-600">
+                    <span className="font-semibold">{member.qualified_courses.length} qualified</span>
+                    <span>· {member.hard_unavailable.length} hard</span>
+                    <span>· {member.preferences.length} soft</span>
+                  </div>
+                  <div className="mt-2 flex justify-end gap-1">
+                    <IconButton
+                      label={`Edit ${member.name}`}
+                      onClick={() =>
+                        setEdit({
+                          kind: "instructor",
+                          id: member.id,
+                          name: member.name,
+                          max_sections: member.max_sections,
+                          max_preps: member.max_preps,
+                          qualified: member.qualified_courses.join(", "),
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton
+                      label={`Remove ${member.name}`}
+                      tone="rose"
+                      onClick={() => void removeEntity("instructor", member.id, member.name)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[760px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Faculty</th>
                   <th className="p-2.5">Max sections</th>
@@ -1501,11 +1696,11 @@ export function TermSetupView({
                   <tr key={member.id} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-bold text-slate-900">{member.name}</div>
-                      <div className="font-mono text-[10px] text-slate-500">{member.id}</div>
+                      <div className="font-mono text-xs text-slate-500">{member.id}</div>
                     </td>
                     <td className="p-2.5 font-mono">{member.max_sections}</td>
                     <td className="p-2.5 font-mono">{member.max_preps}</td>
-                    <td className="max-w-[240px] truncate p-2.5 text-[10px] text-slate-600" title={member.qualified_courses.join(", ")}>
+                    <td className="max-w-[240px] truncate p-2.5 text-xs text-slate-600" title={member.qualified_courses.join(", ")}>
                       {member.qualified_courses.join(", ")}
                     </td>
                     <td className="p-2.5">
@@ -1521,7 +1716,7 @@ export function TermSetupView({
                         </div>
                       </div>
                     </td>
-                    <td className="p-2.5 text-[10px] text-slate-600">
+                    <td className="p-2.5 text-xs text-slate-600">
                       <span title={JSON.stringify(member.preferences)}>
                         {member.hard_unavailable.length} hard · {member.preferences.length} soft
                       </span>
@@ -1531,13 +1726,13 @@ export function TermSetupView({
                         const submission = window.submissions.find((s) => s.instructor_id === member.id);
                         return submission ? (
                           <span
-                            className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700"
+                            className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700"
                             title={`${submission.hard_count} hard · ${submission.preference_count} soft`}
                           >
                             submitted
                           </span>
                         ) : (
-                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                             pending
                           </span>
                         );
@@ -1580,7 +1775,7 @@ export function TermSetupView({
       {section === "weeks" && (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <Section title="Term weeks" hint="How many weeks the timetable repeats across." icon={<CalendarDays className="h-4 w-4 text-blue-600" />}>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
               Number of weeks
               <input
                 type="number"
@@ -1597,7 +1792,7 @@ export function TermSetupView({
             >
               Save weeks
             </button>
-            <p className="mt-2 text-[11px] text-slate-500">
+            <p className="mt-2 text-xs text-slate-500">
               The weekly pattern runs {overview.weeks.teaching_days.length} days × {overview.weeks.periods_per_day} periods.
             </p>
           </Section>
@@ -1614,7 +1809,7 @@ export function TermSetupView({
                 >
                   <div>
                     <strong className="text-slate-900">{entry.label}</strong>{" "}
-                    <span className="font-mono text-[10px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       {DAY_NAMES[entry.day]}
                       {entry.period !== undefined && entry.period !== null ? ` ${PERIOD_NAMES[entry.period]}` : " (all day)"}
                     </span>
@@ -1645,11 +1840,11 @@ export function TermSetupView({
                 </div>
               ))}
               {overview.holidays.length === 0 && (
-                <p className="text-[11px] text-slate-500">No holidays or closures recorded.</p>
+                <p className="text-xs text-slate-500">No holidays or closures recorded.</p>
               )}
             </div>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Label
                 <input
                   value={holiday.label}
@@ -1657,7 +1852,7 @@ export function TermSetupView({
                   className={cn(FIELD, "mt-1")}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Day
                 <select
                   value={holiday.day}
@@ -1671,7 +1866,7 @@ export function TermSetupView({
                   ))}
                 </select>
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Period
                 <select
                   value={holiday.period}
@@ -1706,7 +1901,7 @@ export function TermSetupView({
         >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Walk limit</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Walk limit</div>
               <div className="mt-1 flex items-center gap-2">
                 <span className="font-mono text-lg font-black text-slate-900">{overview.constraints.walk_limit_min} min</span>
                 <IconButton
@@ -1720,23 +1915,23 @@ export function TermSetupView({
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Holidays</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Holidays</div>
               <div className="mt-1 font-mono text-lg font-black text-slate-900">{overview.constraints.closures}</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Room blackouts</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room blackouts</div>
               <div className="mt-1 font-mono text-lg font-black text-slate-900">{overview.constraints.room_blackouts}</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Active enrollment overrides</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Active enrollment overrides</div>
               <div className="mt-1 font-mono text-lg font-black text-slate-900">{overview.constraints.active_enrollment}</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Instructor pins</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Instructor pins</div>
               <div className="mt-1 font-mono text-lg font-black text-slate-900">{overview.constraints.instructor_pins}</div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Room pins</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Room pins</div>
               <div className="mt-1 font-mono text-lg font-black text-slate-900">{overview.constraints.room_pins}</div>
             </div>
           </div>
@@ -1747,13 +1942,13 @@ export function TermSetupView({
         <div className="space-y-3">
           <Section
             title="Degree maps"
-            hint="Programs and cohorts: what each cohort must take this term. Majors and minors are separate; edit the roadmap JSON or a cohort's term/size."
+            hint="Programs and cohorts: what each cohort must take this term. Majors and minors are separate; edit terms and courses with structured controls — no JSON."
             icon={<GraduationCap className="h-4 w-4 text-emerald-600" />}
           >
             <div className="space-y-3">
               {(["major", "minor"] as const).map((kind) => (
                 <div key={kind} className="space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     {kind === "major" ? "Majors & degrees" : "Minors"}
                   </div>
                   {overview.degree_maps.programs
@@ -1763,7 +1958,7 @@ export function TermSetupView({
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <div className="text-sm font-bold text-slate-900">{program.name}</div>
-                            <div className="font-mono text-[10px] text-slate-500">
+                            <div className="font-mono text-xs text-slate-500">
                               {program.id} · {program.degree ?? (kind === "minor" ? "Minor" : "BSc")}
                               {program.department ? ` · ${program.department}` : ""}
                             </div>
@@ -1775,23 +1970,42 @@ export function TermSetupView({
                                 kind: "program",
                                 id: program.id,
                                 name: program.name,
-                                roadmap: JSON.stringify(program.roadmap, null, 2),
+                                roadmap: JSON.parse(JSON.stringify(program.roadmap)) as DegreeRoadmap,
                               })
                             }
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </IconButton>
                         </div>
-                        <div className="mt-2 grid grid-cols-1 gap-1.5 text-[11px] sm:grid-cols-2">
-                          {Object.entries(program.roadmap).map(([term, requirements]) => (
+                        <div className="mt-2 grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
+                          {Object.entries(program.roadmap)
+                            .sort(([a], [b]) => Number(a) - Number(b))
+                            .map(([term, requirements]) => (
                             <div key={term} className="rounded-lg border border-slate-200 bg-white p-2">
-                              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
                                 Term {term}
                               </div>
-                              <div className="text-slate-700">
-                                {requirements
-                                  .map((req) => `${req.course_id}${req.required ? "" : " (elective)"}`)
-                                  .join(", ") || "—"}
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {requirements.length ? requirements.map((req) => {
+                                  const course = courseById.get(req.course_id);
+                                  return (
+                                    <span
+                                      key={req.course_id}
+                                      className={cn(
+                                        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ring-1",
+                                        req.required
+                                          ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                          : "bg-violet-50 text-violet-700 ring-violet-200"
+                                      )}
+                                      title={course ? `${course.code} — ${course.title}` : req.course_id}
+                                    >
+                                      {course?.code ?? req.course_id}
+                                      <span className="text-xs font-medium opacity-70">
+                                        {req.required ? "required" : "elective"}
+                                      </span>
+                                    </span>
+                                  );
+                                }) : <span className="text-xs text-slate-500">No courses yet</span>}
                               </div>
                             </div>
                           ))}
@@ -1808,9 +2022,55 @@ export function TermSetupView({
             hint="Cohort size and current term drive demand and the degree-map requirements."
             icon={<Users className="h-4 w-4 text-blue-600" />}
           >
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <div className="space-y-2 md:hidden">
+              {overview.degree_maps.cohorts.map((cohort) => (
+                <div key={cohort.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-slate-900">{cohort.name}</p>
+                      <p className="font-mono text-xs text-slate-500">{cohort.id}</p>
+                    </div>
+                    <div className="shrink-0 text-right text-xs">
+                      <p className="font-bold">{cohort.size} students</p>
+                      <p className="text-slate-500">Term {cohort.current_term}</p>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">{cohort.program_name}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {cohort.term_courses.length ? cohort.term_courses.map((course) => (
+                      <span key={course} className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">{course}</span>
+                    )) : <span className="text-xs text-slate-500">No courses this term</span>}
+                  </div>
+                  <div className="mt-2 flex justify-end gap-1">
+                    <IconButton
+                      label={`Edit ${cohort.name}`}
+                      onClick={() =>
+                        setEdit({
+                          kind: "cohort",
+                          id: cohort.id,
+                          name: cohort.name,
+                          size: cohort.size,
+                          current_term: cohort.current_term,
+                          program_id: cohort.program_id,
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton
+                      label={`Remove ${cohort.name}`}
+                      tone="rose"
+                      onClick={() => void removeEntity("cohort", cohort.id, cohort.name)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
               <table className="w-full min-w-[640px] text-left text-xs">
-                <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                   <tr>
                     <th className="p-2.5">Cohort</th>
                     <th className="p-2.5">Program</th>
@@ -1825,12 +2085,12 @@ export function TermSetupView({
                     <tr key={cohort.id} className="hover:bg-slate-50">
                       <td className="p-2.5">
                         <div className="font-bold text-slate-900">{cohort.name}</div>
-                        <div className="font-mono text-[10px] text-slate-500">{cohort.id}</div>
+                        <div className="font-mono text-xs text-slate-500">{cohort.id}</div>
                       </td>
                       <td className="p-2.5">{cohort.program_name}</td>
                       <td className="p-2.5 font-mono">{cohort.current_term}</td>
                       <td className="p-2.5 font-mono">{cohort.size}</td>
-                      <td className="max-w-[220px] truncate p-2.5 text-[10px] text-slate-600" title={cohort.term_courses.join(", ")}>
+                      <td className="max-w-[220px] truncate p-2.5 text-xs text-slate-600" title={cohort.term_courses.join(", ")}>
                         {cohort.term_courses.join(", ")}
                       </td>
                       <td className="p-2.5 text-right">
@@ -1885,7 +2145,7 @@ export function TermSetupView({
               <div key={campus} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-extrabold text-slate-900">{campus}</h4>
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                  <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
                     {buildings.length} buildings
                   </span>
                 </div>
@@ -1894,13 +2154,13 @@ export function TermSetupView({
                     <button
                       key={building.id}
                       onClick={() => onNavigate("facility")}
-                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left text-[11px] transition-all hover:border-blue-300 hover:shadow-xs"
+                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left text-xs transition-all hover:border-blue-300 hover:shadow-xs"
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-bold text-slate-900">{building.name}</span>
-                        <span className="block font-mono text-[9px] text-slate-500">{building.id}</span>
+                        <span className="block font-mono text-[10px] text-slate-500">{building.id}</span>
                       </span>
-                      <span className="shrink-0 text-right font-mono text-[9px] text-slate-500">
+                      <span className="shrink-0 text-right font-mono text-[10px] text-slate-500">
                         {building.rooms} rooms
                         <br />
                         {building.seats.toLocaleString()} seats
@@ -1933,9 +2193,53 @@ export function TermSetupView({
           hint={`${overview.courses.length} courses. Patterns, room type, seats and required equipment drive the solver.`}
           icon={<BookOpen className="h-4 w-4 text-indigo-600" />}
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {overview.courses.map((course) => (
+              <div key={course.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900">{course.code} · {course.title}</p>
+                    <p className="font-mono text-[10px] text-slate-500">{course.id}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <IconButton
+                      label={`Edit ${course.code}`}
+                      onClick={() =>
+                        setEdit({
+                          kind: "course",
+                          id: course.id,
+                          code: course.code,
+                          title: course.title,
+                          pattern: course.pattern,
+                          room_type: course.room_type,
+                          seats: course.seats,
+                          equipment: course.equipment.join(", "),
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </IconButton>
+                    <IconButton
+                      label={`Remove ${course.code}`}
+                      tone="rose"
+                      onClick={() => void removeEntity("course", course.id, course.code)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="chip">{course.pattern}</span>
+                  <span className="chip">{course.room_type}</span>
+                  <span className="chip">{course.seats} seats</span>
+                  {course.equipment.length > 0 && <span className="text-slate-600">{course.equipment.join(", ")}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[760px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Course</th>
                   <th className="p-2.5">Pattern</th>
@@ -1952,12 +2256,12 @@ export function TermSetupView({
                       <div className="font-bold text-slate-900">
                         {course.code} · {course.title}
                       </div>
-                      <div className="font-mono text-[10px] text-slate-500">{course.id}</div>
+                      <div className="font-mono text-xs text-slate-500">{course.id}</div>
                     </td>
                     <td className="p-2.5 font-mono">{course.pattern}</td>
                     <td className="p-2.5 capitalize">{course.room_type}</td>
                     <td className="p-2.5 font-mono">{course.seats}</td>
-                    <td className="p-2.5 text-[10px] text-slate-600">{course.equipment.join(", ") || "—"}</td>
+                    <td className="p-2.5 text-xs text-slate-600">{course.equipment.join(", ") || "—"}</td>
                     <td className="p-2.5 text-right">
                       <div className="inline-flex items-center gap-1">
                         <IconButton
@@ -2000,9 +2304,55 @@ export function TermSetupView({
           hint="Every cohort, its program, current term and the courses it must take this term."
           icon={<Users className="h-4 w-4 text-emerald-600" />}
         >
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <div className="space-y-2 md:hidden">
+            {overview.degree_maps.cohorts.map((cohort) => (
+              <div key={cohort.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900">{cohort.name}</p>
+                    <p className="font-mono text-[10px] text-slate-500">{cohort.id}</p>
+                  </div>
+                  <div className="shrink-0 text-right text-xs">
+                    <p className="font-bold">{cohort.size} students</p>
+                    <p className="text-slate-500">Term {cohort.current_term}</p>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-slate-600">{cohort.program_name}</p>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {cohort.term_courses.length ? cohort.term_courses.map((course) => (
+                    <span key={course} className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">{course}</span>
+                  )) : <span className="text-xs text-slate-500">No courses this term</span>}
+                </div>
+                <div className="mt-2 flex justify-end gap-1">
+                  <IconButton
+                    label={`Edit ${cohort.name}`}
+                    onClick={() =>
+                      setEdit({
+                        kind: "cohort",
+                        id: cohort.id,
+                        name: cohort.name,
+                        size: cohort.size,
+                        current_term: cohort.current_term,
+                        program_id: cohort.program_id,
+                      })
+                    }
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </IconButton>
+                  <IconButton
+                    label={`Remove ${cohort.name}`}
+                    tone="rose"
+                    onClick={() => void removeEntity("cohort", cohort.id, cohort.name)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </IconButton>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
             <table className="w-full min-w-[720px] text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                 <tr>
                   <th className="p-2.5">Cohort</th>
                   <th className="p-2.5">Program</th>
@@ -2017,12 +2367,12 @@ export function TermSetupView({
                   <tr key={cohort.id} className="hover:bg-slate-50">
                     <td className="p-2.5">
                       <div className="font-bold text-slate-900">{cohort.name}</div>
-                      <div className="font-mono text-[10px] text-slate-500">{cohort.id}</div>
+                      <div className="font-mono text-xs text-slate-500">{cohort.id}</div>
                     </td>
                     <td className="p-2.5">{cohort.program_name}</td>
                     <td className="p-2.5 font-mono">{cohort.current_term}</td>
                     <td className="p-2.5 font-mono">{cohort.size}</td>
-                    <td className="max-w-[260px] truncate p-2.5 text-[10px] text-slate-600" title={cohort.term_courses.join(", ")}>
+                    <td className="max-w-[260px] truncate p-2.5 text-xs text-slate-600" title={cohort.term_courses.join(", ")}>
                       {cohort.term_courses.join(", ") || "—"}
                     </td>
                     <td className="p-2.5 text-right">
@@ -2073,7 +2423,7 @@ export function TermSetupView({
               >
                 <div>
                   <strong className="text-slate-900">{entry.label}</strong>{" "}
-                  <span className="font-mono text-[10px] text-slate-500">
+                  <span className="font-mono text-xs text-slate-500">
                     {new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, {
                       weekday: "long",
                       month: "short",
@@ -2096,11 +2446,11 @@ export function TermSetupView({
               </div>
             ))}
             {calendar && calendar.holidays.length === 0 && (
-              <p className="text-[11px] text-slate-500">No dated holidays recorded.</p>
+              <p className="text-xs text-slate-500">No dated holidays recorded.</p>
             )}
           </div>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Date
               <input
                 type="date"
@@ -2109,7 +2459,7 @@ export function TermSetupView({
                 className={cn(FIELD, "mt-1")}
               />
             </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Label
               <input
                 value={datedHoliday.label}
@@ -2137,7 +2487,7 @@ export function TermSetupView({
               <Plus className="h-3.5 w-3.5" /> Add holiday
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-xs text-slate-500">
             Use the <strong>Calendar</strong> tab to add a day swap such as
             “Friday follows Tuesday” and see the meeting audit.
           </p>
@@ -2152,7 +2502,7 @@ export function TermSetupView({
             icon={<CalendarRange className="h-4 w-4 text-blue-600" />}
             action={
               <div className="flex flex-wrap items-end gap-2">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   Term start
                   <input
                     type="date"
@@ -2161,7 +2511,7 @@ export function TermSetupView({
                     className={cn(FIELD, "mt-0.5")}
                   />
                 </label>
-                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   Weeks
                   <input
                     type="number"
@@ -2176,7 +2526,7 @@ export function TermSetupView({
                 </label>
                 <button
                   onClick={() => void persistCalendar({ start_date: calendarStart })}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700"
+                  className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-blue-600 px-2.5 text-xs font-bold text-white hover:bg-blue-700"
                 >
                   Save dates
                 </button>
@@ -2192,7 +2542,7 @@ export function TermSetupView({
                 ["Sections extra", calendar.totals.sections_extra],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
                   <div className="font-mono text-lg font-black text-slate-900">{value}</div>
                 </div>
               ))}
@@ -2202,7 +2552,7 @@ export function TermSetupView({
               <div className="min-w-[640px]">
                 <div className="grid grid-cols-5 gap-px bg-slate-200 p-px">
                   {DAY_NAMES.map((day) => (
-                    <div key={day} className="bg-slate-100 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    <div key={day} className="bg-slate-100 px-2 py-1 text-center text-xs font-bold uppercase tracking-wider text-slate-600">
                       {day.slice(0, 3)}
                     </div>
                   ))}
@@ -2224,7 +2574,7 @@ export function TermSetupView({
                           <div
                             key={weekday}
                             className={cn(
-                              "min-h-14 p-1.5 text-[10px]",
+                              "min-h-14 p-1.5 text-xs",
                               day.status === "holiday"
                                 ? "bg-rose-50"
                                 : day.status === "swap"
@@ -2274,7 +2624,7 @@ export function TermSetupView({
                         day: "numeric",
                       })}
                     </strong>{" "}
-                    <span className="font-mono text-[10px] text-slate-500">
+                    <span className="font-mono text-xs text-slate-500">
                       follows {DAY_NAMES[entry.follows]}
                     </span>
                   </div>
@@ -2292,11 +2642,11 @@ export function TermSetupView({
                 </div>
               ))}
               {calendar.swaps.length === 0 && (
-                <p className="text-[11px] text-slate-500">No day swaps recorded.</p>
+                <p className="text-xs text-slate-500">No day swaps recorded.</p>
               )}
             </div>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Date
                 <input
                   type="date"
@@ -2305,7 +2655,7 @@ export function TermSetupView({
                   className={cn(FIELD, "mt-1")}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Follows
                 <select
                   value={swap.follows}
@@ -2319,7 +2669,7 @@ export function TermSetupView({
                   ))}
                 </select>
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Label
                 <input
                   value={swap.label}
@@ -2361,7 +2711,7 @@ export function TermSetupView({
           >
             <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
               <table className="w-full min-w-[560px] text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <thead className="sticky top-0 bg-slate-100 text-xs font-bold uppercase tracking-wider text-slate-600">
                   <tr>
                     <th className="p-2">Course</th>
                     <th className="p-2">Expected</th>
@@ -2379,17 +2729,17 @@ export function TermSetupView({
                       </td>
                       <td className="p-2 font-mono">{row.expected}</td>
                       <td className="p-2 font-mono">{row.actual}</td>
-                      <td className={cn("p-2 font-mono font-bold", row.shortfall > 0 ? "text-amber-700" : "text-slate-400")}>
+                      <td className={cn("p-2 font-mono font-bold", row.shortfall > 0 ? "text-amber-700" : "text-slate-500")}>
                         {row.shortfall}
                       </td>
-                      <td className={cn("p-2 font-mono font-bold", row.extra > 0 ? "text-purple-700" : "text-slate-400")}>
+                      <td className={cn("p-2 font-mono font-bold", row.extra > 0 ? "text-purple-700" : "text-slate-500")}>
                         {row.extra}
                       </td>
                     </tr>
                   ))}
                   {calendar.audit.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center text-[11px] text-emerald-700">
+                      <td colSpan={5} className="p-4 text-center text-xs text-emerald-700">
                         Every section meets its nominal weekly pattern.
                       </td>
                     </tr>
@@ -2409,11 +2759,11 @@ export function TermSetupView({
             icon={<Settings className="h-4 w-4 text-slate-600" />}
           >
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Term name
                 <input value={term} onChange={(e) => setTerm(e.target.value)} className={cn(FIELD, "mt-1")} />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Weeks
                 <input
                   type="number"
@@ -2424,11 +2774,11 @@ export function TermSetupView({
                   className={cn(FIELD, "mt-1")}
                 />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Opens
                 <input type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} className={cn(FIELD, "mt-1")} />
               </label>
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Deadline
                 <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={cn(FIELD, "mt-1")} />
               </label>
@@ -2439,7 +2789,7 @@ export function TermSetupView({
             >
               Save settings
             </button>
-            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-[11px] text-emerald-800">
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800">
               <strong>Persistent institution:</strong> stored in Postgres 18. The university does
               not re-upload the same data each term; use the update box to replace or extend it.
             </div>
@@ -2455,7 +2805,7 @@ export function TermSetupView({
               rows={9}
               spellCheck={false}
               placeholder="Paste updated institution data (courses, faculty, rooms, cohorts, degree maps)…"
-              className={cn(FIELD, "font-mono text-[10px]")}
+              className={cn(FIELD, "font-mono text-xs")}
             />
             <div className="mt-2 flex items-center gap-2">
               <button
@@ -2466,7 +2816,7 @@ export function TermSetupView({
                 {uploadBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 Update &amp; save
               </button>
-              <span className="text-[10px] text-slate-500">Existing entities are replaced by the upload.</span>
+              <span className="text-xs text-slate-500">Existing entities are replaced by the upload.</span>
             </div>
           </Section>
         </div>
@@ -2479,7 +2829,7 @@ export function TermSetupView({
           icon={<Save className="h-4 w-4 text-emerald-600" />}
         >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Solver engine
               <select value={engine} onChange={(e) => setEngine(e.target.value)} className={cn(FIELD, "mt-1")}>
                 <option value="cpsat">CP-SAT</option>
@@ -2487,7 +2837,7 @@ export function TermSetupView({
                 <option value="greedy">Greedy</option>
               </select>
             </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Objective
               <select value={objective} onChange={(e) => setObjective(e.target.value)} className={cn(FIELD, "mt-1")}>
                 <option value="preference">Faculty preferences</option>
@@ -2496,11 +2846,11 @@ export function TermSetupView({
                 <option value="balanced_load">Faculty load balance</option>
               </select>
             </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Term start
               <input type="datetime-local" value={termStart} onChange={(e) => setTermStart(e.target.value)} className={cn(FIELD, "mt-1")} />
             </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Term end
               <input type="datetime-local" value={termEnd} onChange={(e) => setTermEnd(e.target.value)} className={cn(FIELD, "mt-1")} />
             </label>
@@ -2513,7 +2863,7 @@ export function TermSetupView({
             {busy === "save-options" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save schedule options
           </button>
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-xs text-slate-500">
             Saved: engine <strong>{String((window.options ?? {}).engine ?? "cpsat")}</strong>,
             objective <strong>{String((window.options ?? {}).objective ?? "preference")}</strong>.
             These are applied by the Schedule draft solve and Publish.
@@ -2525,30 +2875,38 @@ export function TermSetupView({
       {edit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <button aria-label="Close" onClick={() => setEdit(null)} className="absolute inset-0 h-full w-full cursor-default" />
-          <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="entity-edit-title"
+            className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+          >
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-extrabold text-slate-900">
-                Edit {edit.kind} · <span className="font-mono text-slate-500">{edit.id}</span>
+              <h3 id="entity-edit-title" className="flex min-w-0 items-baseline gap-2 text-sm font-extrabold text-slate-900">
+                <span className="truncate">
+                  Edit {edit.kind}{"name" in edit ? ` · ${edit.name}` : ` · ${edit.id}`}
+                </span>
+                <span className="shrink-0 font-mono text-xs font-medium text-slate-500">{edit.id}</span>
               </h3>
-              <button onClick={() => setEdit(null)} aria-label="Close" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+              <button onClick={() => setEdit(null)} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="mt-3 space-y-2 text-xs">
               {edit.kind === "building" && (
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                   Name
                   <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={cn(FIELD, "mt-1")} />
                 </label>
               )}
               {edit.kind === "room" && (
                 <>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Name
                     <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Capacity
                       <input
                         type="number"
@@ -2558,7 +2916,7 @@ export function TermSetupView({
                         className={cn(FIELD, "mt-1")}
                       />
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Type
                       <select
                         value={edit.room_type}
@@ -2571,7 +2929,7 @@ export function TermSetupView({
                       </select>
                     </label>
                   </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Building
                     <select
                       value={edit.building_id}
@@ -2585,7 +2943,7 @@ export function TermSetupView({
                       ))}
                     </select>
                   </label>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Equipment (comma separated)
                     <input
                       value={edit.equipment}
@@ -2597,12 +2955,12 @@ export function TermSetupView({
               )}
               {edit.kind === "instructor" && (
                 <>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Name
                     <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Max sections
                       <input
                         type="number"
@@ -2612,7 +2970,7 @@ export function TermSetupView({
                         className={cn(FIELD, "mt-1")}
                       />
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Max preps
                       <input
                         type="number"
@@ -2623,7 +2981,7 @@ export function TermSetupView({
                       />
                     </label>
                   </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Qualified course IDs (comma separated)
                     <input
                       value={edit.qualified}
@@ -2635,12 +2993,12 @@ export function TermSetupView({
               )}
               {edit.kind === "cohort" && (
                 <>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Name
                     <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Size
                       <input
                         type="number"
@@ -2650,7 +3008,7 @@ export function TermSetupView({
                         className={cn(FIELD, "mt-1")}
                       />
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Current term
                       <input
                         type="number"
@@ -2661,7 +3019,7 @@ export function TermSetupView({
                       />
                     </label>
                   </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Program
                     <select
                       value={edit.program_id}
@@ -2679,30 +3037,128 @@ export function TermSetupView({
               )}
               {edit.kind === "program" && (
                 <>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    Name
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Program name
                     <input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    Roadmap JSON
-                    <textarea
-                      value={edit.roadmap}
-                      onChange={(e) => setEdit({ ...edit, roadmap: e.target.value })}
-                      rows={10}
-                      spellCheck={false}
-                      className={cn(FIELD, "mt-1 font-mono text-[10px]")}
-                    />
-                  </label>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Terms &amp; courses</p>
+                        <p className="text-xs text-slate-500">Pick a course, mark it required or elective, optionally estimate seats.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const numbers = Object.keys(edit.roadmap).map(Number);
+                          const next = (numbers.length ? Math.max(...numbers) : 0) + 2;
+                          setEdit({ ...edit, roadmap: { ...edit.roadmap, [String(next)]: [] } });
+                        }}
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add term
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.keys(edit.roadmap).sort((a, b) => Number(a) - Number(b)).map((term) => {
+                        const requirements = edit.roadmap[term] ?? [];
+                        return (
+                          <div key={term} className="rounded-lg border border-slate-200 bg-white p-2">
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-slate-900">Term {term}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (requirements.length && !globalThis.confirm(`Remove Term ${term} and its ${requirements.length} course(s)?`)) return;
+                                  const next = { ...edit.roadmap };
+                                  delete next[term];
+                                  setEdit({ ...edit, roadmap: next });
+                                }}
+                                className="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                              >
+                                Remove term
+                              </button>
+                            </div>
+                            <div className="space-y-1.5">
+                              {requirements.map((requirement, index) => (
+                                <div key={`${term}-${index}`} className="grid grid-cols-[1fr_auto_auto] items-center gap-1.5">
+                                  <select
+                                    aria-label={`Term ${term} course ${index + 1}`}
+                                    value={requirement.course_id}
+                                    onChange={(e) => {
+                                      const next = requirements.map((row, rowIndex) =>
+                                        rowIndex === index ? { ...row, course_id: e.target.value } : row);
+                                      setEdit({ ...edit, roadmap: { ...edit.roadmap, [term]: next } });
+                                    }}
+                                    className="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                  >
+                                    {overview.courses.map((course) => (
+                                      <option key={course.id} value={course.id}>
+                                        {course.code} — {course.title}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    aria-label={`Term ${term} course ${index + 1} requirement`}
+                                    value={requirement.required ? "required" : "elective"}
+                                    onChange={(e) => {
+                                      const next = requirements.map((row, rowIndex) =>
+                                        rowIndex === index ? { ...row, required: e.target.value === "required" } : row);
+                                      setEdit({ ...edit, roadmap: { ...edit.roadmap, [term]: next } });
+                                    }}
+                                    className="rounded-lg border border-slate-300 bg-white px-1.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                  >
+                                    <option value="required">Required</option>
+                                    <option value="elective">Elective</option>
+                                  </select>
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove ${requirement.course_id} from term ${term}`}
+                                    onClick={() => {
+                                      const next = requirements.filter((_, rowIndex) => rowIndex !== index);
+                                      setEdit({ ...edit, roadmap: { ...edit.roadmap, [term]: next } });
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={overview.courses.length === 0}
+                                onClick={() => {
+                                  const used = new Set(requirements.map((row) => row.course_id));
+                                  const course = overview.courses.find((row) => !used.has(row.id)) ?? overview.courses[0];
+                                  if (!course) return;
+                                  setEdit({
+                                    ...edit,
+                                    roadmap: {
+                                      ...edit.roadmap,
+                                      [term]: [...requirements, { course_id: course.id, required: true }],
+                                    },
+                                  });
+                                }}
+                                className="inline-flex min-h-8 items-center gap-1 rounded-lg px-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                              >
+                                <Plus className="h-3.5 w-3.5" /> Add course
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </>
               )}
               {edit.kind === "course" && (
                 <>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Code
                       <input value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value })} className={cn(FIELD, "mt-1")} />
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Seats
                       <input
                         type="number"
@@ -2713,12 +3169,12 @@ export function TermSetupView({
                       />
                     </label>
                   </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Title
                     <input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Pattern
                       <select
                         value={edit.pattern}
@@ -2730,7 +3186,7 @@ export function TermSetupView({
                         <option value="block">block (3h)</option>
                       </select>
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Room type
                       <select
                         value={edit.room_type}
@@ -2743,7 +3199,7 @@ export function TermSetupView({
                       </select>
                     </label>
                   </div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Equipment (comma separated)
                     <input
                       value={edit.equipment}
@@ -2755,12 +3211,12 @@ export function TermSetupView({
               )}
               {edit.kind === "closure" && (
                 <>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Label
                     <input value={edit.label} onChange={(e) => setEdit({ ...edit, label: e.target.value })} className={cn(FIELD, "mt-1")} />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Day
                       <select
                         value={edit.day}
@@ -2774,7 +3230,7 @@ export function TermSetupView({
                         ))}
                       </select>
                     </label>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Period
                       <select
                         value={edit.period}
@@ -2793,7 +3249,7 @@ export function TermSetupView({
                 </>
               )}
               {edit.kind === "constraint" && (
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                   Walk limit (minutes)
                   <input
                     type="number"

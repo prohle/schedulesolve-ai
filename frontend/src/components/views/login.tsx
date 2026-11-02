@@ -58,14 +58,17 @@ const AVATAR_TONE: Record<Persona, string> = {
 export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => void; onToast: Toast }) {
   const [persona, setPersona] = useState<Persona>("coordinator");
   const [mode, setMode] = useState<CanvasMode>("table");
-  const [email, setEmail] = useState(PERSONAS.coordinator.email);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  // Production story: a real institution signs in with its own credentials.
+  // Sample accounts live behind the explicit evaluation affordance below.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [busy, setBusy] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [role, setRole] = useState("instructor");
   const [linkId, setLinkId] = useState("");
+  const [evaluationOpen, setEvaluationOpen] = useState(false);
 
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [inspector, setInspector] = useState<string | null>(null);
@@ -73,10 +76,16 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
 
   function selectPersona(next: Persona) {
     setPersona(next);
+    setRegistering(false);
+    onToast(`Previewing the ${PERSONAS[next].roleTitle} experience`, "info");
+  }
+
+  function fillSample(next: Persona) {
+    setPersona(next);
     setEmail(PERSONAS[next].email);
     setPassword(DEMO_PASSWORD);
     setRegistering(false);
-    onToast(`Pre-filled form for ${PERSONAS[next].roleTitle}`, "info");
+    onToast(`Sample ${PERSONAS[next].roleTitle} credentials filled — press Sign in`, "info");
   }
 
   async function submit() {
@@ -173,7 +182,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                 <span className="whitespace-nowrap text-lg font-black tracking-tight text-slate-900">
                   ScheduleSolve <span className="text-blue-600">AI</span>
                 </span>
-                <span className="hidden rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 sm:inline">
+                <span className="hidden rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-blue-700 sm:inline">
                   v1.0.0
                 </span>
               </div>
@@ -244,7 +253,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
           <div className="mx-auto flex h-full w-full max-w-md flex-col justify-between space-y-5 lg:col-span-4 lg:max-w-none lg:border-r lg:border-slate-200/90 lg:pr-8">
             <div className="flex min-h-[460px] flex-grow overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-ultra">
               <div className="flex w-16 shrink-0 select-none flex-col justify-start gap-2 border-r border-slate-200/80 bg-slate-100/90 p-1.5">
-                <div className="py-1 text-center font-mono text-[9px] font-black uppercase tracking-wider text-slate-400">
+                <div className="py-1 text-center font-mono text-[10px] font-black uppercase tracking-wider text-slate-500">
                   Tabs
                 </div>
 
@@ -256,7 +265,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                       key={id}
                       type="button"
                       onClick={() => selectPersona(id)}
-                      title={`Pre-fill ${config.roleTitle}`}
+                      title={`Preview ${config.roleTitle}`}
                       className={`notebook-tab flex cursor-pointer flex-col items-center justify-center rounded-xl border px-1 py-3 transition-all ${
                         active
                           ? `${NOTEBOOK_ACTIVE[id]} font-bold shadow-xs`
@@ -264,7 +273,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                       }`}
                     >
                       <span className="font-mono text-xs font-black">{config.initials}</span>
-                      <span className="mt-0.5 text-[9px] font-extrabold uppercase">{config.tabLabel}</span>
+                      <span className="mt-0.5 text-[10px] font-extrabold uppercase">{config.tabLabel}</span>
                     </button>
                   );
                 })}
@@ -281,8 +290,8 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                         <h2 className="text-base font-extrabold tracking-tight text-slate-900">
                           {registering ? "Create Account" : "Login / Register"}
                         </h2>
-                        <p className="text-[11px] font-medium text-slate-500">
-                          Institutional Schedule Management
+                        <p className="text-xs font-medium text-slate-500">
+                          Institutional schedule management
                         </p>
                       </div>
                     </div>
@@ -300,7 +309,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                         Email
                       </label>
                       <div className="relative rounded-xl shadow-xs">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
                           <Mail className="h-4 w-4" />
                         </div>
                         <input
@@ -326,13 +335,13 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                         <button
                           type="button"
                           onClick={() => onToast("SSO password reset token dispatched to inbox.", "info")}
-                          className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                         >
                           Forgot password?
                         </button>
                       </div>
                       <div className="relative rounded-xl shadow-xs">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
                           <Lock className="h-4 w-4" />
                         </div>
                         <input
@@ -350,7 +359,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
                           aria-label={showPassword ? "Hide password" : "Show password"}
-                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          className="absolute inset-y-0 right-0 flex cursor-pointer items-center rounded-lg pr-3 text-slate-500 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -387,9 +396,9 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                           onChange={(e) => setKeepSignedIn(e.target.checked)}
                           className="h-3.5 w-3.5 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
-                        <span className="text-[11px] font-medium text-slate-600">Keep me signed in</span>
+                        <span className="text-xs font-medium text-slate-600">Keep me signed in</span>
                       </label>
-                      <span className="flex items-center gap-1 font-mono text-[10px] font-bold text-emerald-700">
+                      <span className="flex items-center gap-1 font-mono text-xs font-bold text-emerald-700">
                         <Shield className="h-3 w-3 text-emerald-600" /> 256-bit AES
                       </span>
                     </div>
@@ -397,7 +406,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                     <button
                       type="submit"
                       disabled={busy}
-                      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 focus:outline-none active:scale-[0.99] disabled:opacity-70"
+                      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 active:scale-[0.99] disabled:opacity-70"
                     >
                       {busy ? (
                         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -419,22 +428,51 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                   <button
                     type="button"
                     onClick={() => setRegistering((v) => !v)}
-                    className="w-full text-center text-[11px] font-medium text-slate-500 underline underline-offset-2 hover:text-slate-700"
+                    className="w-full text-center text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-700"
                   >
                     {registering ? "Already have an account? Sign in" : "New here? Create an account"}
                   </button>
                 </div>
 
-                <div className="space-y-1 rounded-xl border border-slate-200/80 bg-slate-50 p-3 text-xs text-slate-600">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-slate-900">
-                    <Info className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Notebook Pre-fill Active</span>
-                  </div>
-                  <p className="text-[10.5px] leading-snug text-slate-500">
-                    Tap vertical tabs (<strong className="text-slate-700">CO, PC, CS</strong>) on the left edge
-                    to instantly populate sample credentials, then press{" "}
-                    <strong className="text-slate-700">Sign in</strong>.
-                  </p>
+                <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-3 text-xs text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => setEvaluationOpen((value) => !value)}
+                    aria-expanded={evaluationOpen}
+                    className="flex w-full items-center justify-between gap-2 text-left"
+                  >
+                    <span className="flex items-center gap-1 text-xs font-bold text-slate-900">
+                      <Info className="h-3.5 w-3.5 text-blue-600" />
+                      Evaluating ScheduleSolve?
+                    </span>
+                    <span className="text-xs font-semibold text-blue-600">
+                      {evaluationOpen ? "Hide" : "Use a sample account"}
+                    </span>
+                  </button>
+                  {evaluationOpen ? (
+                    <div className="mt-2 space-y-1.5">
+                      <p className="text-xs leading-snug text-slate-500">
+                        Sample credentials for the seeded institution. They are not the
+                        production sign-in story — use your own account for real data.
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {PERSONA_ORDER.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => fillSample(id)}
+                            className="min-h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                          >
+                            {PERSONAS[id].roleTitle}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs leading-snug text-slate-500">
+                      Sample accounts are available behind an explicit evaluation action.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

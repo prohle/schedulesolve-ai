@@ -2,7 +2,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](./backend)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](./frontend)
-[![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#run-it)
+[![Tests](https://img.shields.io/badge/tests-108%20passing-brightgreen.svg)](#run-it)
 [![Meta models](https://img.shields.io/badge/Meta%20models-Muse%20Spark%20%C2%B7%20Voice%20%C2%B7%20Spark%20Open-0668E1)](#meta-ai-tooling-at-runtime)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](./docker-compose.yml)
 
@@ -25,15 +25,15 @@ Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* 
 
 **360° around one proven timetable.** The coordinator builds the term for the whole institution; faculty shape it with their availability, preferences, and verified change requests; and every student is advised from it individually — study record and desired degree in, a mandatory/optional plan that fits their life out, re-verified before it is shown. Three sides of campus, one solver-proven schedule underneath (what that 360° does *not* cover is stated in [docs/limitations.md](./docs/limitations.md)).
 
-> **▶ Live demo (no account, no API key needed): https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** — the full Express flow (Import → Intake → Build → Review → Term Change) plus the Full advanced workspace, proxied to the backend API at https://prohle--schedulesolve-ai-api.us-east.modal.run (`/docs`, `/status`, `/engines`). Both are scale-to-zero on Modal, so the first request may take a few seconds. The hosted demo persists to a single-tenant SQLite volume; the repo's Docker stack runs Postgres 18. Judges can also run everything locally in 2 minutes with `docker compose up` — see [Run it](#run-it).
+> **▶ Live demo (sample-account evaluation login, no API key needed): https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** — the full Express flow (Import → Intake → Build → Review → Term Change) plus the Insights advanced workspace, proxied to the backend API at https://prohle--schedulesolve-ai-api.us-east.modal.run (`/docs`, `/status`, `/engines`). Both are scale-to-zero on Modal, so the first request may take a few seconds. The hosted demo persists to a single-tenant SQLite volume; the repo's Docker stack runs Postgres 18. Judges can also run everything locally in 2 minutes with `docker compose up` — see [Run it](#run-it).
 >
-> **▶ Demo video (2:54, live Puppeteer screencast of the running app — not screenshots): https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4** — re-recorded Nov 1 **live against Muse Spark Open on Baseten** (`meta-models/muse-spark-open-1026`; every Muse beat asserts the live open-weights badge + model name on screen, never a fallback), narration **byte-identical to the final pitch** (12 beats): Sarah → registrar → any-format import autoclean → Patel plain-language intake **and** Patel's own per-professor documented constraints with evidence → **dual-engine compare Rank 1 / Rank 2 from outputs alone** → Chen term change with solver-verified zero-ripple coverage + agent trace → Diaz impossible override (conflict core, proven repairs) → student verified plan with projected graduation term → publish, faculty-only view → Baseten open-weights end card. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md).
+> **▶ Demo video (2:57, live Puppeteer screencast of the running app — not screenshots): https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4** — re-recorded Nov 2 **live against Muse Spark Open on Baseten** (`meta-models/muse-spark-open-1026`; every Muse beat asserts the live open-weights badge + model name on screen, never a fallback), narration **byte-identical to the final pitch** (12 beats): Sarah → registrar → any-format import autoclean → Patel plain-language intake **and** Patel's own per-professor documented constraints with evidence → **dual-engine compare Rank 1 / Rank 2 from outputs alone** → Chen term change with solver-verified zero-ripple coverage + agent trace → Diaz impossible override (conflict core, proven repairs) → student verified plan with projected graduation term → publish, faculty-only view → Baseten open-weights end card. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md).
 
 **Meta models at runtime:** Muse Spark `muse-spark-1.3-contributor` (ingest, constraint parse, explanation, tightener, student plan) · Muse Voice Transcribe `muse-voice-transcribe-1.0` (draft-only voice notes) · verified **Muse Spark Open** `meta-models/muse-spark-open-1026` path on Baseten (18/18 live calls) — full table and captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime). The LLM proposes; the solver proves.
 
-![Express · Build: visual timetable grid](docs/screenshot-build.png)
+![Guided build · Build: visual timetable grid](docs/screenshot-build.png)
 
-![Express · Term Change: before/after with CP-SAT-verified reassignment](docs/screenshot-term-change.png)
+![Guided build · Term change: before/after with CP-SAT-verified reassignment](docs/screenshot-term-change.png)
 
 ![Student · Suggest my schedule: record-based advising with a verified personal plan](docs/screenshot-student.png)
 
@@ -59,8 +59,8 @@ This project is entered in the **Indie Developer track** (solo entrant, team-siz
 |---|---|---|
 | **Impact (30%)** | A real, recurring, expensive problem at two scales at once: one student losing a year to one collision, and one coordinator losing a week per term (plus hours per mid-term disruption) to an NP-hard puzzle run on spreadsheets. The fix is quantified, not asserted: coordinator-week → a Muse parse (~8–25 s live) + a solve (~0.15–0.16 s at department scale) + seconds per verified disruption; a student's graduation risk → a named course and an exact term (`+N terms`, named culprit). It runs at the scale a real registrar schedules: 26-instructor department, 38-instructor university, and a 198-instructor / 361-section / 100-cohort / ~12,000-student stress instance with the four-course graduation guarantee at **100/100**. | Scale + timing table in [Proof at university scale](#proof-at-university-scale); reproduce with `backend/scripts/benchmark.py`; C39 audit at `GET /intelligence/margins`; student projection in `backend/tests/test_student_plan.py` (`test_projection_is_on_track_for_an_on_time_cohort`, `test_projection_names_the_course_that_delays_a_senior`) |
 | **Use of Meta AI tooling (25%)** | Meta models are the intelligence layer of the whole product, not a chatbot bolted on: **five structured Muse Spark roles** (ingest autoclean, constraint parse, conflict explanation, typed tightening, student-plan parse) plus **Muse Voice Transcribe** as a draft-only input — every one schema-validated, every one visibly badged with model + latency, every one degrading to a labelled deterministic fallback with no key. The same four structured roles are **verified live on open-weight Muse Spark Open served by Baseten (18/18 calls)**, and the client is endpoint-agnostic, so the open weights are a configuration swap, not a rewrite. The surprise the rubric asks for: the model was also used to *build a second solver* — an AI-authored native C++ engine that races CP-SAT — and is then never allowed to decide anything. **The LLM proposes; the solver proves.** | Role table + captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime); `backend/muse-verification.json`, `backend/muse-verification-student.json`, `backend/muse-verification-voice.json`, `backend/muse-verification-open.json` (12 parse + 3 explanation + 2 tighten + 1 ingestion = 18) |
-| **Technical depth & execution (20%)** | Two independent solver engines behind one contract cross-checking each other on identical inputs; CP-SAT assumption-literal **minimal conflict cores**; a native C++ search core (MRV, unit propagation, live + pairwise-conflict admissible bounds) that proves CP-SAT's optimum faster on every measured row of this problem class and is the only engine to complete the 361-section instance; spectral graph intelligence (Laplacian, Fiedler vector, Hoffman bound, exact max clique) feeding warm-start hints and a deadlock radar; a closed-grammar AI tightener whose every move is re-solved before it can be shown; Postgres-backed multi-user roles; **107 tests passing from the repo root (106 backend + 1 root smoke)**, CI on every push. Boundaries are published, not hidden. | [Two engines, one contract](#two-engines-one-contract-industrial-cp-sat-vs-an-ai-crafted-solver); `docs/solver_evidence.md`; `docs/constraint_catalog.md`; `docs/limitations.md`; `docs/truthfulness.md`; `backend/.venv/bin/python -m pytest -q` from the repo root → `107 passed` (106 from `backend/`) |
-| **Demo (25%)** | A working product, not a prototype of one: hosted live demo with one-tap demo logins (no account, no API key), a 2:54 live Puppeteer screencast of the running app, recorded live against Muse Spark Open on Baseten with narration byte-identical to the final pitch, and a two-minute local path (`docker compose up`). Every headline beat is clickable in order — any-format import with a 6/6 completeness check, one-sentence Patel intake applied to the term, dual-engine compare ranked Rank 1 / Rank 2 from outputs alone, university-scale publish, instructor change request re-proven and re-published, Chen term change with solver-verified zero-ripple coverage and a live agent trace, Diaz impossible override with conflict core and verified repairs, and a student's verified plan with its projected graduation term. | [For judges — verify any claim in under 5 minutes](#run-it); live demo and video links at the top of this README; `docs/demo_script.md` |
+| **Technical depth & execution (20%)** | Two independent solver engines behind one contract cross-checking each other on identical inputs; CP-SAT assumption-literal **minimal conflict cores**; a native C++ search core (MRV, unit propagation, live + pairwise-conflict admissible bounds) that proves CP-SAT's optimum faster on every measured row of this problem class and is the only engine to complete the 361-section instance; spectral graph intelligence (Laplacian, Fiedler vector, Hoffman bound, exact max clique) feeding warm-start hints and a deadlock radar; a closed-grammar AI tightener whose every move is re-solved before it can be shown; Postgres-backed multi-user roles; **108 tests passing from the repo root (107 backend + 1 root smoke)**, CI on every push. Boundaries are published, not hidden. | [Two engines, one contract](#two-engines-one-contract-industrial-cp-sat-vs-an-ai-crafted-solver); `docs/solver_evidence.md`; `docs/constraint_catalog.md`; `docs/limitations.md`; `docs/truthfulness.md`; `backend/.venv/bin/python -m pytest -q` from the repo root → `108 passed` (107 from `backend/`) |
+| **Demo (25%)** | A working product, not a prototype of one: hosted live demo with sample-account evaluation logins (no API key), a 2:57 live Puppeteer screencast of the running app, recorded live against Muse Spark Open on Baseten with narration byte-identical to the final pitch, and a two-minute local path (`docker compose up`). Every headline beat is clickable in order — any-format import with a 6/6 completeness check, one-sentence Patel intake applied to the term, dual-engine compare ranked Rank 1 / Rank 2 from outputs alone, university-scale publish, instructor change request re-proven and re-published, Chen term change with solver-verified zero-ripple coverage and a live agent trace, Diaz impossible override with conflict core and verified repairs, and a student's verified plan with its projected graduation term. | [For judges — verify any claim in under 5 minutes](#run-it); live demo and video links at the top of this README; `docs/demo_script.md` |
 
 **Bonus prizes — claimed only where the evidence exists:**
 
@@ -206,7 +206,7 @@ The demo story above is one department slice (6 instructors, 8 sections) so ever
 - **ScheduleSolve native solver** (`ours`, `backend/native/schedulesolve_solver.cpp` + `backend/app/solver/native_solver.py`): an AI-authored C++17 search core built for this problem — MRV over live domains, unit propagation, branch-and-bound with a live admissible bound plus a *pairwise-conflict bound* (contending sections whose cheapest options clash force a deviation cost), single/ejection hill-climbing, and deletion-minimization conflict cores with itself as oracle. Domains and penalties come from the identical preparation code CP-SAT uses, so the engines differ only in search. A Python reference implementation of the same algorithm (`backend/app/solver/home_solver.py`) is the readable specification and the fallback when the binary is unbuilt. No OR-Tools anywhere in either path.
 - **Greedy descent** (`greedy`): the first descent only — plug-and-play proof that a new engine is one registry entry (`backend/app/solver/engine.py`); it shows exactly what the optimization phases buy.
 
-**Head-to-head (measured, `scripts/benchmark.py`):** ours *proves the same optimum as CP-SAT at every demo scale, faster on every row* (university: optimal −40 in 39 ms vs 147 ms), and at full-university stress scale (361 sections) it alone proves the optimum (5,832 ms) while CP-SAT exceeds its budget (`unknown`). The pure-Python reference reaches the same penalty but cannot prove optimality inside its 30 s budget at scale — that measured gap is exactly why the search core is native C++, and why the claim is scoped to this problem class (CP-SAT remains the better general solver; full analysis in [docs/solver_evidence.md](./docs/solver_evidence.md)). **Compare engines** (Build step, or `POST /solve/compare`) diffs status, runtime, penalty delta, placement-agreement %, and both grids with differing sections ringed; the compare ranks engines from outputs only. Tests verify ours independently — hard constraints checked from placements alone, proven objective parity at all scales, the identical conflict core `[0,1,2]` on the Diaz overload, determinism (`backend/tests/test_native_solver.py`, `backend/tests/test_home_solver.py`).
+**Head-to-head (measured, `scripts/benchmark.py`):** ours *proves the same optimum as CP-SAT at every demo scale, faster on every row* (university: optimal −40 in 39 ms vs 147 ms), and at full-university stress scale (361 sections) it alone proves the optimum (5,832 ms) while CP-SAT exceeds its budget (`unknown`). The pure-Python reference reaches the same penalty but cannot prove optimality inside its 30 s budget at scale — that measured gap is exactly why the search core is native C++, and why the claim is scoped to this problem class (CP-SAT remains the better general solver; full analysis in [docs/solver_evidence.md](./docs/solver_evidence.md)). **Head-to-head** (Build step, or `POST /solve/compare`) diffs status, runtime, penalty delta, placement-agreement %, and both grids with differing sections ringed; the compare ranks engines from outputs only. Tests verify ours independently — hard constraints checked from placements alone, proven objective parity at all scales, the identical conflict core `[0,1,2]` on the Diaz overload, determinism (`backend/tests/test_native_solver.py`, `backend/tests/test_home_solver.py`).
 
 At department scale every cohort still gets its four-course guarantee, every course has ≥2 qualified instructors, and the Chen term change still re-homes exactly CS 301 + CS 310 with zero ripple. Locked in by `backend/tests/test_department.py`. Reproduce: `cd backend && .venv/bin/python scripts/benchmark.py`.
 
@@ -236,20 +236,20 @@ Two pitch-adjacent claims are deliberately **not** made, because the repo cannot
 
 | Claim | Proof in the repo | Reproduce |
 |---|---|---|
-| Any-format ingest autocleans into one institution model | `backend/app/ingestion/` (extract → Muse structured output → deterministic normalizer) | Live demo → Express → Import; or `POST /ingest` |
+| Any-format ingest autocleans into one institution model | `backend/app/ingestion/` (extract → Muse structured output → deterministic normalizer) | Live demo → Guided build → Import; or `POST /ingest` |
 | Missing required inputs are named before a solve | `check_completeness` over the six `REQUIRED_DATA` inputs (`backend/app/ingestion/check.py:14`) | Import a partial file set; the 6/6 check names the gaps |
 | Contradictory data is source-attributed and electable; nothing resolves silently | `detect_conflicts` / `resolve_conflicts`; `backend/tests/test_ingestion_conflicts.py`, `test_conflict_election.py` | Import disagreeing degree maps; choose the winner in the wizard |
 | One plain-language sentence becomes solver-proven term state | Muse parse → `validate_operations` → solve → `apply_operations` (only proven ops commit) | Intake: "Prof. Patel can't teach Mondays" |
 | Two engines prove the same optimum; ours is faster on this problem class, and alone completes 361 sections | Benchmark table above; parity + independent hard-constraint checks in `backend/tests/test_native_solver.py` | `bash backend/scripts/build_native.sh && cd backend && .venv/bin/python scripts/benchmark.py` |
-| Rankings come from outputs alone | `rank_results`: proven status → penalty → speed (`backend/app/solver/engine.py`) | Build → Compare engines (Rank 1 / Rank 2) |
+| Rankings come from outputs alone | `rank_results`: proven status → penalty → speed (`backend/app/solver/engine.py`) | Build → Head-to-head (Rank 1 / Rank 2) |
 | Mid-term coverage suggests only solver-proven names, zero ripple | Per-candidate CP-SAT probes with unaffected placements pinned (`propose_candidates`) | Term Change: "Prof. Chen will no longer teach this term" |
 | Impossible requests yield a minimal core + proven, electable repairs | Assumption literals / deletion-minimized cores; every resolution re-solved before shown (`backend/app/services/copilot.py`) | "Diaz is taking over CS 101, MATH 201 and CS 201 personally." |
-| Every cohort's ≥4-course graduation guarantee is audited | C39 audit (`GET /intelligence/margins`); 12/12, 20/20, 100/100 at scale | `backend/scripts/benchmark.py`; Full → Radar |
-| Faculty elect hard/soft constraints individually before a deadline | Intake window + per-professor grid; deadline refusal tested (`backend/app/services/term.py`, `backend/tests/test_intake.py`) | Sign in as an instructor → Schedule → availability grid |
+| Every cohort's ≥4-course graduation guarantee is audited | C39 audit (`GET /intelligence/margins`); 12/12, 20/20, 100/100 at scale | `backend/scripts/benchmark.py`; Insights → Conflict health |
+| Faculty elect hard/soft constraints individually before a deadline | Intake window + per-professor grid; deadline refusal tested (`backend/app/services/term.py`, `backend/tests/test_intake.py`) | Sign in as an instructor → Timetable → availability grid |
 | A student's plan is verified, with a projected graduation term and named missing/conflicting inputs | Exact selector + independent re-verification + `project_graduation` (`backend/app/services/student_plan.py:74`); `backend/tests/test_student_plan.py` | Sign in as `cs2025@northgate.edu` → Suggest my schedule |
 | Muse Spark Open (Baseten) runs the same structured roles | 18/18 live capture, real outputs + latencies (`backend/muse-verification-open.json`) | Set `MUSE_BASE_URL` / `MUSE_MODEL` per [Meta AI tooling](#meta-ai-tooling-at-runtime); no code change |
 | Voice never changes the term by itself | `POST /term-change/audio` returns a reviewable draft only (`backend/muse-verification-voice.json`) | Term Change → dictate a note; a signed-in human submits it as text |
-| The test suite backs the behaviour, not just the prose | 107 tests from the repo root (106 backend + 1 smoke): solver parity, conflict election, student projection, intake deadline, department/full scales | `backend/.venv/bin/python -m pytest -q` from the repo root → `107 passed` |
+| The test suite backs the behaviour, not just the prose | 108 tests from the repo root (107 backend + 1 smoke): solver parity, conflict election, student projection, intake deadline, department/full scales | `backend/.venv/bin/python -m pytest -q` from the repo root → `108 passed` |
 
 ## What we built vs. what we rent
 
@@ -263,7 +263,7 @@ Honest accounting — the rented parts are named, not hidden:
 | Self-healing loop: minimal core → explanation → **every resolution re-solved before it can be shown** → least-disruptive auto-apply (`services/copilot.py`) | Modal hosting, Baseten inference for the open-weights path |
 | Term Change probe-and-rank over every qualified instructor; C39 four-course audit; typed tightener with closed move grammar | |
 | Any-format ingestion (PDF/DOCX/XLSX/CSV/JSON/TXT/MD/ZIP → typed scenario) + deterministic completeness check | |
-| Multi-user product: role-filtered schedules, verified change requests, Express/Full UI, audit ledger | |
+| Multi-user product: role-filtered schedules, verified change requests, Guided build/Insights UI, audit ledger | |
 
 Boundaries we don't cross are listed just as plainly: [docs/limitations.md](./docs/limitations.md). A claim-by-claim audit of what is real, synthetic or illustrative is in [docs/truthfulness.md](./docs/truthfulness.md).
 
@@ -318,7 +318,7 @@ docker compose up --build   # live Muse Spark
 
 **Audit trail** — every submission and change event, newest first, with the live `muse-spark` badge.
 
-![Full · Audit trail](docs/screenshot-audit.png)
+![Insights · Audit trail](docs/screenshot-audit.png)
 
 ## Stack
 
@@ -332,12 +332,12 @@ docker compose up --build   # live Muse Spark
 
 ## Run it
 
-**Judges — try it in 2 minutes, no account, no API key:**
+**Judges — try it in 2 minutes, sample-account evaluation login, no API key:**
 
 ```bash
 git clone https://github.com/prohle/schedulesolve-ai && cd schedulesolve-ai
 docker compose up --build
-# open http://localhost:3000 — landing → Sign In (one-tap demo) → Import → Intake → Build → Review → Term Change
+# open http://localhost:3000 — landing → Sign In (sample-account evaluation) → Import → Intake → Build → Review → Term Change
 ```
 
 Without a key the model roles degrade to a deterministic parser, so every beat (parse → solve → self-heal → term-change reassignment → department scale) is clickable offline at zero cost. Add `MODEL_API_KEY` (see below) and the same clicks run live Muse Spark with on-screen model + latency badges. Submission details, track, and bonus-prize flags: [docs/submission.md](./docs/submission.md).
@@ -352,15 +352,15 @@ Without a key the model roles degrade to a deterministic parser, so every beat (
 
 **Hosted demo (live now):** UI at **https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** and backend at https://prohle--schedulesolve-ai-api.us-east.modal.run (`/status`, `/docs`, `/engines`; both scale-to-zero on Modal, warm them with one request). Deploy your own from [docs/deploy_modal.md](./docs/deploy_modal.md). The local one-command path is below.
 
-**For judges — verify any claim in under 5 minutes (live demo, one-tap Coordinator login):**
-1. **Any-format autoclean** — Express → Import: the six sample files are preloaded as pasted text; or drop any registrar file and watch the 6/6 completeness check.
+**For judges — verify any claim in under 5 minutes (live demo, sample-account Coordinator login):**
+1. **Any-format autoclean** — Guided build → Import: the six sample files are preloaded as pasted text; or drop any registrar file and watch the 6/6 completeness check.
 2. **One sentence, proven ripple** — Intake: "Prof. Patel can't teach Mondays" → typed ops, agent trace, applied to the term.
-3. **Two engines, ranked from outputs** — Build → Solve → **Compare engines**: Rank 1 / Rank 2 from status → penalty → speed alone.
+3. **Two engines, ranked from outputs** — Build → Solve → **Head-to-head**: Rank 1 / Rank 2 from status → penalty → speed alone.
 4. **Scale** — Build → **University**: 38 instructors, 41 sections, 20 cohorts solved as one institution; KPI strip shows the proof time.
-5. **Term Change** — Term Change → Apply Term Change: ranked zero-ripple reassignment, only CS 301 + CS 310 move in the After grid.
-6. **The advanced workspace** — Full → Radar (spectral health), Planning (20% growth what-if, re-solved first), Audit (every step above, with `muse-spark` provenance).
-7. **A student's plan, proven** — sign in as `cs2025@northgate.edu` → Schedule → *Suggest my schedule*: pick your degree, paste a study record (or let it look up your cohort's progress), then "I work Tuesdays and Thursdays. I need CS 201 this term." → a personal plan audited against your record (mandatory done/ready/locked), re-verified before it is shown, with a **projected graduation term** — on track, or the course that pushes it out (add "no 8:00 classes" and it will honestly refuse CS 201's only section instead of slipping the degree).
-Nothing here needs an API key or an account beyond the one-tap demo logins.
+5. **Term Change** — Term change → Rank coverage options → Apply elected coverage: ranked zero-ripple reassignment, only CS 301 + CS 310 move in the After grid.
+6. **The advanced workspace** — Insights → Conflict health (spectral health), Plan (20% growth what-if, re-solved first), Audit (every step above, with `muse-spark` provenance).
+7. **A student's plan, proven** — sign in as `cs2025@northgate.edu` → Timetable → *Suggest my schedule*: pick your degree, paste a study record (or let it look up your cohort's progress), then "I work Tuesdays and Thursdays. I need CS 201 this term." → a personal plan audited against your record (mandatory done/ready/locked), re-verified before it is shown, with a **projected graduation term** — on track, or the course that pushes it out (add "no 8:00 classes" and it will honestly refuse CS 201's only section instead of slipping the degree).
+Nothing here needs an API key or an account beyond the sample-account evaluation logins.
 
 **Full stack (one command):**
 
@@ -396,7 +396,7 @@ Set `MODEL_API_KEY` (from the [Meta Model API dashboard](https://dev.meta.ai)) t
 ```bash
 cd backend
 .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-.venv/bin/python -m pytest -q   # 106 backend tests; 107 from the repo root (adds the root smoke test)
+.venv/bin/python -m pytest -q   # 107 backend tests; 108 from the repo root (adds the root smoke test)
 ```
 
 The suite covers solve determinism, hard-constraint satisfaction, the
@@ -417,8 +417,20 @@ the commit history is the build log. The main pieces:
 | Ingestion | Free-form institutional data → Muse extraction → deterministic normalizer → Scenario | `backend/app/ingestion/` |
 | Scale | Department-cluster scenario (26 instructors / 25 sections / 12 cohorts) generated deterministically from the seed, one-click load, measured benchmark | `backend/app/data/department.py`, `backend/scripts/benchmark.py` |
 | Agent trace | Every co-pilot/term-change response carries the step-by-step loop (actor per step); Express renders it live | `agent_trace` in `backend/app/services/copilot.py`, `term_change.py` |
-| UI | Express guided flow, visual timetable grid + before/after diff, Full advanced view, audit trail | `frontend/src/` |
+| UI | Guided build (Express) flow, real URL/deep-link routing with role-scoped workspaces, coordinator role preview, first-run checklist, structured degree-map editor, mobile task cards, skip link/focus-trapped sheets, visual timetable grid + before/after diff, Insights advanced view, audit trail | `frontend/src/` |
 | Ops | Docker Compose (Postgres + API + UI), one-command local runner, provenance ledger | `docker-compose.yml`, `start.sh`, `backend/app/db.py` |
+
+**Nov 2 product hardening (also built in the hackathon window):** every workspace
+now has a stable URL (`/dashboard/express`, `/dashboard/people`,
+`/dashboard/insights`, `/dashboard/solver`, …) with refresh, back/forward and
+role-aware deep-link fallbacks; login preserves the intended destination; the
+type scale is raised to a 12px control floor; primary labels lead with outcomes
+while solver vocabulary moves to tooltips; degree maps are edited with
+structured term/course controls instead of raw JSON; admin tables become task
+cards on phones; the More sheet traps focus, closes on Escape and returns focus;
+toasts announce through an ARIA live region; coordinators can preview the
+instructor and student experience without signing out; and sample credentials
+sit behind an explicit evaluation affordance rather than the default login.
 
 ## Status
 

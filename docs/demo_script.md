@@ -32,8 +32,9 @@ for the video. Total narration at the TTS pace used (`--speed 1.08`) is
    graduation by a year.
 2. **The registrar's chair** — landing scale story: the operational
    heartbeat of a whole university.
-3. **Spreadsheets collapse** — one-tap coordinator login → Express →
-   Import, six institutional files selected (PDF/DOCX/CSV/TXT/XLSX/MD).
+3. **Spreadsheets collapse** — sample-account coordinator login → Guided
+   build (Express) → Import, six institutional files selected
+   (PDF/DOCX/CSV/TXT/XLSX/MD).
 4. **Phase One** — Process: Muse Spark autocleans the files into one
    typed institution model; completeness and missing inputs named on
    screen (live Baseten badge asserted).
@@ -46,9 +47,9 @@ for the video. Total narration at the TTS pace used (`--speed 1.08`) is
    only with evidence — without it they are downgraded to the strongest
    soft preference (avoid, weight 10), never dropped; soft wishes
    (3-hour block pattern, course preference) are documented as soft.
-6. **Phase Three** — Build: Department scale → Compare engines,
+6. **Phase Three** — Build: Department scale → Head-to-head,
    ScheduleSolve solver vs CP-SAT ranked Rank 1 / Rank 2 from outputs
-   alone (recorder asserts "ScheduleSolve solver (ours) ranks first"),
+   alone (recorder asserts "C-Solve ranks first"),
    then University scale (38 faculty · 41 sections asserted).
 7. **Phase Four** — Term Change: "Prof. Chen will no longer teach this
    term" → solver probes every qualified instructor → zero-ripple

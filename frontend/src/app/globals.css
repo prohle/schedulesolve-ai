@@ -114,9 +114,76 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  /* Anchor targets clear the sticky header when scrolled to. */
+  [id] {
+    scroll-margin-top: 4.5rem;
+  }
 }
 
 @layer utilities {
+  /* Keyboard-only skip link. */
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 100;
+    transform: translateY(-200%);
+    border-radius: 0.75rem;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+    transition: transform 0.15s ease;
+  }
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    transform: translateY(0);
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+  /* Shared surface language: one card, chip and button scale everywhere. */
+  .surface-card {
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.25;
+    border: 1px solid var(--border);
+    background: var(--muted);
+    color: var(--secondary-foreground);
+  }
+  .chip-success {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+  }
+  .chip-warning {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+  }
+  .chip-danger {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+  .chip-accent {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
   /* One scrollbar style, everywhere (was referenced but never defined). */
   .custom-scrollbar,
   .scrollbar-thin {

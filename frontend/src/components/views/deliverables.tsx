@@ -96,7 +96,7 @@ function Panel({
             {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
             <div className="min-w-0">
               {title && <h3 className="truncate text-xs font-bold tracking-tight text-slate-800">{title}</h3>}
-              {hint && <p className="mt-0.5 text-[10.5px] leading-snug text-slate-500">{hint}</p>}
+              {hint && <p className="mt-0.5 text-xs leading-snug text-slate-500">{hint}</p>}
             </div>
           </div>
           {action}
@@ -539,12 +539,12 @@ export function DeliverablesView({
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-blue-600">
               Role deliverables
             </span>
             <span
               className={cn(
-                "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                "rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wider",
                 source === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
               )}
               title={
@@ -555,7 +555,7 @@ export function DeliverablesView({
             >
               {source === "published" ? "Published term" : "Live solve"}
             </span>
-            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {status || "solved"}
             </span>
           </div>
@@ -576,7 +576,7 @@ export function DeliverablesView({
                   key={tab}
                   onClick={() => setRole(tab)}
                   className={cn(
-                    "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold transition-all",
+                    "min-h-8 rounded-lg px-2.5 text-xs font-semibold transition-all",
                     role === tab ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -585,7 +585,7 @@ export function DeliverablesView({
               ))}
             </div>
           ) : (
-            <span className="inline-flex min-h-9 items-center rounded-xl bg-blue-50 px-3 text-[11px] font-bold text-blue-700 ring-1 ring-blue-200/70">
+            <span className="inline-flex min-h-9 items-center rounded-xl bg-blue-50 px-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200/70">
               {ROLE_LABEL[role]}
             </span>
           )}
@@ -600,7 +600,7 @@ export function DeliverablesView({
                 key={id}
                 onClick={() => setViewMode(id)}
                 className={cn(
-                  "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold transition-all",
+                  "min-h-8 rounded-lg px-2.5 text-xs font-semibold transition-all",
                   viewMode === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -631,7 +631,7 @@ export function DeliverablesView({
               onClick={() => setInspector(card.key)}
               className="rounded-lg border border-slate-200/80 bg-slate-50 p-2 text-left transition-all hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
             >
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{card.label}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{card.label}</div>
               <div className={cn("mt-0.5 truncate text-xs font-bold", card.tone)}>{card.value}</div>
             </button>
           ))}
@@ -642,11 +642,11 @@ export function DeliverablesView({
         <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+              <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-blue-600">
                 Live Deliverable
               </span>
               <h3 className="mt-1 text-lg font-bold text-slate-900">Campus Timetable Matrix &amp; Heatmap</h3>
-              <p className="text-[11px] font-medium text-slate-500">
+              <p className="text-xs font-medium text-slate-500">
                 Every cell is read from the placed term: room, day and period.
               </p>
             </div>
@@ -703,7 +703,7 @@ export function DeliverablesView({
             action={
               <button
                 onClick={exportCsv}
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[11px] font-bold hover:bg-accent"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-xs font-bold hover:bg-accent"
               >
                 <Download className="h-3.5 w-3.5 text-primary" /> Export CSV
               </button>
@@ -734,14 +734,14 @@ export function DeliverablesView({
                 },
               ].map((facet) => (
                 <div key={facet.key}>
-                  <label htmlFor={`extract-${facet.key}`} className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <label htmlFor={`extract-${facet.key}`} className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {facet.label}
                   </label>
                   <select
                     id={`extract-${facet.key}`}
                     value={filters[facet.key]}
                     onChange={(e) => setFilters((f) => ({ ...f, [facet.key]: e.target.value }))}
-                    className="min-h-8 w-full rounded-lg border border-border bg-background px-2 text-[11px] font-medium"
+                    className="min-h-8 w-full rounded-lg border border-border bg-background px-2 text-xs font-medium"
                   >
                     <option value="ALL">All</option>
                     {facet.options.map(([value, label]) => (
@@ -756,7 +756,7 @@ export function DeliverablesView({
 
             <div className="max-h-72 overflow-auto rounded-xl border border-border">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-muted/90 text-[10px] font-bold uppercase tracking-wider text-muted-foreground backdrop-blur">
+                <thead className="sticky top-0 z-10 bg-muted/90 text-xs font-bold uppercase tracking-wider text-muted-foreground backdrop-blur">
                   <tr>
                     <th className="p-2.5">Course &amp; dept</th>
                     <th className="p-2.5">Faculty</th>
@@ -771,34 +771,34 @@ export function DeliverablesView({
                     <tr key={row.sectionId} className="hover:bg-accent/40">
                       <td className="p-2.5">
                         <span className="font-bold">{row.code}</span> {row.title}
-                        <span className="ml-1.5 rounded border border-primary/20 bg-primary/10 px-1 py-0.5 font-mono text-[9px] font-bold text-primary">
+                        <span className="ml-1.5 rounded border border-primary/20 bg-primary/10 px-1 py-0.5 font-mono text-[10px] font-bold text-primary">
                           {row.dept}
                         </span>
                       </td>
                       <td className="p-2.5">
                         {row.instructorName}
-                        <span className="ml-1 text-[10px] text-muted-foreground">
+                        <span className="ml-1 text-xs text-muted-foreground">
                           ({utilization?.faculty.find((f) => f.instructor_id === row.instructorId)?.load ?? 0}/
                           {utilization?.faculty.find((f) => f.instructor_id === row.instructorId)?.max_sections ?? "—"})
                         </span>
                       </td>
                       <td className="p-2.5">
                         {row.roomName}
-                        <span className="block text-[10px] text-muted-foreground">{row.buildingName}</span>
+                        <span className="block text-xs text-muted-foreground">{row.buildingName}</span>
                       </td>
-                      <td className="p-2.5 font-mono text-[11px]">
+                      <td className="p-2.5 font-mono text-xs">
                         {row.dayShort} {row.start}–{row.end}
-                        <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[9px]">{row.window}</span>
+                        <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px]">{row.window}</span>
                       </td>
                       <td className="p-2.5">
                         {row.equipmentOk ? (
-                          <span className="text-[10px] font-semibold text-emerald-600">ready</span>
+                          <span className="text-xs font-semibold text-emerald-600">ready</span>
                         ) : (
-                          <span className="text-[10px] font-semibold text-amber-600">missing {row.missingEquipment.join(", ")}</span>
+                          <span className="text-xs font-semibold text-amber-600">missing {row.missingEquipment.join(", ")}</span>
                         )}
                       </td>
                       <td className="p-2.5 text-right">
-                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
                           SOLVER-PROVEN
                         </span>
                       </td>
@@ -806,7 +806,7 @@ export function DeliverablesView({
                   ))}
                   {filteredRows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-[11px] text-muted-foreground">
+                      <td colSpan={6} className="p-4 text-center text-xs text-muted-foreground">
                         No sections match these filters.
                       </td>
                     </tr>
@@ -815,7 +815,7 @@ export function DeliverablesView({
               </table>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
                 {filteredRows.length} of {rows.length} sections · {proof.peakUtilization}% peak facility utilization
               </span>
@@ -839,7 +839,7 @@ export function DeliverablesView({
               </div>
               <div>
                 <h3 className="text-sm font-bold">{activeInstructor.name}</h3>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {instructorMetric.sections} section(s) · {activeInstructor.max_sections} cap ·{" "}
                   {instructorMetric.satisfied}/{instructorMetric.total} stated preference(s) honoured
                 </p>
@@ -865,12 +865,12 @@ export function DeliverablesView({
             icon={<Wrench className="h-4 w-4 text-purple-600" />}
             className="border-purple-200 bg-purple-50/70"
             action={
-              <span className="rounded-md bg-purple-100 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-800">
+              <span className="rounded-md bg-purple-100 px-2 py-0.5 font-mono text-xs font-bold text-purple-800">
                 {pct(instructorMetric.overall)} match
               </span>
             }
           >
-            <div className="grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
               <div className="rounded-lg border border-border bg-muted/40 p-2.5">
                 <div className="mb-1 font-bold text-foreground">Teaching</div>
                 <ul className="space-y-1 text-muted-foreground">
@@ -927,7 +927,7 @@ export function DeliverablesView({
               </div>
             </div>
             {instructorMetric.violations.length > 0 && (
-              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                 {instructorMetric.violations.map((v) => (
                   <div key={v}>• {v}</div>
                 ))}
@@ -962,7 +962,7 @@ export function DeliverablesView({
             action={
               <button
                 onClick={exportCsv}
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[11px] font-bold hover:bg-accent"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-xs font-bold hover:bg-accent"
               >
                 <Download className="h-3.5 w-3.5 text-primary" /> Export
               </button>
@@ -974,16 +974,16 @@ export function DeliverablesView({
                   <div className="font-bold text-primary">
                     {row.code} — {row.title}
                   </div>
-                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  <div className="mt-1 font-mono text-xs text-muted-foreground">
                     {row.dayShort} {row.start}–{row.end} • {row.roomName} ({row.buildingName})
                   </div>
-                  <div className={cn("mt-1 text-[10px] font-bold", row.equipmentOk ? "text-emerald-600" : "text-amber-600")}>
+                  <div className={cn("mt-1 text-xs font-bold", row.equipmentOk ? "text-emerald-600" : "text-amber-600")}>
                     {row.equipmentOk ? "✓ Room equipment ready" : `⚠ Missing ${row.missingEquipment.join(", ")}`}
                   </div>
                 </div>
               ))}
               {instructorRows.length === 0 && (
-                <p className="text-[11px] text-muted-foreground">No sections assigned this term.</p>
+                <p className="text-xs text-muted-foreground">No sections assigned this term.</p>
               )}
             </div>
           </Panel>
@@ -1000,7 +1000,7 @@ export function DeliverablesView({
               </div>
               <div>
                 <h3 className="text-sm font-bold">{plan.cohort.name}</h3>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Term {plan.cohort.current_term} · {plan.requiredCount} required · {plan.electiveCount} elective ·{" "}
                   {plan.guaranteeOk ? "guarantee met" : "guarantee shortfall"}
                 </p>
@@ -1047,7 +1047,7 @@ export function DeliverablesView({
             action={
               <button
                 onClick={exportCsv}
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-[11px] font-bold hover:bg-accent"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-border px-2.5 text-xs font-bold hover:bg-accent"
               >
                 <Download className="h-3.5 w-3.5 text-primary" /> Export
               </button>
@@ -1068,7 +1068,7 @@ export function DeliverablesView({
                   <div className="flex shrink-0 items-center gap-1.5">
                     <span
                       className={cn(
-                        "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
+                        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
                         course.required ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
                       )}
                     >
@@ -1076,7 +1076,7 @@ export function DeliverablesView({
                     </span>
                     <span
                       className={cn(
-                        "rounded px-2 py-0.5 text-[10px] font-bold",
+                        "rounded px-2 py-0.5 text-xs font-bold",
                         course.conflictFree ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"
                       )}
                     >
@@ -1086,10 +1086,10 @@ export function DeliverablesView({
                 </div>
               ))}
               {plan.courses.length === 0 && (
-                <p className="text-[11px] text-muted-foreground">No roadmap courses for this cohort&apos;s current term.</p>
+                <p className="text-xs text-muted-foreground">No roadmap courses for this cohort&apos;s current term.</p>
               )}
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               Guarantee margin: {plan.guaranteeMargin} distinct non-overlapping courses (minimum {plan.minCourses}).
             </p>
           </Panel>

@@ -49,7 +49,7 @@ function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: 
     <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
       <div className="truncate text-xl font-extrabold text-foreground sm:text-2xl">{value}</div>
       <div className="mt-0.5 flex items-center gap-1">
-        <span className="truncate text-[11px] text-muted-foreground">{label}</span>
+        <span className="truncate text-xs text-muted-foreground">{label}</span>
         {hint && <InfoTip text={hint} />}
       </div>
     </div>
@@ -162,11 +162,11 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
           <Wrench className="w-8 h-8 text-amber-600" />
         </div>
         <div>
-          <h2 className="font-extrabold text-lg text-foreground">Backend not reachable</h2>
+          <h2 className="font-extrabold text-lg text-foreground">We couldn’t load this workspace</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">{error}</p>
         </div>
         <Button variant="outline" size="md" onClick={reload} className="flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" /> Retry
+          <RefreshCw className="w-4 h-4" /> Try again
         </Button>
       </div>
     );
@@ -175,19 +175,19 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading intelligence layer…
+        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading insights…
       </div>
     );
   }
 
   const tabs = [
-    { id: "radar" as const, label: "Radar", icon: <Radar className="w-3.5 h-3.5" /> },
-    { id: "margins" as const, label: "4-Course", icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+    { id: "radar" as const, label: "Conflict health", icon: <Radar className="w-3.5 h-3.5" /> },
+    { id: "margins" as const, label: "Coverage", icon: <ShieldCheck className="w-3.5 h-3.5" /> },
     { id: "utilization" as const, label: "Utilization", icon: <Gauge className="w-3.5 h-3.5" /> },
     { id: "matrices" as const, label: "Matrices", icon: <Database className="w-3.5 h-3.5" /> },
-    { id: "solve" as const, label: "Solve", icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { id: "tighten" as const, label: "Tighten", icon: <Wrench className="w-3.5 h-3.5" /> },
-    { id: "planning" as const, label: "What-if", icon: <Building2 className="w-3.5 h-3.5" /> },
+    { id: "solve" as const, label: "Build", icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { id: "tighten" as const, label: "Improve", icon: <Wrench className="w-3.5 h-3.5" /> },
+    { id: "planning" as const, label: "Plan", icon: <Building2 className="w-3.5 h-3.5" /> },
     { id: "audit" as const, label: "Audit", icon: <ScrollText className="w-3.5 h-3.5" /> },
   ];
 
@@ -208,11 +208,11 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-3 sm:px-4">
         <div className="flex items-center gap-2">
           <span className="rounded-xl bg-primary/10 p-2 text-primary"><Network className="h-4 w-4" /></span>
-          <h2 className="font-extrabold text-foreground">Full</h2>
-          <InfoTip text="Advanced workspace: spectral radar, 4-course audit, utilization, solver, and AI-proposed fixes the solver verifies first." />
+          <h2 className="font-extrabold text-foreground">Insights</h2>
+          <InfoTip text="Outcome first: coverage, fairness and risk. The advanced solver evidence — spectral radar, four-course audit, utilization and verified fixes — sits one layer down." />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="primary" size="sm" onClick={() => { runSolve(); onToast("Running CP-SAT solve…", "info"); }} disabled={busy !== null} className="flex items-center gap-1.5">
+          <Button variant="primary" size="sm" onClick={() => { runSolve(); onToast("Building a proven timetable…", "info"); }} disabled={busy !== null} className="flex items-center gap-1.5">
             {busy === "solve" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             Solve
           </Button>
@@ -247,19 +247,19 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
         {tab === "radar" && spectral && (
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="grid grid-cols-2 gap-3 lg:col-span-3">
-              <Stat label="Algebraic connectivity μ₂" value={spectral.algebraic_connectivity.toFixed(3)} hint={spectral.algebraic_connectivity === 0 ? "disconnected → independent islands" : "tightly-coupled core"} />
-              <Stat label="Hoffman chromatic lower bound" value={`χ ≥ ${spectral.hoffman_chromatic_lower_bound}`} hint="fewer colors needed than periods → feasible" />
-              <Stat label="Max clique" value={spectral.max_clique.length} hint="sections that all pairwise conflict" />
-              <Stat label="Largest Laplacian eigenvalue" value={spectral.largest_laplacian_eigenvalue.toFixed(2)} hint="rigidity of the conflict graph" />
+              <Stat label="Coupled sections" value={spectral.algebraic_connectivity.toFixed(3)} hint={spectral.algebraic_connectivity === 0 ? "disconnected → independent islands" : "tightly-coupled core (algebraic connectivity μ₂)"} />
+              <Stat label="Time bands needed" value={`χ ≥ ${spectral.hoffman_chromatic_lower_bound}`} hint="Hoffman chromatic lower bound — fewer bands needed than periods means feasible" />
+              <Stat label="Largest conflict group" value={spectral.max_clique.length} hint="max clique — sections that all pairwise conflict" />
+              <Stat label="Rigidity" value={spectral.largest_laplacian_eigenvalue.toFixed(2)} hint="largest Laplacian eigenvalue — rigidity of the conflict graph" />
             </div>
 
             <Card title="Scheduling islands" hint="Groups of sections linked by shared cohorts — islands solve independently." icon={<GitFork className="w-4 h-4 text-primary" />} className="lg:col-span-2">
               {spectral.components.map((comp, i) => (
                 <div key={i} className="mb-2 last:mb-0">
-                  <div className="text-[11px] text-muted-foreground mb-1">Island {i + 1} · {comp.length} section{comp.length > 1 ? "s" : ""}</div>
+                  <div className="text-xs text-muted-foreground mb-1">Island {i + 1} · {comp.length} section{comp.length > 1 ? "s" : ""}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {comp.map((s) => (
-                      <span key={s} className="px-2 py-0.5 bg-muted rounded text-[11px] font-mono text-foreground">{s.replace("sec-", "")}</span>
+                      <span key={s} className="px-2 py-0.5 bg-muted rounded text-xs font-mono text-foreground">{s.replace("sec-", "")}</span>
                     ))}
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
             <Card title="Solve order" hint="Spectral ordering: most-constrained sections placed first." icon={<Activity className="w-4 h-4 text-sky-600" />} className="lg:col-span-3">
               <div className="flex flex-wrap gap-1.5">
                 {spectral.spectral_order.map((s, i) => (
-                  <span key={s} className="px-2 py-0.5 bg-sky-50 border border-sky-200 rounded text-[11px] font-mono text-sky-900">
+                  <span key={s} className="px-2 py-0.5 bg-sky-50 border border-sky-200 rounded text-xs font-mono text-sky-900">
                     {i + 1}. {s.replace("sec-", "")}
                   </span>
                 ))}
@@ -319,19 +319,19 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="font-bold text-foreground">{m.name}</span>
-                      <span className="text-[11px] text-muted-foreground ml-2">{m.size} students · {m.terms_remaining} terms to graduation</span>
+                      <span className="text-xs text-muted-foreground ml-2">{m.size} students · {m.terms_remaining} terms to graduation</span>
                     </div>
-                    <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded", m.ok ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
+                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded", m.ok ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
                       {m.margin} / {margins.min_courses} courses
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {m.example_track.map((c) => (
-                      <span key={c} className="px-2 py-0.5 bg-white border border-border rounded text-[11px] font-mono text-foreground">{c}</span>
+                      <span key={c} className="px-2 py-0.5 bg-white border border-border rounded text-xs font-mono text-foreground">{c}</span>
                     ))}
-                    {m.example_track.length === 0 && <span className="text-[11px] text-muted-foreground">no placed courses</span>}
+                    {m.example_track.length === 0 && <span className="text-xs text-muted-foreground">no placed courses</span>}
                   </div>
-                  <p className={cn("text-[11px]", m.ok ? "text-emerald-700" : "text-amber-700")}>{m.risk}</p>
+                  <p className={cn("text-xs", m.ok ? "text-emerald-700" : "text-amber-700")}>{m.risk}</p>
                 </div>
               ))}
             </div>
@@ -353,7 +353,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                     <div className="flex-1 h-2 bg-muted rounded overflow-hidden">
                       <div className={cn("h-full rounded", r.utilization > 0.9 ? "bg-amber-400" : "bg-emerald-500")} style={{ width: `${Math.round(r.utilization * 100)}%` }} />
                     </div>
-                    <span className="w-20 shrink-0 text-right text-[11px] font-mono text-muted-foreground sm:w-24">{r.peak_seats}/{r.capacity} · {Math.round(r.utilization * 100)}%</span>
+                    <span className="w-20 shrink-0 text-right text-xs font-mono text-muted-foreground sm:w-24">{r.peak_seats}/{r.capacity} · {Math.round(r.utilization * 100)}%</span>
                   </div>
                 ))}
               </div>
@@ -367,7 +367,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                     <div className="flex-1 h-2 bg-muted rounded overflow-hidden">
                       <div className={cn("h-full rounded", f.satisfied ? "bg-emerald-500" : "bg-red-400")} style={{ width: `${Math.round(f.utilization * 100)}%` }} />
                     </div>
-                    <span className="w-20 shrink-0 text-right text-[11px] font-mono text-muted-foreground sm:w-24">{f.load}/{f.max_sections}</span>
+                    <span className="w-20 shrink-0 text-right text-xs font-mono text-muted-foreground sm:w-24">{f.load}/{f.max_sections}</span>
                   </div>
                 ))}
               </div>
@@ -404,11 +404,11 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
               <div className="grid grid-cols-6 gap-1 items-center">
                 <div />
                 {DAY_NAMES.slice(0, 5).map((d) => (
-                  <div key={d} className="text-[10px] text-muted-foreground font-semibold text-center">{d.slice(0, 3)}</div>
+                  <div key={d} className="text-xs text-muted-foreground font-semibold text-center">{d.slice(0, 3)}</div>
                 ))}
                 {PERIOD_NAMES.map((_, period) => (
                   <Fragment key={period}>
-                    <div className="text-[10px] text-muted-foreground font-semibold">{PERIOD_NAMES[period]}</div>
+                    <div className="text-xs text-muted-foreground font-semibold">{PERIOD_NAMES[period]}</div>
                     {Array.from({ length: 5 }, (_, day) => {
                       const value = matrices.department_capacity[day]?.[period] ?? 0;
                       const dead = matrices.dead_zones.some(([dd, pp]) => dd === day && pp === period);
@@ -425,7 +425,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                 ))}
               </div>
               {!matrices.dead_zones.length && (
-                <p className="text-[10px] text-emerald-700 mt-2">No dead zones — every slot has supply.</p>
+                <p className="text-xs text-emerald-700 mt-2">No dead zones — every slot has supply.</p>
               )}
             </Card>
           </div>
@@ -459,16 +459,16 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                       className={cn("text-left border rounded-lg p-3 transition-colors", active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40")}>
                       <div className="font-bold text-sm text-foreground">{label}</div>
                       {o.status === "infeasible" ? (
-                        <div className="text-[11px] text-red-700 mt-1">
+                        <div className="text-xs text-red-700 mt-1">
                           Infeasible — {o.conflicts?.explanation ?? "the solver named a conflict core"}
                           {o.conflicts?.sources && o.conflicts.sources.length > 0 && (
                             <span className="block mt-0.5">Source: {o.conflicts.sources.join(" · ")}</span>
                           )}
                         </div>
                       ) : (
-                      <div className="text-[11px] text-muted-foreground mt-1">max load {maxLoad} · {idle} idle · {o.solve_time_ms} ms</div>
+                      <div className="text-xs text-muted-foreground mt-1">max load {maxLoad} · {idle} idle · {o.solve_time_ms} ms</div>
                       )}
-                      <div className="text-[10px] font-mono text-muted-foreground mt-1 truncate">
+                      <div className="text-xs font-mono text-muted-foreground mt-1 truncate">
                         {Object.entries(loads).sort().map(([k, v]) => `${k}:${v}`).join("  ")}
                       </div>
                     </button>
@@ -522,7 +522,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                             </td>
                             <td className="px-3 py-1.5 font-semibold text-foreground">{p.course_code}</td>
                             <td className="px-3 py-1.5 text-muted-foreground">{p.instructor_name}</td>
-                            <td className="px-3 py-1.5 text-muted-foreground">{p.room_name} <span className="text-[10px]">[{p.building_id}]</span></td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{p.room_name} <span className="text-xs">[{p.building_id}]</span></td>
                             <td className="px-3 py-1.5 font-mono text-muted-foreground">{placementSlot(p)}</td>
                             <td className="px-3 py-1.5 text-right font-mono text-muted-foreground">{p.duration ?? 1.5}h</td>
                           </tr>
@@ -551,11 +551,11 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                     : "bg-amber-50 border-amber-200 text-amber-800"
                 )}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide",
+                    <span className={cn("text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide",
                       tighten.muse_mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-muted text-muted-foreground")}>
                       {tighten.muse_mode}
                     </span>
-                    <span className="text-[11px] font-bold uppercase">{tighten.trigger}</span>
+                    <span className="text-xs font-bold uppercase">{tighten.trigger}</span>
                   </div>
                   <p>{tighten.assessment}</p>
                 </div>
@@ -570,19 +570,19 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                               ? <CircleCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                               : <CircleX className="w-4 h-4 text-muted-foreground shrink-0" />}
                             <span className="font-mono text-xs font-bold text-foreground">{mv.kind}</span>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {[mv.instructor_id, mv.course_id, mv.cohort_id].filter(Boolean).join(" → ")}
                             </span>
                           </div>
-                          <p className="text-[11px] text-muted-foreground mb-1">{mv.rationale}</p>
-                          <p className={cn("text-[11px] font-medium", mv.verified ? "text-emerald-700" : "text-muted-foreground")}>{mv.detail}</p>
+                          <p className="text-xs text-muted-foreground mb-1">{mv.rationale}</p>
+                          <p className={cn("text-xs font-medium", mv.verified ? "text-emerald-700" : "text-muted-foreground")}>{mv.detail}</p>
                           {mv.verified ? (
                             <Button variant="primary" size="sm" disabled={applyingMove !== null || appliedMove === i}
                               onClick={() => void applyMove(i)} className="mt-2">
                               {applyingMove === i ? "Re-verifying…" : appliedMove === i ? "Elected repair applied" : "Elect this repair"}
                             </Button>
                           ) : (
-                            <p className="text-[10px] font-semibold text-muted-foreground mt-1">Rejected by the solver — shown for transparency, cannot be applied.</p>
+                            <p className="text-xs font-semibold text-muted-foreground mt-1">Rejected by the solver — shown for transparency, cannot be applied.</p>
                           )}
                         </div>
                       ))}
@@ -601,7 +601,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                 <span>What-if analysis</span>
                 <InfoTip text="Each what-if is re-solved first: feasibility, utilization, and 4-course guarantee deltas — before any money is spent." />
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Preview first, then apply the change to the live institution. Prefer to skip the preview?
                 Room and calendar changes can be applied directly from Facility or Calendar.
               </p>
@@ -614,7 +614,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
               ].map((c) => (
                 <Button key={c.id} variant="outline" size="md" onClick={() => runWhatif(c.id)} disabled={whatifBusy} className="flex flex-col items-start gap-0.5 h-auto py-2.5">
                   <span className="font-semibold">{c.label}</span>
-                  <span className="text-[11px] text-muted-foreground">{c.desc}</span>
+                  <span className="text-xs text-muted-foreground">{c.desc}</span>
                 </Button>
               ))}
             </div>
@@ -685,10 +685,10 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                   {history?.submissions.map((s) => (
                     <div key={s.id} className="border border-border rounded p-2 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className={cn("px-1.5 py-0.5 rounded font-bold uppercase text-[9px]", s.parser_mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-muted")}>
+                        <span className={cn("px-1.5 py-0.5 rounded font-bold uppercase text-[10px]", s.parser_mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-muted")}>
                           {s.parser_mode}
                         </span>
-                        <span className="text-[10px] text-muted-foreground ml-auto">{new Date(s.created_at).toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{new Date(s.created_at).toLocaleString()}</span>
                       </div>
                       <div className="mt-1 font-medium text-foreground">{s.message}</div>
                       {s.summary && <div className="text-muted-foreground mt-0.5">{s.summary}</div>}
@@ -702,8 +702,8 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                   {history?.events.map((e) => (
                     <div key={e.id} className="border border-border rounded p-2 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded bg-muted font-bold uppercase text-[9px]">{e.kind.replaceAll("_", " ")}</span>
-                        <span className="text-[10px] text-muted-foreground ml-auto">{new Date(e.created_at).toLocaleString()}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-muted font-bold uppercase text-[10px]">{e.kind.replaceAll("_", " ")}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{new Date(e.created_at).toLocaleString()}</span>
                       </div>
                       <div className="mt-1 text-foreground">{e.description}</div>
                     </div>

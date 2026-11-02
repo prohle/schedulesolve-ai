@@ -116,7 +116,7 @@ const CONFLICT_OPTION_LABEL: Record<string, string> = {
 
 const CELL_WORD = ["", "Prefer", "Avoid", "Off"];
 const CELL_CLASS = [
-  "bg-muted/50 text-muted-foreground/60 ring-border hover:bg-muted",
+  "bg-muted/50 text-muted-foreground ring-border hover:bg-muted",
   "bg-emerald-100 text-emerald-800 ring-emerald-300",
   "bg-amber-100 text-amber-800 ring-amber-300",
   "bg-slate-700 text-white ring-slate-700",
@@ -226,7 +226,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
         <h3 className="text-xs font-bold tracking-wide uppercase">My intake — availability & load</h3>
         <InfoTip text="Tap cells with a brush: Off = hard constraint (never scheduled), Avoid/Prefer = soft (the solver pays a penalty to violate them). Pick your teaching load too. Before the intake deadline this goes straight to the faculty window; after it, it becomes a change request the coordinator approves. The solver verifies your exact picks before anything changes." />
         {load && (
-          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground ring-1 ring-border">
+          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground ring-1 ring-border">
             Now: {load.current}/{load.max_sections} sections · {load.preps} course{load.preps === 1 ? "" : "s"}
           </span>
         )}
@@ -234,7 +234,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
 
       {intakeWindow && (
         <div className={cn(
-          "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-3 py-2 text-[11px] font-semibold",
+          "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-3 py-2 text-xs font-semibold",
           intakeWindow.open
             ? "border-emerald-200 bg-emerald-50 text-emerald-900"
             : "border-amber-200 bg-amber-50 text-amber-900")}>
@@ -244,11 +244,11 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
           </span>
           {intakeWindow.open && <span className="opacity-80">{intakeWindow.days_left} day{intakeWindow.days_left === 1 ? "" : "s"} left</span>}
           {intakeWindow.submissions?.some((s) => s.instructor_id === user.instructor_id || (!!user.instructor_id && s.instructor_id.replaceAll("-", "").endsWith(user.instructor_id.replaceAll("-", "")))) ? (
-            <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+            <span className="ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">
               You submitted
             </span>
           ) : intakeWindow.open ? (
-            <span className="ml-auto rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+            <span className="ml-auto rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">
               Awaiting your constraints
             </span>
           ) : null}
@@ -259,30 +259,30 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
         <div className="flex overflow-hidden rounded-xl ring-1 ring-border" role="group" aria-label="Brush">
           {CELL_WORD.map((w, i) => i > 0 && (
             <button key={w} onClick={() => setBrush(i)}
-              className={cn("min-h-9 px-2.5 py-1.5 text-[11px] font-bold transition-colors",
+              className={cn("min-h-9 px-2.5 py-1.5 text-xs font-bold transition-colors",
                 brush === i ? CELL_CLASS[i] + " ring-2 ring-inset ring-primary/50" : "bg-card text-muted-foreground hover:bg-muted")}>
               {w}
             </button>
           ))}
           <button onClick={() => setBrush(0)}
-            className={cn("min-h-9 px-2.5 py-1.5 text-[11px] font-bold",
+            className={cn("min-h-9 px-2.5 py-1.5 text-xs font-bold",
               brush === 0 ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted")}>
             Erase
           </button>
         </div>
         <button onClick={() => { dirty.current = true; setCells((p) => ({ ...p, ...Object.fromEntries([0, 1, 2, 3].map((per) => [`4-${per}`, 3])) })); }}
-          className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
+          className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-xs font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
           No Fridays
         </button>
         <button onClick={() => { dirty.current = true; setCells((p) => {
           const n = { ...p };
           for (let d = 0; d < 5; d++) for (const per of [0, 1]) if (!n[`${d}-${per}`]) n[`${d}-${per}`] = 1;
           return n;
-        }); }} className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
+        }); }} className="min-h-9 rounded-xl bg-muted px-2.5 py-1.5 text-xs font-semibold ring-1 ring-border transition-all active:scale-[0.97]">
           Prefer mornings
         </button>
         <button onClick={() => { dirty.current = true; setCells({}); }}
-          className="min-h-9 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground underline underline-offset-2">
+          className="min-h-9 rounded-xl px-2 py-1.5 text-xs font-semibold text-muted-foreground underline underline-offset-2">
           Clear
         </button>
       </div>
@@ -290,17 +290,17 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
       <div className="grid gap-1" style={{ gridTemplateColumns: `2.2rem repeat(${PERIOD_NAMES.length}, minmax(0, 1fr))` }}>
         <span />
         {PERIOD_NAMES.map((p) => (
-          <span key={p} className="pb-0.5 text-center text-[10px] font-bold text-muted-foreground">{p}</span>
+          <span key={p} className="pb-0.5 text-center text-xs font-bold text-muted-foreground">{p}</span>
         ))}
         {DAY_NAMES.map((day, d) => (
           <Fragment key={day}>
-            <span className="flex items-center text-[10px] font-bold text-muted-foreground">{day.slice(0, 3)}</span>
+            <span className="flex items-center text-xs font-bold text-muted-foreground">{day.slice(0, 3)}</span>
             {[0, 1, 2, 3].map((p) => {
               const v = cells[`${d}-${p}`] ?? 0;
               return (
                 <button key={`${d}-${p}`} onClick={() => paint(d, p)}
                   aria-label={`${day} ${PERIOD_NAMES[p]}: ${CELL_WORD[v] || "available"}`}
-                  className={cn("min-h-10 rounded-lg text-[10px] font-bold ring-1 transition-all active:scale-[0.96]", CELL_CLASS[v])}>
+                  className={cn("min-h-10 rounded-lg text-xs font-bold ring-1 transition-all active:scale-[0.96]", CELL_CLASS[v])}>
                   {CELL_WORD[v]}
                 </button>
               );
@@ -314,7 +314,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
           ["Sections I can teach", maxSections, setMaxSections],
           ["Max distinct courses", maxPreps, setMaxPreps],
         ] as const).map(([label, value, set]) => (
-          <label key={label} className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+          <label key={label} className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             {label}
             <span className="flex items-center gap-1">
               <button aria-label={`fewer ${label}`} onClick={() => { dirty.current = true; set(Math.max(0, value - 1)); setLoadTouched(true); }}
@@ -325,7 +325,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
             </span>
           </label>
         ))}
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {ops.length ? `${ops.length} constraint${ops.length === 1 ? "" : "s"} picked` : "No cells picked — the note alone works too"}
         </span>
       </div>
@@ -337,14 +337,14 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
       />
 
       <div className="space-y-1.5 rounded-xl border border-border bg-background p-3">
-        <p className="text-[11px] font-bold">…or say it in plain English</p>
+        <p className="text-xs font-bold">…or say it in plain English</p>
         <textarea
           aria-label="My constraints in plain English"
           className="min-h-14 w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm"
           placeholder='e.g. "I have childcare on Mondays. A 3-hour class block works better for me. CS 301 is my preference."'
           value={plainMsg} onChange={(e) => { dirty.current = true; setPlainMsg(e.target.value); }}
         />
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Muse Spark turns this into documented constraints for you: an obligation
           (“I have childcare on Mondays”) is a <strong>hard candidate</strong>;
           “works better / is my preference” is <strong>soft</strong>. Hard is
@@ -352,11 +352,11 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
           as the strongest soft preference (avoid, weight 10), never dropped.
         </p>
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="evidence-kind">
+          <label className="text-xs font-semibold text-muted-foreground" htmlFor="evidence-kind">
             Evidence for hard requests
           </label>
           <select id="evidence-kind" value={evKind} onChange={(e) => setEvKind(e.target.value)}
-            className="min-h-9 rounded-lg border border-border bg-card px-2 text-[11px] font-semibold">
+            className="min-h-9 rounded-lg border border-border bg-card px-2 text-xs font-semibold">
             <option value="committee">Committee duty</option>
             <option value="medical">Medical</option>
             <option value="contract">Contract / workload</option>
@@ -364,7 +364,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
             <option value="religious">Religious observance</option>
             <option value="other">Other</option>
           </select>
-          <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg bg-muted px-2.5 py-1.5 text-[11px] font-semibold ring-1 ring-border">
+          <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold ring-1 ring-border">
             {evFile ? evFile.name : "Attach evidence…"}
             <input type="file" className="hidden" aria-label="Attach evidence"
               onChange={async (e) => {
@@ -383,7 +383,7 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
                 setEvFile({ name: f.name, sha256 });
               }} />
           </label>
-          {evFile && <span className="text-[10px] text-muted-foreground">recorded as metadata + hash — the file itself is not stored</span>}
+          {evFile && <span className="text-xs text-muted-foreground">recorded as metadata + hash — the file itself is not stored</span>}
         </div>
       </div>
 
@@ -391,12 +391,12 @@ function IntakePanel({ user, load, intakeWindow, busy, onSend }: {
         const mine = intakeWindow?.submissions?.find((s) => s.instructor_id === user.instructor_id || (!!user.instructor_id && s.instructor_id.replaceAll("-", "").endsWith(user.instructor_id.replaceAll("-", ""))));
         if (!mine?.documented_constraints?.length) return null;
         return (
-          <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 p-3 text-[11px] text-sky-900">
+          <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
             <p className="font-bold">
               What Muse documented from your words
-              {mine.parser_mode && <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 font-mono text-[10px] uppercase">{mine.parser_mode}{mine.model ? ` · ${mine.model}` : ""}</span>}
-              {mine.evidence_status === "missing_downgraded" && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">hard → soft (no evidence)</span>}
-              {mine.evidence_status === "provided" && <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900">evidence on record</span>}
+              {mine.parser_mode && <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 font-mono text-xs uppercase">{mine.parser_mode}{mine.model ? ` · ${mine.model}` : ""}</span>}
+              {mine.evidence_status === "missing_downgraded" && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-xs font-bold text-amber-900">hard → soft (no evidence)</span>}
+              {mine.evidence_status === "provided" && <span className="ml-2 rounded bg-emerald-200 px-1.5 py-0.5 text-xs font-bold text-emerald-900">evidence on record</span>}
             </p>
             {mine.documented_constraints.map((d, i) => <p key={i}>• {d.explanation}</p>)}
           </div>
@@ -452,7 +452,7 @@ function ClosuresCard({ onToast }: {
       {list.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {list.map((c, i) => (
-            <span key={i} className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-slate-700 py-1 pr-1.5 pl-2.5 text-[11px] font-semibold text-white">
+            <span key={i} className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-slate-700 py-1 pr-1.5 pl-2.5 text-xs font-semibold text-white">
               {DAY_NAMES[c.day].slice(0, 3)}{c.period != null ? ` ${PERIOD_NAMES[c.period]}` : " · all day"} — {c.label}
               <button aria-label="remove closure" disabled={saving}
                 onClick={() => { const n = list.filter((_, j) => j !== i); setDraft(n); save(n); }}
@@ -581,14 +581,14 @@ function MuseVoiceCard({ onDraft, onToast }: {
           <AudioLines className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-800">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-800">
             Muse Voice Transcribe
           </p>
-          <p className="text-[11px] font-medium text-violet-900/70">
+          <p className="text-xs font-medium text-violet-900/70">
             Speak naturally — get a reviewable draft. Nothing changes until you submit it.
           </p>
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-700 ring-1 ring-violet-200">
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-violet-700 ring-1 ring-violet-200">
           <ShieldCheck className="h-3 w-3" /> draft only
         </span>
       </div>
@@ -598,7 +598,7 @@ function MuseVoiceCard({ onDraft, onToast }: {
           <button
             type="button"
             onClick={stop}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-rose-600 px-3 text-[11px] font-bold text-white shadow-sm shadow-rose-600/25 transition-all hover:bg-rose-700 active:scale-[0.98]"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-rose-600 px-3 text-xs font-bold text-white shadow-sm shadow-rose-600/25 transition-all hover:bg-rose-700 active:scale-[0.98]"
           >
             <Square className="h-3 w-3 fill-current" /> Stop · {clock(seconds)}
           </button>
@@ -607,14 +607,14 @@ function MuseVoiceCard({ onDraft, onToast }: {
             type="button"
             onClick={() => void start()}
             disabled={state === "transcribing"}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 text-[11px] font-bold text-white shadow-sm shadow-violet-600/25 transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 text-xs font-bold text-white shadow-sm shadow-violet-600/25 transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-50"
           >
             {state === "transcribing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mic className="h-3.5 w-3.5" />}
             {state === "transcribing" ? "Listening…" : "Record voice note"}
           </button>
         )}
 
-        <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3 text-[11px] font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]">
+        <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3 text-xs font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]">
           <Upload className="h-3.5 w-3.5" /> Upload audio
           <input
             id="voice-upload"
@@ -640,20 +640,20 @@ function MuseVoiceCard({ onDraft, onToast }: {
             ))}
           </span>
         )}
-        <span className="text-[10px] text-violet-900/50">
+        <span className="text-xs text-violet-900/50">
           WAV / WebM · 32 MB max · transcribed by Muse
         </span>
       </div>
 
       {error && (
-        <p className="relative mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[10.5px] font-medium text-rose-800">
+        <p className="relative mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-800">
           {error}
         </p>
       )}
 
       {draft && (
         <div className="relative mt-2.5 rounded-xl border border-violet-200 bg-white/85 p-2.5 shadow-sm">
-          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-violet-700">
+          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700">
             <Sparkles className="h-3 w-3" /> Transcript draft · review before solving
           </div>
           <p className="mt-1 text-xs font-medium leading-relaxed text-slate-800">“{draft}”</p>
@@ -661,14 +661,14 @@ function MuseVoiceCard({ onDraft, onToast }: {
             <button
               type="button"
               onClick={() => { onDraft(draft); setDraft(""); }}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 text-[10.5px] font-bold text-white transition-all hover:bg-violet-700 active:scale-[0.98]"
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 text-xs font-bold text-white transition-all hover:bg-violet-700 active:scale-[0.98]"
             >
               <Check className="h-3 w-3" /> Use as my request
             </button>
             <button
               type="button"
               onClick={() => setDraft("")}
-              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-white px-2.5 text-[10.5px] font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]"
+              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-white px-2.5 text-xs font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]"
             >
               <X className="h-3 w-3" /> Discard
             </button>
@@ -767,7 +767,7 @@ function StudentPlanPanel({ user, onToast }: {
         </h3>
         <InfoTip text="Advising from your own record: pick your desired degree, then either let the system look up your progress from your cohort or paste your study record (courses completed). Mandatory vs optional comes from the degree map your institution fed in. Muse Spark parses your record and your life — work days, times you can't attend — then an exact selector recommends mandatory-ready courses first and optional picks to fill, re-verified before shown: no overlaps, nothing already completed, nothing still locked. If a must-take course can't fit, it tells you instead of quietly delaying your degree." />
         {plan && (
-          <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${plan.target_met ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+          <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold ${plan.target_met ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
             {plan.courses.length}/{plan.target_courses} courses · {plan.target_met ? "target met" : "target not met"}
           </span>
         )}
@@ -780,7 +780,7 @@ function StudentPlanPanel({ user, onToast }: {
           return (
             <span
               key={label}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${
                 active
                   ? "bg-primary text-primary-foreground ring-primary shadow-sm"
                   : done
@@ -788,7 +788,7 @@ function StudentPlanPanel({ user, onToast }: {
                     : "bg-muted/60 text-muted-foreground ring-transparent"
               }`}
             >
-              <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] ${
+              <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[10px] ${
                 active ? "bg-white/20" : done ? "bg-emerald-500 text-white" : "bg-white ring-1 ring-border"
               }`}>
                 {done ? <Check className="h-2.5 w-2.5" /> : index + 1}
@@ -800,14 +800,14 @@ function StudentPlanPanel({ user, onToast }: {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="plan-cohort">Cohort</label>
+        <label className="text-xs font-semibold text-muted-foreground" htmlFor="plan-cohort">Cohort</label>
         <select id="plan-cohort" value={cohortId} onChange={(e) => setCohortId(e.target.value)}
           className="min-h-10 rounded-xl border border-border bg-background px-2 text-xs font-semibold">
           {(scenario?.cohorts ?? []).map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
-        <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="plan-degree">Degree I want</label>
+        <label className="text-xs font-semibold text-muted-foreground" htmlFor="plan-degree">Degree I want</label>
         <select id="plan-degree" value={programId} onChange={(e) => setProgramId(e.target.value)}
           className="min-h-10 rounded-xl border border-border bg-background px-2 text-xs font-semibold">
           <option value="">My cohort&apos;s degree</option>
@@ -815,23 +815,23 @@ function StudentPlanPanel({ user, onToast }: {
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="plan-progress">My progress</label>
+        <label className="text-xs font-semibold text-muted-foreground" htmlFor="plan-progress">My progress</label>
         <select id="plan-progress" value={recordMode} onChange={(e) => setRecordMode(e.target.value as "lookup" | "record")}
           className="min-h-10 rounded-xl border border-border bg-background px-2 text-xs font-semibold">
           <option value="lookup">Look up from my cohort</option>
           <option value="record">Use my study record</option>
         </select>
-        <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${plan?.parser_mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-muted text-muted-foreground"}`}>
+        <span className={`rounded px-2 py-0.5 text-xs font-bold uppercase ${plan?.parser_mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-muted text-muted-foreground"}`}>
           {plan ? plan.parser_mode : "muse spark"}
         </span>
-        {plan?.model && <span className="font-mono text-[10px] text-muted-foreground">{plan.model}</span>}
+        {plan?.model && <span className="font-mono text-xs text-muted-foreground">{plan.model}</span>}
       </div>
 
       {recordMode === "record" && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-2.5">
           <label
             htmlFor="transcript-upload"
-            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-white px-2.5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200 transition-all hover:bg-slate-50 active:scale-[0.98]"
+            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 transition-all hover:bg-slate-50 active:scale-[0.98]"
           >
             {uploadBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
             {uploadBusy ? "Reading…" : "Upload transcript"}
@@ -847,7 +847,7 @@ function StudentPlanPanel({ user, onToast }: {
               e.target.value = "";
             }}
           />
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {transcriptName
               ? `${transcriptName} — courses extracted, review below`
               : "PDF, Word or text — Muse reads it; you review it before a plan is suggested."}
@@ -867,35 +867,35 @@ function StudentPlanPanel({ user, onToast }: {
       {plan && (
         <div className="animate-rise grid gap-2 sm:grid-cols-3">
           <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-2.5 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
               <BadgeCheck className="h-3 w-3" /> Verified plan
             </div>
             <p className="mt-1 text-lg font-black tracking-tight text-emerald-950">
               {plan.courses.length}/{plan.target_courses} courses
             </p>
-            <p className="text-[10px] text-emerald-800/70">
+            <p className="text-xs text-emerald-800/70">
               {plan.target_met ? "Target met · conflict-free" : "Best fit found · see notes"}
             </p>
           </div>
           <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-2.5 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-indigo-700">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-700">
               <GraduationCap className="h-3 w-3" /> Projected graduation
             </div>
             <p className="mt-1 text-lg font-black tracking-tight text-indigo-950">
               {plan.projected_graduation || "—"}
             </p>
-            <p className="text-[10px] text-indigo-800/70">
+            <p className="text-xs text-indigo-800/70">
               {plan.projection_note || "From your degree map, record and this plan"}
             </p>
           </div>
           <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-2.5 shadow-sm">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-violet-700">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-700">
               <Sparkles className="h-3 w-3" /> Muse advisory
             </div>
             <p className="mt-1 text-lg font-black tracking-tight text-violet-950">
               {plan.parser_mode === "muse-spark" ? "Live" : "Fallback"}
             </p>
-            <p className="text-[10px] text-violet-800/70">
+            <p className="text-xs text-violet-800/70">
               {plan.model || "Muse Spark"} · {plan.parser_latency_ms ? `${Math.round(plan.parser_latency_ms / 100) / 10}s` : "ready to explain trade-offs"}
             </p>
           </div>
@@ -922,7 +922,7 @@ function StudentPlanPanel({ user, onToast }: {
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-4 w-4 shrink-0" />
                 <span className="font-bold">{plan.projection_note}</span>
-                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold ${
                   plan.projection_status === "delayed"
                     ? "bg-amber-200 text-amber-900"
                     : plan.projection_status === "complete"
@@ -934,7 +934,7 @@ function StudentPlanPanel({ user, onToast }: {
                     : plan.projection_status === "complete" ? "complete" : "on track"}
                 </span>
               </div>
-              <p className="text-[11px] font-medium opacity-90">
+              <p className="text-xs font-medium opacity-90">
                 Projected: {plan.projected_graduation || "—"}
                 {plan.expected_graduation && plan.expected_graduation !== plan.projected_graduation
                   ? ` · Expected: ${plan.expected_graduation}` : ""}
@@ -954,7 +954,7 @@ function StudentPlanPanel({ user, onToast }: {
       {plan?.missing_inputs && plan.missing_inputs.length > 0 && (
         <div className="space-y-1 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
           <p className="font-bold">Input missing — add it to sharpen this advice</p>
-          {plan.missing_inputs.map((item, i) => <p key={i} className="text-[11px]">{item}</p>)}
+          {plan.missing_inputs.map((item, i) => <p key={i} className="text-xs">{item}</p>)}
         </div>
       )}
 
@@ -964,9 +964,9 @@ function StudentPlanPanel({ user, onToast }: {
           {plan.conflicts.map((c) => (
             <div key={c.kind} className="space-y-1">
               <p className="font-semibold">{c.summary}</p>
-              {c.detail && <p className="text-[11px] opacity-90">{c.detail}</p>}
+              {c.detail && <p className="text-xs opacity-90">{c.detail}</p>}
               {c.sources && c.sources.length > 0 && (
-                <ul className="space-y-0.5 text-[11px] opacity-90">
+                <ul className="space-y-0.5 text-xs opacity-90">
                   {c.sources.map((source, i) => (
                     <li key={i}><span className="font-semibold">Source {i + 1}:</span> {source}</li>
                   ))}
@@ -977,7 +977,7 @@ function StudentPlanPanel({ user, onToast }: {
                   <button key={opt} disabled={busy}
                     onClick={() => resolveConflict(c.kind, opt)}
                     className={cn(
-                      "min-h-8 rounded-lg px-2.5 py-1 text-[11px] font-bold ring-1 transition-all active:scale-[0.97] disabled:opacity-50",
+                      "min-h-8 rounded-lg px-2.5 py-1 text-xs font-bold ring-1 transition-all active:scale-[0.97] disabled:opacity-50",
                       c.chosen_option === opt
                         ? "bg-violet-600 text-white ring-violet-600"
                         : "bg-white text-violet-800 ring-violet-300 hover:bg-violet-100")}>
@@ -1023,7 +1023,7 @@ function StudentPlanPanel({ user, onToast }: {
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-extrabold tracking-tight">
                     {c.course_code}
-                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
                       c.required ? "bg-indigo-100 text-indigo-800" : "bg-slate-100 text-slate-700"
                     }`}>
                       {c.required ? "required" : "optional"}
@@ -1036,20 +1036,20 @@ function StudentPlanPanel({ user, onToast }: {
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700">
                   <CalendarDays className="h-2.5 w-2.5" />
                   {c.days.map((d) => DAY_NAMES[d].slice(0, 3)).join("/")}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700">
                   <Clock3 className="h-2.5 w-2.5" />
                   {c.start_time}–{c.end_time}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-700">
                   <MapPin className="h-2.5 w-2.5" />
                   {c.room_name}
                 </span>
               </div>
-              <p className="mt-1.5 text-[10.5px] font-medium text-muted-foreground">
+              <p className="mt-1.5 text-xs font-medium text-muted-foreground">
                 {c.instructor_name} · {c.reason}
               </p>
             </div>
@@ -1183,29 +1183,29 @@ function MuseStandby({ user, mine, requests }: {
           <Sparkles className="h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-700">
             Muse Spark · on standby
           </p>
           <p className="text-sm font-extrabold tracking-tight text-slate-900">
             Downstream impact &amp; trade-offs
           </p>
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-indigo-700 ring-1 ring-indigo-200">
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-indigo-700 ring-1 ring-indigo-200">
           <ShieldCheck className="h-3 w-3" /> advisory only
         </span>
       </div>
       <div className="relative mt-3 grid gap-2 sm:grid-cols-3">
         {insights.map(({ icon: Icon, label, value, detail }) => (
           <div key={label} className="rounded-xl border border-white/90 bg-white/80 p-2.5 shadow-sm ring-1 ring-slate-900/5">
-            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">
               <Icon className="h-3 w-3 text-indigo-600" /> {label}
             </div>
             <p className="mt-1 text-sm font-black tracking-tight text-slate-900">{value}</p>
-            <p className="mt-0.5 text-[10px] leading-snug text-slate-600">{detail}</p>
+            <p className="mt-0.5 text-xs leading-snug text-slate-600">{detail}</p>
           </div>
         ))}
       </div>
-      <p className="relative mt-2 flex items-center gap-1.5 text-[10px] text-indigo-900/60">
+      <p className="relative mt-2 flex items-center gap-1.5 text-xs text-indigo-900/60">
         <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" />
         Muse explains; the solver proves. Every statement above is derived from the published timetable.
       </p>
@@ -1293,7 +1293,7 @@ export function MyScheduleView({ user, onToast }: {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Publish failed");
-      onToast(`Published schedule #${data.id}: ${data.status}, penalty ${data.objective}`, "success");
+      onToast(`Published schedule #${data.id} — ready for instructors and students`, "success");
       await load();
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Publish failed", "error");
@@ -1399,13 +1399,31 @@ export function MyScheduleView({ user, onToast }: {
                 : user.role === "instructor" ? "My Teaching Schedule"
                 : "Published Timetable"}
             </h2>
-            <p className="text-[11px] text-muted-foreground">
-              {mine ? `${mine.scope} · ${mine.status} · penalty ${mine.objective}` : "Nothing published yet"}
+            <p className="text-xs text-muted-foreground">
+              {mine
+                ? `${mine.scope} · ${mine.status === "optimal" ? "proven" : mine.status}`
+                : "Nothing published yet"}
             </p>
           </div>
-          <InfoTip text="The coordinator builds the term in Express, then publishes it here. You only see your own sections (instructor) or your cohort's courses (student)." />
+          <InfoTip text={`The coordinator builds the term in Express, then publishes it here. You only see your own sections (instructor) or your cohort's courses (student). Solver detail: status ${mine?.status ?? "—"}, penalty ${mine?.objective ?? "—"}.`} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user.role === "instructor" && (
+            <button
+              onClick={() => document.getElementById("instructor-intake")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/25 active:scale-[0.98]"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Intake
+            </button>
+          )}
+          {user.role === "student" && (
+            <button
+              onClick={() => document.getElementById("student-advising")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/25 active:scale-[0.98]"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Advising
+            </button>
+          )}
           <div className="flex rounded-xl border border-border bg-muted/60 p-1">
             {(
               [
@@ -1417,7 +1435,7 @@ export function MyScheduleView({ user, onToast }: {
                 key={id}
                 onClick={() => setView(id)}
                 className={cn(
-                  "inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all",
+                  "inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold transition-all",
                   view === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -1447,7 +1465,7 @@ export function MyScheduleView({ user, onToast }: {
             <Sparkles className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-black uppercase tracking-wider text-blue-700">Next step</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">Next step</p>
             <p className="text-xs font-bold text-slate-900">
               {termWindow?.submissions?.some((submission) => submission.instructor_id === user.instructor_id)
                 ? "Your intake is submitted — review it while the window is open."
@@ -1456,7 +1474,7 @@ export function MyScheduleView({ user, onToast }: {
           </div>
           <button
             onClick={() => document.getElementById("instructor-intake")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="inline-flex min-h-8 items-center rounded-lg bg-blue-600 px-2.5 text-[10.5px] font-bold text-white shadow-sm hover:bg-blue-700"
+            className="inline-flex min-h-8 items-center rounded-lg bg-blue-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
           >
             {termWindow?.submissions?.some((submission) => submission.instructor_id === user.instructor_id) ? "Review intake" : "Go to intake"}
           </button>
@@ -1469,12 +1487,12 @@ export function MyScheduleView({ user, onToast }: {
             <Sparkles className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-black uppercase tracking-wider text-violet-700">Next step</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-violet-700">Next step</p>
             <p className="text-xs font-bold text-slate-900">Upload your transcript or describe your week — get a verified plan.</p>
           </div>
           <button
             onClick={() => document.getElementById("student-advising")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="inline-flex min-h-8 items-center rounded-lg bg-violet-600 px-2.5 text-[10.5px] font-bold text-white shadow-sm hover:bg-violet-700"
+            className="inline-flex min-h-8 items-center rounded-lg bg-violet-600 px-2.5 text-xs font-bold text-white shadow-sm hover:bg-violet-700"
           >
             Start advising
           </button>
@@ -1483,7 +1501,7 @@ export function MyScheduleView({ user, onToast }: {
 
       {user.role === "coordinator" && (
         <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-sm backdrop-blur">
-          <span className="px-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+          <span className="px-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
             On this page
           </span>
           {[
@@ -1494,7 +1512,7 @@ export function MyScheduleView({ user, onToast }: {
             <button
               key={id}
               onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="rounded-lg px-2 py-1 text-[10.5px] font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+              className="rounded-lg px-2 py-1 text-xs font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
             >
               {label}
             </button>
@@ -1554,15 +1572,15 @@ export function MyScheduleView({ user, onToast }: {
               <div className="text-xs space-y-0.5 min-w-0">
                 <p className="font-semibold">
                   #{r.id} · {r.requester || r.instructor_id || "instructor"}
-                  <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  <span className={`ml-2 px-1.5 py-0.5 rounded text-xs font-bold ${
                     r.status === "applied" ? "bg-emerald-100 text-emerald-800"
                     : r.status === "rejected" ? "bg-red-100 text-red-800"
                     : "bg-amber-100 text-amber-800"}`}>{r.status}</span>
                   {r.kind === "structured" && (
-                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">picked</span>
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-xs font-bold">picked</span>
                   )}
                   {r.load && (
-                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px] font-bold">
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-xs font-bold">
                       load {r.load.current}/{r.load.max_sections ?? "?"}
                     </span>
                   )}
@@ -1570,7 +1588,7 @@ export function MyScheduleView({ user, onToast }: {
                 {r.operations?.length ? (
                   <span className="flex flex-wrap gap-1 pt-0.5">
                     {r.operations.map((o, i) => (
-                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">{o.explanation}</span>
+                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{o.explanation}</span>
                     ))}
                   </span>
                 ) : (
@@ -1586,11 +1604,11 @@ export function MyScheduleView({ user, onToast }: {
               {user.role === "coordinator" && r.status === "pending" && (
                 <div className="flex gap-1 shrink-0">
                   <button disabled={busy} onClick={() => decide(r.id, "apply")}
-                          className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-50">
+                          className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-50">
                     <Check className="w-3 h-3" /> Apply (verified)
                   </button>
                   <button disabled={busy} onClick={() => decide(r.id, "reject")}
-                          className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-muted px-2.5 py-1.5 text-[11px] font-semibold transition-all active:scale-[0.97] disabled:opacity-50">
+                          className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] disabled:opacity-50">
                     <X className="w-3 h-3" /> Reject
                   </button>
                 </div>
@@ -1600,7 +1618,7 @@ export function MyScheduleView({ user, onToast }: {
           {user.role !== "coordinator" && requests.length > 3 && (
             <button
               onClick={() => setShowAllRequests((value) => !value)}
-              className="inline-flex min-h-8 items-center rounded-lg bg-muted px-2.5 text-[10.5px] font-bold text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
+              className="inline-flex min-h-8 items-center rounded-lg bg-muted px-2.5 text-xs font-bold text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
             >
               {showAllRequests ? "Show latest 3" : `Show all ${requests.length} requests`}
             </button>

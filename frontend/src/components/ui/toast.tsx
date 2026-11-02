@@ -43,7 +43,9 @@ export function Toast({ message, type = "info", onClose }: ToastProps) {
         "flex items-center gap-2 rounded-2xl px-3.5 py-2.5 text-[13px] font-medium shadow-2xl ring-1",
         colors[type]
       )}
-      role="alert"
+      role={type === "error" ? "alert" : "status"}
+      aria-live={type === "error" ? "assertive" : "polite"}
+      aria-atomic="true"
     >
       <Icon className={cn("h-4 w-4 shrink-0", iconColors[type])} />
       <span className="flex-1 leading-snug">{message}</span>

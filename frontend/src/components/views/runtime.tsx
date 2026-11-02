@@ -165,12 +165,12 @@ export function RuntimeView() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-AI Runtime
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+AI Connection
           </p>
           <h2 className="mt-0.5 flex items-center gap-2 text-lg font-black tracking-tight">
             <PlugZap className="h-5 w-5 text-primary" />
-            Muse Spark connection &amp; configuration
+            Live Muse Spark — connected and verified
             <InfoTip text="The same client runs hosted Muse Spark, open-weight Muse Spark Open on Baseten, or a self-hosted vLLM endpoint. The model is a configuration value — every role below is schema-validated before it can touch the term." />
           </h2>
         </div>
@@ -191,20 +191,20 @@ AI Runtime
       )}
 
       <div className="grid gap-3 lg:grid-cols-3">
-        <section className="elev rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-card p-4 lg:col-span-2">
+        <section className="elev rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 lg:col-span-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider",
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wider",
               config?.live ? "bg-emerald-600 text-white" : "bg-amber-500 text-white",
             )}>
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
               {config?.live ? "Live" : "Deterministic fallback"}
             </span>
             <span className="text-xs font-extrabold">{config?.provider ?? "—"}</span>
-            <span className="rounded bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+            <span className="rounded bg-white px-1.5 py-0.5 font-mono text-xs font-bold text-slate-700 ring-1 ring-slate-200">
               {config?.model ?? "—"}
             </span>
-            <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800">
+            <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold text-emerald-800">
               <ShieldCheck className="h-3.5 w-3.5" /> structured output
             </span>
           </div>
@@ -217,37 +217,37 @@ AI Runtime
               ["Reasoning effort", config?.reasoning_effort ?? "low"],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl border border-emerald-200/70 bg-white/80 px-2.5 py-1.5">
-                <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</div>
-                <div className="truncate font-mono text-[10.5px] font-semibold" title={String(value)}>{value}</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{label}</div>
+                <div className="truncate font-mono text-xs font-semibold" title={String(value)}>{value}</div>
               </div>
             ))}
           </div>
 
           <div className="mt-3 rounded-xl border border-border bg-white p-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
               <Timer className="h-3.5 w-3.5" /> Connection test · real structured call
             </div>
             {test ? (
               <div className="mt-2 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={cn(
-                    "rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
+                    "rounded px-1.5 py-0.5 text-[10px] font-black uppercase",
                     test.mode === "muse-spark" ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-900",
                   )}>
                     {test.mode}
                   </span>
-                  <span className="font-mono text-[10px] font-semibold">{test.model ?? "deterministic"}</span>
-                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-emerald-800">
+                  <span className="font-mono text-xs font-semibold">{test.model ?? "deterministic"}</span>
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-emerald-800">
                     {test.operations.length} schema-valid operation{test.operations.length === 1 ? "" : "s"}
                   </span>
-                  <span className="ml-auto text-[10px] font-bold tabular-nums text-muted-foreground">
+                  <span className="ml-auto text-xs font-bold tabular-nums text-muted-foreground">
                     {test.latency_ms != null ? `${(test.latency_ms / 1000).toFixed(1)} s` : "—"}
                   </span>
                 </div>
-                <p className="text-[11px] font-semibold text-slate-800">{test.summary}</p>
+                <p className="text-xs font-semibold text-slate-800">{test.summary}</p>
                 <ul className="space-y-0.5">
                   {test.operations.slice(0, 3).map((op, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
+                    <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
                       <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
                       <span><span className="font-mono font-bold text-slate-700">{op.op}</span> — {op.explanation}</span>
                     </li>
@@ -255,7 +255,7 @@ AI Runtime
                 </ul>
               </div>
             ) : (
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Run the test to prove the configured endpoint answers with schema-valid operations.
               </p>
             )}
@@ -272,16 +272,16 @@ AI Runtime
                 <div className="text-3xl font-black tabular-nums text-emerald-900">
                   {open?.calls ?? 0}<span className="text-sm font-bold text-emerald-700">/{open?.calls ?? 0}</span>
                 </div>
-                <div className="text-[9px] font-black uppercase tracking-wider text-emerald-800">
+                <div className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
                   live structured calls · open weights
                 </div>
               </div>
               <CheckCircle2 className="h-7 w-7 text-emerald-600" />
             </div>
-            <p className="mt-1.5 truncate font-mono text-[9px] font-semibold text-emerald-900">{open?.model ?? "—"}</p>
-            <p className="truncate text-[9px] text-emerald-800">{open?.base_url ?? "—"}</p>
+            <p className="mt-1.5 truncate font-mono text-[10px] font-semibold text-emerald-900">{open?.model ?? "—"}</p>
+            <p className="truncate text-[10px] text-emerald-800">{open?.base_url ?? "—"}</p>
           </div>
-          <ul className="mt-2 space-y-1 text-[10px]">
+          <ul className="mt-2 space-y-1 text-xs">
             {([
               ["Hosted Muse Spark", hosted],
               ["Student plan parse", config?.verification.student],
@@ -295,7 +295,7 @@ AI Runtime
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
+          <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
             Captured runs in <span className="font-mono">backend/muse-verification-open.json</span>.
             Every screen badge is asserted live by the recorder — never a canned result.
           </p>
@@ -306,7 +306,7 @@ AI Runtime
         <section className="elev overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/80 px-3 py-2">
             <Code2 className="h-4 w-4 text-emerald-400" />
-            <span className="text-[11px] font-black text-slate-100">How the client connects</span>
+            <span className="text-xs font-black text-slate-100">How the client connects</span>
             <div className="ml-auto flex gap-1">
               {[
                 ["python", "client.py"],
@@ -316,7 +316,7 @@ AI Runtime
                   key={id}
                   onClick={() => setTab(id as "python" | "env")}
                   className={cn(
-                    "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase transition-colors",
+                    "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase transition-colors",
                     tab === id ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-300 hover:bg-slate-700",
                   )}
                 >
@@ -325,10 +325,10 @@ AI Runtime
               ))}
             </div>
           </div>
-          <pre className="custom-scrollbar h-[330px] overflow-auto p-3 font-mono text-[10.5px] leading-[1.6] text-slate-200">
+          <pre className="custom-scrollbar h-[330px] overflow-auto p-3 font-mono text-xs leading-[1.6] text-slate-200">
             {code}
           </pre>
-          <div className="border-t border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[9px] font-semibold text-slate-400">
+          <div className="border-t border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[10px] font-semibold text-slate-400">
             Same code path for hosted, Baseten and self-hosted — only the env changes.
           </div>
         </section>
@@ -351,21 +351,21 @@ AI Runtime
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-extrabold">{preset.name}</span>
+                      <span className="text-xs font-extrabold">{preset.name}</span>
                       {active && (
-                        <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[8px] font-black uppercase text-white">active</span>
+                        <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">active</span>
                       )}
                     </div>
                     <p className="truncate text-[9.5px] text-muted-foreground">{preset.detail}</p>
                   </div>
-                  <span className="font-mono text-[9px] font-bold text-muted-foreground">
+                  <span className="font-mono text-[10px] font-bold text-muted-foreground">
                     {preset.id === "baseten" ? "muse-spark-open" : preset.id === "meta" ? "muse-spark" : "vllm"}
                   </span>
                 </div>
               );
             })}
           </div>
-          <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-2.5 text-[10px] leading-snug text-sky-900">
+          <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-2.5 text-xs leading-snug text-sky-900">
             <strong>To switch:</strong> set <span className="font-mono">MUSE_BASE_URL</span>,{" "}
             <span className="font-mono">MUSE_MODEL</span> and <span className="font-mono">MODEL_API_KEY</span>{" "}
             — no code change, no redeploy of the UI.
@@ -378,8 +378,8 @@ AI Runtime
           <Sparkles className="h-4 w-4 text-primary" /> Five structured roles + voice
         </h3>
         <div className="custom-scrollbar mt-2 overflow-auto rounded-xl border border-border">
-          <table className="w-full min-w-[720px] text-left text-[11px]">
-            <thead className="bg-muted/70 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead className="bg-muted/70 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-2.5 py-1.5">Role</th>
                 <th className="px-2.5 py-1.5">Model</th>
@@ -392,11 +392,11 @@ AI Runtime
               {(config?.roles ?? []).map((role) => (
                 <tr key={role.role} className="border-t border-border/70 hover:bg-accent/40">
                   <td className="px-2.5 py-1.5 font-extrabold">{role.role}</td>
-                  <td className="px-2.5 py-1.5 font-mono text-[10px] text-muted-foreground">{role.model}</td>
-                  <td className="px-2.5 py-1.5 font-mono text-[10px]">{role.schema}</td>
-                  <td className="px-2.5 py-1.5 font-mono text-[10px] text-muted-foreground">{role.endpoint}</td>
+                  <td className="px-2.5 py-1.5 font-mono text-xs text-muted-foreground">{role.model}</td>
+                  <td className="px-2.5 py-1.5 font-mono text-xs">{role.schema}</td>
+                  <td className="px-2.5 py-1.5 font-mono text-xs text-muted-foreground">{role.endpoint}</td>
                   <td className="px-2.5 py-1.5">
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-emerald-800">
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-emerald-800">
                       schema-validated
                     </span>
                   </td>
@@ -405,7 +405,7 @@ AI Runtime
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[10px] text-muted-foreground">
+        <p className="mt-2 text-xs text-muted-foreground">
           The LLM proposes; the solver proves. No parsed operation reaches the term until it
           passes schema + scenario validation, and no repair, coverage name or student plan is
           shown until the solver has verified it.

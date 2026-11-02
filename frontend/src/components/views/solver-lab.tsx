@@ -183,12 +183,12 @@ export function SolverLabView() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-Solver Lab
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+Proof Lab
           </p>
           <h2 className="mt-0.5 flex items-center gap-2 text-lg font-black tracking-tight">
             <Cpu className="h-5 w-5 text-primary" />
-            Native C-Solve engine — code, input, proof
+            A proven timetable — speed, evidence, audit
             <InfoTip text="The AI-authored C++17 search core races OR-Tools CP-SAT on identical data. A separate verifier re-derives every hard constraint, so the timetable is proven admissible for faculty, cohorts, students, facilities and campus — not just “solved”." />
           </h2>
         </div>
@@ -203,7 +203,7 @@ Solver Lab
               onClick={() => { setScale(id); void run(id); }}
               disabled={busy}
               className={cn(
-                "min-h-9 rounded-xl border px-3 text-[11px] font-bold transition-all active:scale-[0.98] disabled:opacity-50",
+                "min-h-9 rounded-xl border px-3 text-xs font-bold transition-all active:scale-[0.98] disabled:opacity-50",
                 scale === id
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
                   : "border-border bg-card hover:bg-accent",
@@ -215,7 +215,7 @@ Solver Lab
           <button
             onClick={() => void run()}
             disabled={busy}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
             {busy ? "Proving…" : "Run proof"}
@@ -237,7 +237,7 @@ Solver Lab
                 <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-900">
                   <Timer className="h-4 w-4" /> Head-to-head · identical data
                 </h3>
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-white">
                   {proof.status}
                 </span>
               </div>
@@ -256,7 +256,7 @@ Solver Lab
                           <InfoTip text={engine.hint} />
                         </span>
                         <span className={cn(
-                          "rounded px-1.5 py-0.5 text-[9px] font-black uppercase",
+                          "rounded px-1.5 py-0.5 text-[10px] font-black uppercase",
                           first ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground",
                         )}>
                           {first ? "Rank 1" : "Rank 2"}
@@ -264,7 +264,7 @@ Solver Lab
                       </div>
                       <div className="mt-2 flex items-baseline gap-2">
                         <span className="text-2xl font-black tabular-nums">{row.solve_time_ms}<span className="text-xs font-bold text-muted-foreground"> ms</span></span>
-                        <span className="text-[11px] font-semibold text-muted-foreground">
+                        <span className="text-xs font-semibold text-muted-foreground">
                           {row.status} · penalty {row.objective ?? "—"}
                         </span>
                       </div>
@@ -272,7 +272,7 @@ Solver Lab
                   );
                 })}
               </div>
-              <p className="mt-3 text-[11px] font-semibold text-emerald-900">{proof.race.verdict}</p>
+              <p className="mt-3 text-xs font-semibold text-emerald-900">{proof.race.verdict}</p>
             </section>
 
             <section className="elev rounded-2xl border border-border bg-card p-4">
@@ -292,11 +292,11 @@ Solver Lab
                 ].map(([label, value]) => (
                   <div key={String(label)} className="rounded-lg border border-border bg-background px-2.5 py-1.5">
                     <div className="text-sm font-black tabular-nums">{value}</div>
-                    <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 truncate text-[10px] font-medium text-muted-foreground" title={String(proof.input.name)}>
+              <p className="mt-2 truncate text-xs font-medium text-muted-foreground" title={String(proof.input.name)}>
                 {proof.input.name}
               </p>
             </section>
@@ -306,13 +306,13 @@ Solver Lab
             <section className="elev overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
               <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 bg-slate-900/80 px-3 py-2">
                 <Code2 className="h-4 w-4 text-emerald-400" />
-                <span className="text-[11px] font-black text-slate-100">
+                <span className="text-xs font-black text-slate-100">
                   {source?.file ?? "schedulesolve_solver.cpp"}
                 </span>
-                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[9px] font-bold uppercase text-slate-300">
+                <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-300">
                   {source?.language ?? "C++17"}
                 </span>
-                <span className="text-[9px] font-medium text-slate-500">
+                <span className="text-[10px] font-medium text-slate-500">
                   {source?.lines ?? 0} lines · {source ? Math.round(source.bytes / 1024) : 0} KB · sha {source?.sha256.slice(0, 10)}
                 </span>
                 <div className="ml-auto flex gap-1">
@@ -324,7 +324,7 @@ Solver Lab
                       key={path}
                       onClick={() => { setSourceFile(path); void loadSource(path); }}
                       className={cn(
-                        "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase transition-colors",
+                        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase transition-colors",
                         sourceFile === path ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-300 hover:bg-slate-700",
                       )}
                     >
@@ -334,7 +334,7 @@ Solver Lab
                 </div>
               </div>
               <div className="custom-scrollbar h-[430px] overflow-auto" id="solver-code-scroll">
-                <pre className="min-w-full p-3 font-mono text-[10.5px] leading-[1.55] text-slate-200">
+                <pre className="min-w-full p-3 font-mono text-xs leading-[1.55] text-slate-200">
                   {codeLines.map((line, i) => (
                     <div key={i} className="flex hover:bg-white/5">
                       <span className="w-9 shrink-0 select-none pr-2 text-right text-slate-600">{i + 1}</span>
@@ -343,7 +343,7 @@ Solver Lab
                   ))}
                 </pre>
               </div>
-              <div className="border-t border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[9px] font-semibold text-slate-400">
+              <div className="border-t border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[10px] font-semibold text-slate-400">
                 greedy descent → hill-climb → branch-and-bound · deterministic · single thread · JSON in / JSON out
               </div>
             </section>
@@ -354,7 +354,7 @@ Solver Lab
                   <ShieldCheck className="h-4 w-4 text-emerald-600" /> Constraint proof
                 </h3>
                 <span className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider",
+                  "rounded-full px-2 py-0.5 text-xs font-black uppercase tracking-wider",
                   proof.proof.all_ok ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900",
                 )}>
                   {passedChecks}/{totalChecks} checks pass
@@ -370,14 +370,14 @@ Solver Lab
                     )}>
                       <div className="flex items-center gap-1.5">
                         <Icon className={cn("h-3.5 w-3.5", group.ok ? "text-emerald-600" : "text-amber-600")} />
-                        <span className="text-[11px] font-extrabold">{group.label}</span>
-                        <span className="ml-auto text-[9px] font-black text-muted-foreground">
+                        <span className="text-xs font-extrabold">{group.label}</span>
+                        <span className="ml-auto text-[10px] font-black text-muted-foreground">
                           {group.passed}/{group.total}
                         </span>
                       </div>
                       <ul className="mt-1.5 space-y-1">
                         {group.checks.map((check) => (
-                          <li key={check.id} className="flex items-start gap-1.5 text-[10px] leading-snug">
+                          <li key={check.id} className="flex items-start gap-1.5 text-xs leading-snug">
                             {check.status === "pass" ? (
                               <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-600" />
                             ) : check.status === "warn" ? (
@@ -404,13 +404,13 @@ Solver Lab
               <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
                 <GraduationCap className="h-4 w-4 text-primary" /> Result — the proven timetable
               </h3>
-              <span className="text-[10px] font-bold text-muted-foreground">
+              <span className="text-xs font-bold text-muted-foreground">
                 {proof.placements.length} sections · objective {proof.objective ?? "—"} · {proof.solve_time_ms} ms
               </span>
             </div>
             <div className="custom-scrollbar mt-2 max-h-[260px] overflow-auto rounded-xl border border-border" id="solver-result-scroll">
-              <table className="w-full min-w-[720px] text-left text-[11px]">
-                <thead className="sticky top-0 bg-muted/80 text-[9px] font-black uppercase tracking-wider text-muted-foreground backdrop-blur">
+              <table className="w-full min-w-[720px] text-left text-xs">
+                <thead className="sticky top-0 bg-muted/80 text-[10px] font-black uppercase tracking-wider text-muted-foreground backdrop-blur">
                   <tr>
                     <th className="px-2.5 py-1.5">Course</th>
                     <th className="px-2.5 py-1.5">Faculty</th>
@@ -427,7 +427,7 @@ Solver Lab
                       <td className="px-2.5 py-1.5 text-muted-foreground">{p.room}</td>
                       <td className="px-2.5 py-1.5 font-semibold">{slotLabel(p)}</td>
                       <td className="px-2.5 py-1.5">
-                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-emerald-800">
+                        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-emerald-800">
                           solver-proven
                         </span>
                       </td>
@@ -439,7 +439,7 @@ Solver Lab
           </section>
 
           {!proof.proof.all_ok && (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900">
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
               <CircleSlash className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 {proof.proof.violations.length

@@ -56,7 +56,7 @@ Modal directly.
 ## 3. Demo-day checklist
 
 Verified live **Oct 30** against the deployed Modal stack (UI redeployed
-with the Express/Full interface the same day):
+with the Guided build/Insights interface the same day):
 
 - [x] `GET /status` returns `ok`.
 - [x] `POST /scenario/reset` returns the seed (left reset for judges).

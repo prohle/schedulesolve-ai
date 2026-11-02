@@ -1,15 +1,23 @@
 "use client";
 
-// App shell (route: /dashboard): role-aware views.
-// Desktop gets an icon rail; mobile gets a bottom tab bar. No banner copy —
-// each view carries its own compact header. Visitors without a session are
-// redirected to /login-register.
+// App shell (route: /dashboard/[[...view]]): role-aware workspaces with real
+// URLs. Desktop gets an icon rail; mobile gets a bottom tab bar. Visitors
+// without a session are redirected to /login-register and returned here after
+// signing in.
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Toast } from "@/components/ui/toast";
-import { Header } from "./header";
-import { Sidebar, MobileNav, isViewAllowed, type ActiveView } from "./sidebar";
+import { Header, type PreviewRole } from "./header";
+import {
+  Sidebar,
+  MobileNav,
+  homeView,
+  isViewAllowed,
+  viewFromPath,
+  viewPath,
+  type ActiveView,
+} from "./sidebar";
 import { WizardView } from "./views/wizard";
 import { DeliverablesView } from "./views/deliverables";
 import { TermSetupView } from "./views/term-setup";
@@ -18,13 +26,17 @@ import { IntelligenceView } from "./views/intelligence";
 import { MyScheduleView } from "./views/my-schedule";
 import { SolverLabView } from "./views/solver-lab";
 import { RuntimeView } from "./views/runtime";
+import { FirstRunChecklist } from "./first-run";
+import { RolePreviewView } from "./role-preview";
 import { authFetch, clearSession, getStoredUser, type AuthUser } from "@/lib/auth";
 
 export function Dashboard() {
   const router = useRouter();
-  const [activeView, setActiveView] = useState<ActiveView>("wizard");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [previewRole, setPreviewRole] = useState<PreviewRole | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: "info" | "success" | "warning" | "error";
@@ -38,7 +50,8 @@ export function Dashboard() {
   useEffect(() => {
     const stored = getStoredUser();
     if (!stored) {
-      router.replace("/login-register");
+      const intended = `${window.location.pathname}${window.location.search}`;
+      router.replace(`/login-register?next=${encodeURIComponent(intended)}`);
       return;
     }
     authFetch("/api/auth/me")
@@ -46,9 +59,6 @@ export function Dashboard() {
         if (res.ok) {
           const me = (await res.json()).user as AuthUser;
           setUser(me);
-          // Coordinators land on the Import wizard (the demo path judges
-          // follow); instructors and students land on their own schedule.
-          setActiveView(me.role === "coordinator" ? "wizard" : "schedule");
         } else {
           clearSession();
         }
@@ -59,14 +69,54 @@ export function Dashboard() {
 
   // No session (or an expired one): the app shell is not the place to sign in.
   useEffect(() => {
-    if (authReady && !user) router.replace("/login-register");
-  }, [authReady, user, router]);
+    if (authReady && !user) {
+      const intended = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+      router.replace(`/login-register?next=${encodeURIComponent(intended)}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, user, router, pathname]);
+
+  // The URL is the source of truth. An empty /dashboard resolves to the role
+  // home; a forbidden or unknown deep link also falls back to that home.
+  const segment = pathname.replace(/^\/dashboard\/?/, "").split("/")[0] || undefined;
+  const requested = viewFromPath(segment);
+  const role = previewRole ?? user?.role ?? "coordinator";
+  const home = homeView(role);
+  const safeView: ActiveView =
+    requested && isViewAllowed(role, requested) ? requested : home;
+
+  useEffect(() => {
+    if (!authReady || !user) return;
+    if (!requested) {
+      router.replace(viewPath(home));
+      return;
+    }
+    if (!isViewAllowed(role, requested)) {
+      router.replace(viewPath(home));
+    }
+  }, [authReady, user, requested, role, home, router]);
 
   async function handleLogout() {
     try { await authFetch("/api/auth/logout", { method: "POST" }); } catch { /* local clear still applies */ }
     clearSession();
     setUser(null);
     router.replace("/login-register");
+  }
+
+  function navigate(view: ActiveView) {
+    router.push(viewPath(view));
+  }
+
+  function navigatePath(path: string) {
+    router.push(path);
+  }
+
+  function changePreview(next: PreviewRole | null) {
+    setPreviewRole(next);
+    const nextRole = next ?? user?.role ?? "coordinator";
+    if (!isViewAllowed(nextRole, safeView)) {
+      router.push(viewPath(homeView(nextRole)));
+    }
   }
 
   if (!authReady || !user) {
@@ -78,47 +128,70 @@ export function Dashboard() {
     );
   }
 
-  // A role only sees its own rail. If a hidden view is somehow active (deep
-  // state, a stale click, a role switch), fall back to the role's home view
-  // instead of rendering an admin-only screen.
-  const safeView: ActiveView = isViewAllowed(user.role, activeView)
-    ? activeView
-    : user.role === "coordinator" ? "wizard" : "schedule";
+  const wizardStep = searchParams.get("step");
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background font-sans text-foreground no-select">
-      <Header user={user} onLogout={handleLogout} />
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <Header
+        user={user}
+        onLogout={handleLogout}
+        previewRole={previewRole}
+        onPreview={changePreview}
+      />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar role={user.role} activeView={safeView} setActiveView={setActiveView} />
-        <main className="relative min-w-0 flex-1 overflow-hidden bg-muted/30 bg-[radial-gradient(54rem_26rem_at_85%_-10%,rgba(37,99,235,0.08),transparent),radial-gradient(36rem_20rem_at_-10%_110%,rgba(124,58,237,0.06),transparent),radial-gradient(40rem_24rem_at_50%_115%,rgba(16,185,129,0.05),transparent)]">
+        <Sidebar role={role} activeView={safeView} setActiveView={navigate} />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="relative min-w-0 flex-1 overflow-hidden bg-muted/30"
+        >
           {/* Clearance for the fixed mobile tab bar (removed on lg). */}
           <div className="custom-scrollbar h-full overflow-y-auto p-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:p-4 lg:pb-4">
-            <div key={safeView} className="animate-rise mx-auto w-full max-w-6xl">
-              {isUniversitySection(safeView) && (
-                <TermSetupView
+            <div key={`${safeView}-${previewRole ?? "self"}`} className="animate-rise mx-auto w-full max-w-6xl">
+              {previewRole ? (
+                <RolePreviewView
+                  role={previewRole}
                   user={user}
                   onToast={showToast}
-                  section={safeView}
-                  onNavigate={setActiveView}
+                  onExit={() => changePreview(null)}
                 />
+              ) : (
+                <>
+                  {role === "coordinator" && safeView === "wizard" && (
+                    <FirstRunChecklist onNavigate={navigatePath} />
+                  )}
+                  {isUniversitySection(safeView) && (
+                    <TermSetupView
+                      user={user}
+                      onToast={showToast}
+                      section={safeView}
+                      onNavigate={navigate}
+                    />
+                  )}
+                  {safeView === "wizard" && (
+                    <WizardView onToast={showToast} initialStep={wizardStep} />
+                  )}
+                  {safeView === "deliverables" && (
+                    <DeliverablesView
+                      user={user}
+                      onToast={showToast}
+                      onOpenFull={role === "coordinator" ? () => navigate("intelligence") : undefined}
+                    />
+                  )}
+                  {safeView === "schedule" && <MyScheduleView user={user} onToast={showToast} />}
+                  {safeView === "intelligence" && <IntelligenceView onToast={showToast} />}
+                  {safeView === "solver" && <SolverLabView />}
+                  {safeView === "runtime" && <RuntimeView />}
+                </>
               )}
-              {safeView === "wizard" && <WizardView onToast={showToast} />}
-              {safeView === "deliverables" && (
-                <DeliverablesView
-                  user={user}
-                  onToast={showToast}
-                  onOpenFull={user.role === "coordinator" ? () => setActiveView("intelligence") : undefined}
-                />
-              )}
-              {safeView === "schedule" && <MyScheduleView user={user} onToast={showToast} />}
-              {safeView === "intelligence" && <IntelligenceView onToast={showToast} />}
-              {safeView === "solver" && <SolverLabView />}
-              {safeView === "runtime" && <RuntimeView />}
             </div>
           </div>
         </main>
       </div>
-      <MobileNav role={user.role} activeView={safeView} setActiveView={setActiveView} />
+      <MobileNav role={role} activeView={safeView} setActiveView={navigate} />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
