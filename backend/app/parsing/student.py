@@ -18,6 +18,7 @@ import re
 from app import config
 from app.models.results import StudentConstraints
 from app.models.scenario import DAY_NAMES, PERIOD_NAMES, Scenario
+from app.services import guard
 from app.parsing.deterministic import _DAY, _mentioned_courses
 
 logger = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ class StudentPlanParser:
               plan: list[str], pool: list[str]) -> StudentConstraints:
         import time
         t0 = time.perf_counter()
-        if self._client is None:
+        if self._client is None or not guard.model_allowed():
             out = deterministic_student_parse(message, scenario, cohort)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return self._clean(out, pool)

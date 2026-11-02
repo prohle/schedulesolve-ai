@@ -31,13 +31,26 @@ volume = modal.Volume.from_name("schedulesolve-data", create_if_missing=True)
 
 @app.function(
     image=image,
-    secrets=[modal.Secret.from_name("meta-api")],
+    # Chat runs on open-weight Muse Spark Open via Baseten; voice ASR still
+    # uses the Meta Model API key. Keeping them in one secret avoids two
+    # MODEL_API_KEY entries fighting over the chat client.
+    secrets=[modal.Secret.from_name("baseten-api")],
     volumes={"/data": volume},
-    env={"DATABASE_URL": "sqlite:////data/schedulesolve.db", "ALLOW_SQLITE": "1"},
+    env={
+        "DATABASE_URL": "sqlite:////data/schedulesolve.db",
+        "ALLOW_SQLITE": "1",
+        "MUSE_BASE_URL": "https://inference.baseten.co/v1",
+        "MUSE_MODEL": "meta-models/muse-spark-open-1026",
+        "MUSE_ASR_BASE_URL": "https://api.meta.ai/v1",
+        "MUSE_ASR_MODEL": "muse-voice-transcribe-1.0",
+        "MUSE_REASONING_EFFORT": "low",
+        # Cost guard: durable daily weighted budget + per-identity limits.
+        "DEMO_DAILY_MODEL_BUDGET": "300",
+    },
     timeout=300,          # Muse calls can take 30-90s
     cpu=2,
     memory=4096,
-    max_containers=2,     # cap cost; the demo is single-tenant
+    max_containers=1,     # cap cost and concurrency; the demo is single-tenant
     min_containers=0,     # scale to zero; warm only around judging
 )
 @modal.asgi_app()

@@ -3,15 +3,19 @@
 The winning input story is: *drop whatever the registrar, the department
 admin, and three instructors each had lying around* — a PDF catalog, an
 Excel room sheet, a Word memo, CSV exports, JSON dumps, plain-text emails,
-all zipped together. Muse Spark can only autoclean what it can read, so
-this layer turns every common format into plain text first:
+all zipped together. This layer turns every text-bearing format into plain
+text first:
 
   .txt .md .csv .tsv .json .html .xml .yaml   decoded as-is (UTF-8)
   .pdf                                        pypdf text layer
   .docx                                       stdlib zip + WordprocessingML
   .xlsx                                       stdlib zip + shared strings/sheets
   .zip                                        recursed, member by member
-  .png .jpg .jpeg .webp .gif                  marked (no text layer to extract)
+  .png .jpg .jpeg .webp .gif                  rendered to vision pages by
+                                              app.ingestion.vision (see
+                                              POST /ingest/files); this
+                                              extractor returns a note if
+                                              called directly
   anything else                               best-effort UTF-8 salvage
 
 No format is rejected: worst case the file contributes a visible

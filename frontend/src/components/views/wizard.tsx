@@ -267,6 +267,16 @@ function MuseExtraction({ ingest }: { ingest: IngestResponse }) {
             {Math.round(ingest.parser_latency_ms / 100) / 10}s
           </span>
         )}
+        {!!ingest.batches && ingest.batches > 1 && (
+          <span className="rounded bg-white px-1.5 py-0.5 font-bold text-slate-600 ring-1 ring-slate-200">
+            {ingest.batches} batches
+          </span>
+        )}
+        {!!ingest.images_read && (
+          <span className="rounded bg-white px-1.5 py-0.5 font-bold text-slate-600 ring-1 ring-slate-200">
+            {ingest.images_read} image page{ingest.images_read === 1 ? "" : "s"}
+          </span>
+        )}
         <span className="ml-auto font-bold text-sky-800">View structured output →</span>
       </summary>
       <div className="border-t border-sky-200 p-3">
@@ -784,7 +794,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
                 </p>
                 <p className="relative mt-1 text-xs text-muted-foreground">PDF · DOCX · XLSX · CSV · JSON · TXT · ZIP</p>
                 <input id="file-input" type="file" multiple className="hidden"
-                  accept=".pdf,.docx,.xlsx,.csv,.tsv,.json,.txt,.md,.html,.zip"
+                  accept=".pdf,.docx,.xlsx,.csv,.tsv,.json,.txt,.md,.html,.zip,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tiff"
                   onChange={(e) => e.target.files && addFiles(e.target.files)} />
               </div>
 

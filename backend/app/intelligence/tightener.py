@@ -41,6 +41,7 @@ from app.models.results import SolveResult
 from app.models.scenario import Operation, Program, RoadmapRequirement, Scenario, Section
 from app.intelligence.matrices import cohort_pool, compute_margins
 from app.intelligence.spectral import analyze
+from app.services import guard
 from app.services.audit import record_event
 from app.solver.scheduling_model import solve
 
@@ -161,7 +162,7 @@ def _muse_plan(scenario: Scenario, evidence: list[str], ops: list[Operation],
         client = OpenAI(
             base_url=config.MUSE_BASE_URL, api_key=config.MUSE_API_KEY,
             timeout=config.MUSE_TIMEOUT_S)
-    if client is None:
+    if client is None or not guard.model_allowed():
         return None
     try:
         response = client.beta.chat.completions.parse(

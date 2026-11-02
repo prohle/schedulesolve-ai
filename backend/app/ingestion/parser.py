@@ -25,6 +25,8 @@ from app.models.ingestion import (
     InstitutionData,
 )
 from app.ingestion.prompts import INGESTION_SYSTEM_PROMPT
+from app.ingestion.vision import PROVIDER_MAX_IMAGES, data_url
+from app.services import guard
 
 logger = logging.getLogger(__name__)
 
@@ -51,19 +53,44 @@ class IngestionParser:
                 base_url=config.MUSE_BASE_URL, api_key=config.MUSE_API_KEY,
                 timeout=config.MUSE_TIMEOUT_S)
 
-    def parse(self, text: str) -> InstitutionData:
+    def parse(self, text: str, images: Optional[list[tuple[bytes, str]]] = None) -> InstitutionData:
         import time
         t0 = time.perf_counter()
-        if self._client is None:
+        images = images or []
+        if len(images) > PROVIDER_MAX_IMAGES:
+            # The caller must batch; refuse rather than send a request the
+            # provider will reject (and charge for).
+            raise ValueError(
+                f"{len(images)} images in one request exceeds Muse Spark's "
+                f"{PROVIDER_MAX_IMAGES}-image limit")
+        if self._client is None or not guard.model_allowed():
+            if images and not text.strip():
+                self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
+                self.mode = "deterministic"
+                return InstitutionData(
+                    summary="Scanned pages/images need a live Muse vision model; "
+                            "no model key is configured.")
             parsed = deterministic_ingest(text)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return parsed
         try:
+            if images:
+                content: list[dict] = []
+                if text.strip():
+                    content.append({"type": "text", "text": text})
+                for part in images:
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": data_url(part)},
+                    })
+                user_content: object = content
+            else:
+                user_content = text
             response = self._client.beta.chat.completions.parse(
                 model=config.MUSE_MODEL,
                 messages=[
                     {"role": "system", "content": INGESTION_SYSTEM_PROMPT},
-                    {"role": "user", "content": text},
+                    {"role": "user", "content": user_content},
                 ],
                 response_format=InstitutionData,
                 reasoning_effort=config.MUSE_REASONING_EFFORT,
@@ -72,11 +99,17 @@ class IngestionParser:
             if parsed is None:
                 raise ValueError("model returned no parsed data")
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
-            logger.info("muse-spark ingestion ok (model=%s)", config.MUSE_MODEL)
+            logger.info("muse-spark ingestion ok (model=%s, images=%d)",
+                        config.MUSE_MODEL, len(images))
             return parsed
         except Exception:
             logger.exception("Muse Spark ingestion failed; falling back to the deterministic parser")
-            parsed = deterministic_ingest(text)
+            if images and not text.strip():
+                parsed = InstitutionData(
+                    summary="Muse vision could not read these pages; "
+                            "the deterministic fallback has no OCR.")
+            else:
+                parsed = deterministic_ingest(text)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             self.mode = "deterministic"
             return parsed

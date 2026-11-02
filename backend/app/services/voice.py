@@ -16,6 +16,7 @@ import httpx
 from fastapi import HTTPException
 
 from app import config
+from app.services import guard
 
 ASR_MODEL = config.MUSE_ASR_MODEL
 MAX_BYTES = 32 * 1024 * 1024
@@ -34,6 +35,11 @@ def transcribe_wav(audio: bytes, filename: str = "note.wav") -> str:
         raise HTTPException(
             status_code=503,
             detail="Voice transcription needs MUSE_API_KEY (Meta Model API).")
+    if not guard.model_allowed():
+        raise HTTPException(
+            status_code=503,
+            detail="Demo protection: the model budget is exhausted, so voice is "
+                   "temporarily unavailable. Typed intake still works.")
     if len(audio) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="Audio exceeds the 32 MB limit.")
     request = {

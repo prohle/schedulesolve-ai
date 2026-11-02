@@ -21,6 +21,7 @@ from app import config
 from app.models.scenario import Operation, ParsedRequest, Scenario
 from app.parsing.deterministic import deterministic_parse
 from app.parsing.prompts import build_system_prompt
+from app.services import guard
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class ConstraintParser:
         import time
         message = normalize_honorifics(message)
         t0 = time.perf_counter()
-        if self._client is None:
+        if self._client is None or not guard.model_allowed():
             parsed = deterministic_parse(message, scenario, speaker_id)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return parsed

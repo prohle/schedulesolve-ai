@@ -11,3 +11,4 @@ scipy==1.18.1
 sqlalchemy==2.1.6
 psycopg[binary]==3.3.6
 pypdf==6.21.4
+pymupdf==2.1

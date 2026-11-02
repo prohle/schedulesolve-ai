@@ -490,6 +490,8 @@ export interface IngestResponse {
   changes?: ChangeReport | null;
   model?: string;
   parser_latency_ms?: number;
+  batches?: number;
+  images_read?: number;
 }
 
 // --- Intelligence layer (sparse matrices + spectral radar + AI tightening) ---

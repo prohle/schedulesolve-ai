@@ -60,6 +60,7 @@ def init_db() -> None:
 
     from app.models import audit  # noqa: F401  (register models)
     from app.models import auth  # noqa: F401  (users / schedules / requests)
+    from app.models import guard  # noqa: F401  (durable model-call budget)
     from app.models import term  # noqa: F401  (intake window / faculty submissions)
     from app.models import state  # noqa: F401  (durable institution model)
 

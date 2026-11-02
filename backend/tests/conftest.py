@@ -3,6 +3,16 @@ from fastapi.testclient import TestClient
 
 from app import config
 from app.main import app
+from app.services import guard
+
+
+@pytest.fixture(autouse=True)
+def reset_model_guard():
+    """Each test starts with a clean budget/rate/degraded state."""
+    guard._exhausted_day = None
+    guard._degraded.set(False)
+    guard._hits.clear()
+    yield
 
 
 @pytest.fixture(autouse=True)

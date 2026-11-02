@@ -64,12 +64,19 @@ our word for it. Scoped claims are stronger than broad ones.
 
 ## Input
 
-- **No OCR.** Image files (`.png/.jpg/.webp/.gif/.bmp/.tiff`) are marked
-  "no text layer to extract" and contribute an `[unreadable]` note; a
-  scanned PDF whose pages carry no text layer extracts to nothing
-  (`backend/app/ingestion/extract.py`). The completeness check then tells
-  the coordinator exactly which of the six requirements still needs a
-  readable copy — it never guesses the missing content.
+- **Vision is bounded, not unlimited OCR.** Digital files still go through
+  the deterministic text extractor (PDF/DOCX/XLSX/CSV/JSON/TXT/MD/ZIP).
+  Image files and scanned PDFs (a PDF with fewer than `MIN_PDF_TEXT_CHARS`
+  extractable characters) are rendered to pages and sent to Muse Spark
+  vision with the same `InstitutionData` schema
+  (`backend/app/ingestion/vision.py`). Batching is real and provider-safe:
+  at most `INGEST_MAX_IMAGES_PER_CALL` images per request (default 16,
+  clamped to Muse's **32-image** hard cap), at most
+  `INGEST_MAX_PDF_PAGES` pages per PDF, and every page is downscaled before
+  encoding. If no model key is configured, or a vision call fails, the
+  pages are never guessed: the deterministic fallback runs and the
+  completeness check names what is still missing. A single image that
+  cannot be decoded contributes an explicit unreadable note.
 - **Autoclean quality is bounded by the source.** Muse Spark structures
   what the files say; if the catalog omits a course's equipment or a
   faculty sheet omits a qualification, the model has neither, and the
@@ -151,6 +158,17 @@ our word for it. Scoped claims are stronger than broad ones.
 
 ## Platform
 
+- **The public demo has a cost guard.** The hosted demo is keyless for
+  judges, so the model-calling routes are protected in
+  `backend/app/services/guard.py`: a durable daily budget
+  (`DEMO_DAILY_MODEL_BUDGET`, default 120 weighted units, in the
+  `model_usage` table), per-identity limits (40/hour, 6/minute, keyed by
+  bearer-token hash or forwarded IP), and request caps
+  (`MAX_INGEST_FILES`, `MAX_INGEST_BYTES`, `MAX_UPLOAD_BYTES`,
+  `MAX_MESSAGE_CHARS`). When the budget is exhausted the route returns
+  **429** before any paid call; the deterministic fallback still works.
+  The backend runs at `max_containers=1` to bound concurrency. This is
+  demo protection, not a multi-tenant billing system.
 - **Demo-grade auth.** PBKDF2 password hashes + hashed bearer sessions,
   sized for a hackathon demo and a single coordinator office — not an
   institutional SSO story. Demo accounts ship with password `demo1234`

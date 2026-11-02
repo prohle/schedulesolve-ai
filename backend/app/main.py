@@ -13,7 +13,8 @@ import json
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app import config
@@ -61,6 +62,7 @@ from app.models.scenario import (
 )
 from app.parsing.parser import ConstraintParser, validate_operations
 from app.services import audit
+from app.services import guard
 from app.services import offerings as offering_service
 from app.services import phd as phd_service
 from app.services import term as term_service
@@ -90,6 +92,50 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="ScheduleSolve AI", version="0.2.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def model_budget_guard(request: Request, call_next):
+    """Refuse paid model calls after the demo's daily budget is exhausted.
+
+    The guard is request-level and weighted (see app.services.guard). It only
+    runs when a live model key is configured, so the offline test suite and a
+    no-key local run are untouched. The deterministic fallback still works.
+    """
+    length = request.headers.get("content-length")
+    if length and length.isdigit() and int(length) > config.MAX_REQUEST_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": f"Request exceeds {config.MAX_REQUEST_BYTES // (1024 * 1024)} MB."},
+        )
+    live = bool(config.MUSE_API_KEY or config.MUSE_ASR_API_KEY)
+    weight = guard.weight_for(request.url.path) if live else 0
+    if weight:
+        ok, reason = guard.reserve(guard.identity(request), weight)
+        if not ok:
+            if "daily demo model budget" in reason:
+                # Budget exhausted: keep the judge's flow working with the
+                # deterministic fallback instead of a hard 429. The response
+                # is labelled deterministic by the services.
+                guard.mark_degraded()
+            else:
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "detail": f"Demo protection: {reason}. "
+                                  "The deterministic fallback is still available; retry shortly.",
+                    },
+                    headers={
+                        "Retry-After": "60",
+                        "X-Demo-Budget-Remaining": str(guard.remaining_today()),
+                    },
+                )
+    response = await call_next(request)
+    if weight:
+        response.headers["X-Demo-Budget-Remaining"] = str(guard.remaining_today())
+        if not guard.model_allowed():
+            response.headers["X-Demo-Degraded"] = "1"
+    return response
 
 
 def load_seed_scenario() -> Scenario:
@@ -258,31 +304,48 @@ class IngestResponse(BaseModel):
     changes: Optional[ChangeReport] = None
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None
+    # How the model call was batched: total model requests + image pages read.
+    batches: int = 0
+    images_read: int = 0
 
 
 _last_ingested_data: Optional[InstitutionData] = None
 
 
-def _ingest_batches(batches: list[str], submission: str | None = None) -> IngestResponse:
+def _ingest_batches(
+    text_batches: list[str],
+    image_batches: list[list[tuple[bytes, str]]] | None = None,
+    submission: str | None = None,
+) -> IngestResponse:
     """Shared ingest core: parse every batch, merge, assemble, audit.
 
     One batch is the normal path. Large dumps are split by
-    `app.ingestion.batch`; the model extracts each batch and the deterministic
-    merger concatenates the typed entities before normalization.
+    `app.ingestion.batch`; scanned pages are split by
+    `app.ingestion.vision` into provider-safe image batches. The model
+    extracts each batch independently and the deterministic merger
+    concatenates the typed entities before normalization.
     """
     global _current_scenario, _last_ingested_data
     parser = IngestionParser()
+    image_batches = image_batches or []
     parts = []
     modes: list[str] = []
     latency_ms = 0
-    for text in batches:
+    for text in text_batches:
         # parse() flips to deterministic on a fallback; reset per batch so one
         # failed call does not mislabel the batches that did run live.
         parser.mode = "muse-spark" if config.MUSE_API_KEY else "deterministic"
         parts.append(parser.parse(text))
         modes.append(parser.mode)
         latency_ms += parser.last_latency_ms or 0
+    for images in image_batches:
+        parser.mode = "muse-spark" if config.MUSE_API_KEY else "deterministic"
+        parts.append(parser.parse("", images=images))
+        modes.append(parser.mode)
+        latency_ms += parser.last_latency_ms or 0
     data = merge_institution_data(parts)
+    images_read = sum(len(batch) for batch in image_batches)
+    total_batches = len(text_batches) + len(image_batches)
     mode = "muse-spark" if modes and all(m == "muse-spark" for m in modes) else "deterministic"
     # Build from the parse we already have — never parse the same dump twice.
     scenario = build_scenario(data)
@@ -290,23 +353,38 @@ def _ingest_batches(batches: list[str], submission: str | None = None) -> Ingest
     conflicts = detect_conflicts(data)
     _last_ingested_data = data
     _set_current_scenario(scenario)
-    audit.record_submission((submission or batches[0])[:500], data.summary, mode)
+    audit.record_submission((submission or (text_batches[0] if text_batches else ""))[:500],
+                            data.summary, mode)
     audit.record_event("ingest",
                        f"Ingested {len(data.courses)} courses, {len(data.instructors)} instructors, "
                        f"{len(data.cohorts)} cohorts, {len(data.rooms)} rooms",
                        {"courses": len(data.courses), "instructors": len(data.instructors),
                         "cohorts": len(data.cohorts), "rooms": len(data.rooms),
                         "conflicts": len(conflicts), "changes": len(changes.changes),
-                        "batches": len(batches)})
+                        "batches": total_batches, "images_read": images_read})
     return IngestResponse(scenario=scenario, parsed=data, parser_mode=mode,
                           completeness=check_completeness(data),
                           conflicts=conflicts, changes=changes,
                           model=config.MUSE_MODEL if mode == "muse-spark" else None,
-                          parser_latency_ms=latency_ms or None)
+                          parser_latency_ms=latency_ms or None,
+                          batches=total_batches, images_read=images_read)
 
 
 def _ingest_text(text: str) -> IngestResponse:
-    return _ingest_batches([text], submission=text)
+    if len(text) > config.MAX_INGEST_TEXT_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Ingest text exceeds {config.MAX_INGEST_TEXT_CHARS} characters.",
+        )
+    return _ingest_batches([text], [], submission=text)
+
+
+def _check_message(text: str, label: str = "message") -> None:
+    if text and len(text) > config.MAX_MESSAGE_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"{label} exceeds {config.MAX_MESSAGE_CHARS} characters.",
+        )
 
 
 @app.get("/status")
@@ -339,14 +417,53 @@ async def ingest_files(files: list[UploadFile] = File(...)) -> IngestResponse:
     JSON, text, or a zip of all of them. Each file is extracted to text
     (app.ingestion.extract), concatenated, and autocleaned; the response
     reports which of the six required inputs were found and which are missing."""
+    from app.ingestion import vision
     from app.ingestion.extract import extract_text
+    if len(files) > config.MAX_INGEST_FILES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Too many files: {len(files)} > {config.MAX_INGEST_FILES}.",
+        )
     chunks: list[tuple[str, str]] = []
+    images: list[tuple[bytes, str]] = []
+    notes: list[str] = []
+    total_bytes = 0
     for f in files:
         content = await f.read()
+        if len(content) > config.MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"{f.filename or 'file'} exceeds {config.MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+            )
+        total_bytes += len(content)
+        if total_bytes > config.MAX_INGEST_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Upload exceeds {config.MAX_INGEST_BYTES // (1024 * 1024)} MB in total.",
+            )
         name = f.filename or "file"
-        chunks.append((name, extract_text(name, content)))
-    submission = "".join(f"\n--- {name} ---\n{text}" for name, text in chunks)
-    return _ingest_batches(batch_chunks(chunks), submission=submission)
+        if vision.is_image(name):
+            pages = vision.image_pages(content, name)
+            if pages:
+                images.extend(pages)
+                notes.append(f"[vision: {name}, {len(pages)} image]")
+            else:
+                chunks.append((name, f"[unreadable image {name} — could not decode]"))
+            continue
+        text = extract_text(name, content)
+        if name.lower().endswith(".pdf") and len(text.strip()) < config.MIN_PDF_TEXT_CHARS:
+            pages = vision.pdf_pages(content)
+            if pages:
+                images.extend(pages)
+                notes.append(f"[vision: {name}, {len(pages)} page(s)]")
+                continue
+        chunks.append((name, text))
+    submission = "".join(f"\n--- {name} ---\n{text}" for name, text in chunks) + "\n".join(notes)
+    return _ingest_batches(
+        batch_chunks(chunks) if chunks else [],
+        vision.image_batches(images),
+        submission=submission,
+    )
 
 
 @app.post("/ingest/apply", response_model=IngestResponse)
@@ -471,6 +588,7 @@ def apply_request(req: ApplyOpsRequest) -> Scenario:
 
 @app.post("/parse", response_model=ParsedRequest)
 def parse(req: MessageRequest) -> ParsedRequest:
+    _check_message(req.message)
     scenario = req.scenario or get_current_scenario()
     return ConstraintParser().parse(req.message, scenario, req.speaker_id)
 
@@ -760,6 +878,11 @@ async def student_transcript(file: UploadFile = File(...)) -> dict:
     """
     from app.ingestion.extract import extract_text
     content = await file.read()
+    if len(content) > config.MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Transcript exceeds {config.MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+        )
     text = extract_text(file.filename or "transcript", content).strip()
     if not text:
         raise HTTPException(
@@ -810,6 +933,7 @@ def schedule_pin(req: PinRequest) -> SolveResult:
 
 @app.post("/copilot", response_model=CopilotResponse)
 def copilot(req: MessageRequest) -> CopilotResponse:
+    _check_message(req.message)
     scenario = req.scenario or get_current_scenario()
     return run_copilot(scenario, req.message, speaker_id=req.speaker_id)
 
@@ -819,6 +943,7 @@ def student_plan(req: StudentPlanRequest) -> StudentPlanResponse:
     """Suggest a student's personal schedule: Muse Spark parses their life
     constraints; an exact selector proves a conflict-free plan against the
     placed timetable (see services/student_plan.py)."""
+    _check_message(req.message, "student request")
     scenario = req.scenario or get_current_scenario()
     try:
         return suggest_student_plan(
@@ -845,6 +970,7 @@ class TermChangeRequest(BaseModel):
 
 @app.post("/term-change", response_model=TermChangeResponse)
 def term_change(req: TermChangeRequest) -> TermChangeResponse:
+    _check_message(req.message, "term-change request")
     scenario = req.scenario or get_current_scenario()
     try:
         return run_term_change(scenario, req.message, elected=req.chosen or None)
@@ -874,6 +1000,11 @@ async def term_change_audio(file: UploadFile = File(...)) -> TranscriptDraft:
     established from audio, so the transcript enters the same human-reviewed
     path as typed text (see TranscriptDraft)."""
     audio = await file.read()
+    if len(audio) > config.MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Voice note exceeds {config.MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+        )
     transcript = transcribe_wav(audio, file.filename or "voice-note.wav")
     return TranscriptDraft(transcript=transcript)
 

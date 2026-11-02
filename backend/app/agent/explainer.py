@@ -19,6 +19,7 @@ from typing import Optional
 from app import config
 from app.models.results import ConflictReport, ExplanationResult, Resolution
 from app.models.scenario import Operation, Scenario
+from app.services import guard
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class ConflictExplainer:
         """Returns (validated explanation, mode). Resolutions are constrained
         to the conflict core and capped at 3."""
         core = conflicts.conflicting_operation_indices
-        if self._client is None:
+        if self._client is None or not guard.model_allowed():
             return _deterministic_explanation(ops, core), self.mode
         try:
             response = self._client.beta.chat.completions.parse(

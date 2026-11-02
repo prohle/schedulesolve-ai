@@ -75,3 +75,17 @@ HOME_SOLVER_TIME_LIMIT_S = float(os.getenv("HOME_SOLVER_TIME_LIMIT_S", "30"))
 # C39: full-time offering guarantee — every cohort must be able to assemble
 # at least this many distinct, non-overlapping courses toward graduation.
 MIN_COURSES_PER_COHORT = int(os.getenv("MIN_COURSES_PER_COHORT", "4"))
+
+# Public-demo request caps: reject oversized payloads before any paid model
+# call. The hosted demo is keyless, so this is a cost/DoS boundary as well as
+# a UX one. Per-batch Muse limits live in app/ingestion/batch.py and vision.py.
+MAX_INGEST_TEXT_CHARS = int(os.getenv("MAX_INGEST_TEXT_CHARS", "200000"))
+MAX_INGEST_FILES = int(os.getenv("MAX_INGEST_FILES", "40"))
+MAX_INGEST_BYTES = int(os.getenv("MAX_INGEST_BYTES", str(25 * 1024 * 1024)))
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+MAX_MESSAGE_CHARS = int(os.getenv("MAX_MESSAGE_CHARS", "8000"))
+# Hard body-size ceiling (uploads and large JSON scenarios) before routing.
+MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(30 * 1024 * 1024)))
+# A PDF with fewer extracted characters than this is treated as a scan and
+# rendered to pages for Muse vision instead of being sent as near-empty text.
+MIN_PDF_TEXT_CHARS = int(os.getenv("MIN_PDF_TEXT_CHARS", "200"))
