@@ -7,6 +7,11 @@
 > a fast-forward. Narration is synthesized locally with the 05-media
 > Chatterbox pipeline (`dee_us` voice, diction-weighted).
 >
+> **B-roll licence.** The non-app footage (opening corridor shot, graduation
+> end card) is HeyGen royalty-free stock used under a paid HeyGen
+> subscription. Every frame of the product is the real app. Full asset
+> provenance: [docs/truthfulness.md](./truthfulness.md#assets-and-licences).
+>
 > **Live-model gate (Baseten).** The recording backend runs Muse Spark
 > Open on Baseten: `MUSE_BASE_URL=https://inference.baseten.co/v1`,
 > `MUSE_MODEL=meta-models/muse-spark-open-1026`, `MODEL_API_KEY` = the
