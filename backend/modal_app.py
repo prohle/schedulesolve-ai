@@ -48,10 +48,10 @@ volume = modal.Volume.from_name("schedulesolve-data", create_if_missing=True)
         "DEMO_DAILY_MODEL_BUDGET": "300",
     },
     timeout=300,          # Muse calls can take 30-90s
-    cpu=1,                # 1 core is enough: department solve ~20ms, 361-section ~12s
+    cpu=2,                # headroom for concurrent judges + pymupdf page rendering
     memory=4096,          # keep 4 GiB: pymupdf page rendering for scanned PDFs
     max_containers=1,     # cap cost and concurrency; the demo is single-tenant
-    min_containers=0,     # scale to zero; warm only around judging
+    min_containers=0,     # scale to zero; cold start is ~6s
 )
 @modal.asgi_app()
 def api():

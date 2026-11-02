@@ -32,17 +32,17 @@ zero and a container idles after ~60 s without traffic.
 
 | Warm component | Rate | Cost/hour |
 |---|---|---:|
-| Backend (1 core / 4 GiB) | $0.0473/core/h + $0.008/GiB/h | **$0.079** |
+| Backend (2 core / 4 GiB) | $0.0473/core/h + $0.008/GiB/h | **$0.127** |
 | UI (1 core / 1 GiB) | same | **$0.055** |
 
-So a judge's 2-minute session with both warm is ~**$0.004**, and an
-always-warm stack is ~$3.20/day. A $0.84 balance is ~10 hours of continuous
-warm time or ~300 two-minute sessions — which is why the backend runs 1 core
-(department solve ~20 ms, 361-section ~12 s) and why `keepwarm.yml` is
-**manual-only**: pinging every 15 minutes does not keep a scale-to-zero app
-warm (each ping pays a cold start, then idles), and 480 pings over judging
-week cost ~$1.50–2.20 — more than a small credit balance. A cold start is
-~10–20 s with a cached image, which is the better trade. Run
+So a judge's 2-minute session with both warm is ~**$0.006**, and an
+always-warm stack is ~$4.40/day. A $30 credit covers the whole judging and
+community-vote window with room to spare.
+
+`keepwarm.yml` is still **manual-only**: pinging every 15 minutes does not
+keep a scale-to-zero app warm (each ping pays a cold start, then idles), so
+480 pings over judging week would buy nothing. A cold start is ~6–20 s with a
+cached image, which is the better trade. Run
 `gh workflow run keepwarm.yml` manually right before a live demo if you want
 the containers hot.
 
