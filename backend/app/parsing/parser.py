@@ -6,7 +6,7 @@ defaulting to `muse-spark-1.3-contributor` (frugal; content trains future
 Meta models — fine for synthetic data, flip to `muse-spark-1.3` for real
 institutional data).
 
-Mock path: deterministic rule-based parser — full pipeline with zero credits.
+Deterministic path: rule-based parser — full pipeline with zero credits.
 
 Either way, every operation passes `validate_operations` before it may
 touch the solver — the LLM never gets the benefit of the doubt.
@@ -19,7 +19,7 @@ from typing import Optional
 
 from app import config
 from app.models.scenario import Operation, ParsedRequest, Scenario
-from app.parsing.mock import mock_parse
+from app.parsing.deterministic import deterministic_parse
 from app.parsing.prompts import build_system_prompt
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def normalize_honorifics(message: str) -> str:
     """Speech transcripts spell academic titles out in full while scenario
     names use abbreviated forms ("Prof." / "Prof."). Normalizing before the
     parse keeps name resolution deterministic for both the live Muse
-    path and the mock fallback."""
+    path and the deterministic fallback."""
     import re
     # Spelled-out forms exactly as speech recognition returns them.
     for spelled, short in (("Docto" "r", "Prof."), ("Professor", "Prof.")):
@@ -39,12 +39,12 @@ def normalize_honorifics(message: str) -> str:
 
 class ConstraintParser:
     def __init__(self) -> None:
-        self.mode: str = "mock" if not config.MUSE_API_KEY else "muse-spark"
+        self.mode: str = "deterministic" if not config.MUSE_API_KEY else "muse-spark"
         self.model: str | None = config.MUSE_MODEL if config.MUSE_API_KEY else None
         self.last_latency_ms: int | None = None
         self._client = None
         if config.MUSE_API_KEY:
-            from openai import OpenAI  # imported lazily so mock mode needs no SDK
+            from openai import OpenAI  # imported lazily so offline mode needs no SDK
             self._client = OpenAI(
                 base_url=config.MUSE_BASE_URL, api_key=config.MUSE_API_KEY,
                 timeout=config.MUSE_TIMEOUT_S)
@@ -55,7 +55,7 @@ class ConstraintParser:
         message = normalize_honorifics(message)
         t0 = time.perf_counter()
         if self._client is None:
-            parsed = mock_parse(message, scenario, speaker_id)
+            parsed = deterministic_parse(message, scenario, speaker_id)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return parsed
 
@@ -78,10 +78,10 @@ class ConstraintParser:
             logger.info("muse-spark parse ok (model=%s)", config.MUSE_MODEL)
             return parsed
         except Exception:
-            logger.exception("Muse Spark parse failed; falling back to mock parser")
-            parsed = mock_parse(message, scenario, speaker_id)
+            logger.exception("Muse Spark parse failed; falling back to the deterministic parser")
+            parsed = deterministic_parse(message, scenario, speaker_id)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
-            self.mode = "mock"
+            self.mode = "deterministic"
             return parsed
 
 

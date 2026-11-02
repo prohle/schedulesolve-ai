@@ -1,7 +1,7 @@
 # 3:00 demo shot list — top-3 cut
 
 Record against the **live** stack with `MODEL_API_KEY` set. Every model beat must
-show a `muse-spark` badge and a latency badge. Do not ship a `MOCK` cut.
+show a `muse-spark` badge and a latency badge. Do not ship a fallback cut.
 The hero story: **messy files in any format → a recommended schedule for the
 entire college/university, proven by a solver you can swap.**
 
@@ -24,7 +24,7 @@ Resolution 1440×900 (or 1920×1080). Cursor visible. No dead air longer than
 - [ ] `MODEL_API_KEY` is set in the recording environment.
 - [ ] `docker compose up --build` is up before recording.
 - [ ] `POST /scenario/reset` before the first take.
-- [ ] Every model badge says `muse-spark`, never `MOCK`.
+- [ ] Every model badge says `muse-spark`, never a fallback.
 - [ ] The Import beat drops six files in six different formats (PDF/DOCX/CSV/TXT/XLSX/MD) and the completeness panel reads 6/6.
 - [ ] The Build beat shows the university-scale solve (38 instructors / 41 sections), the dual-engine comparison, and returns to the story seed before Term Change.
 - [ ] The self-heal beat shows the Agent trace panel with Muse Spark and CP-SAT actor badges.

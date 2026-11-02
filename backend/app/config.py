@@ -19,11 +19,31 @@ MUSE_API_KEY = os.getenv("MODEL_API_KEY") or os.getenv("MUSE_API_KEY")
 # "muse-spark-1.3" (Standard mode) so no staff data ever trains Meta models.
 MUSE_MODEL = os.getenv("MUSE_MODEL", "muse-spark-1.3-contributor")
 
+# Muse Voice Transcribe is a hosted Meta ASR endpoint, not an OpenAI-compatible
+# chat model. When the chat model is served from Baseten (open weights), the ASR
+# call must still go to the Meta Model API with the Meta key — otherwise a
+# perfectly valid WAV fails with "please check the model you provided".
+MUSE_ASR_BASE_URL = os.getenv("MUSE_ASR_BASE_URL", "https://api.meta.ai/v1")
+# Prefer a dedicated ASR key, then the Meta-key spelling, then MODEL_API_KEY
+# only when the chat endpoint itself is the Meta Model API (i.e. that key is a
+# Meta key, not a Baseten/vLLM key).
+_ASR_FALLBACK_MODEL_KEY = (
+    os.getenv("MODEL_API_KEY")
+    if "meta.ai" in os.getenv("MUSE_BASE_URL", "https://api.meta.ai/v1")
+    else None
+)
+MUSE_ASR_API_KEY = (
+    os.getenv("MUSE_ASR_API_KEY")
+    or os.getenv("MUSE_API_KEY")
+    or _ASR_FALLBACK_MODEL_KEY
+)
+MUSE_ASR_MODEL = os.getenv("MUSE_ASR_MODEL", "muse-voice-transcribe-1.0")
+
 # Parsing is not a deep-reasoning task; low effort keeps token spend down.
 MUSE_REASONING_EFFORT = os.getenv("MUSE_REASONING_EFFORT", "low")
 
 # Hard timeout on every Meta API call. A hung/slow response must fail fast so
-# the deterministic fallback (mock parser / template explanation / template
+# the deterministic fallback (deterministic parser / template explanation / template
 # tightening) takes over instead of stalling the co-pilot loop. muse-spark is
 # a reasoning model — the tightening prompt can take 40-90s, so this is
 # generous rather than tight.

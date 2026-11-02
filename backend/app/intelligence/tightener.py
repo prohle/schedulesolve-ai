@@ -150,7 +150,7 @@ def verify_move(scenario: Scenario, ops: list[Operation], move: TighteningMove,
 # --- Muse Spark (or deterministic template) proposals ---------------------------
 
 def _mode() -> str:
-    return "muse-spark" if config.MUSE_API_KEY else "mock"
+    return "muse-spark" if config.MUSE_API_KEY else "deterministic"
 
 
 def _muse_plan(scenario: Scenario, evidence: list[str], ops: list[Operation],
@@ -219,7 +219,7 @@ def _courses_non_overlap(slots: dict[str, list[set]], c1: str, c2: str) -> bool:
     return any(not (a & b) for a in slots.get(c1, []) for b in slots.get(c2, []))
 
 
-def _mock_assessment(base: SolveResult, margins: MarginsReport, core: list[int]) -> str:
+def _deterministic_assessment(base: SolveResult, margins: MarginsReport, core: list[int]) -> str:
     if core:
         return ("(template) The request set is infeasible — CP-SAT names a conflict "
                 "core; withdrawing one request lets the timetable re-solve.")
@@ -234,7 +234,7 @@ def _mock_assessment(base: SolveResult, margins: MarginsReport, core: list[int])
     return "(template) No blocking issue — no moves proposed."
 
 
-def _mock_plan(scenario: Scenario, evidence: list[str], base: SolveResult,
+def _deterministic_plan(scenario: Scenario, evidence: list[str], base: SolveResult,
                margins: MarginsReport, ops: list[Operation], core: list[int]) -> TighteningPlan:
     """Deterministic template generator — same grammar, zero credits."""
     moves: list[ProposedMove] = []
@@ -305,7 +305,7 @@ def _mock_plan(scenario: Scenario, evidence: list[str], base: SolveResult,
             seen.add(key)
             unique.append(mv)
     return TighteningPlan(
-        assessment=_mock_assessment(base, margins, core),
+        assessment=_deterministic_assessment(base, margins, core),
         moves=unique[:3])
 
 
@@ -348,8 +348,8 @@ def run_tightener(scenario: Scenario, ops: Optional[list[Operation]] = None) -> 
             plan = _validate_plan(plan, scenario, ops, core)
             mode = "muse-spark"
         else:
-            plan = _mock_plan(scenario, evidence, base, margins, ops, core)
-            mode = "mock"  # Muse absent or failed/timed out -> template fallback
+            plan = _deterministic_plan(scenario, evidence, base, margins, ops, core)
+            mode = "deterministic"  # Muse absent or failed/timed out -> template fallback
 
     moves: list[TighteningMove] = []
     best_result: SolveResult | None = None

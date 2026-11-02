@@ -143,9 +143,14 @@ def build_scenario(data: InstitutionData) -> Scenario:
             continue  # duplicate record: first copy wins (see note above)
         qualified = [c for c in (resolve_code(q) for q in inst.qualified_courses) if c]
         hard, prefs = _availability(inst.availability)
+        # Muse leaves int fields at 0 when the source file does not state a
+        # cap ("invent nothing"). A zero-section cap would make a real
+        # professor unassignable and the whole term unsolvable, so fall back
+        # to the extraction default (2) — the coordinator can still edit it.
         instructors.append(Instructor(
             id=iid, name=inst.name, qualified_courses=qualified,
-            max_sections=inst.max_sections, max_preps=inst.max_preps,
+            max_sections=inst.max_sections if inst.max_sections > 0 else 2,
+            max_preps=inst.max_preps if inst.max_preps > 0 else 2,
             hard_unavailable=hard, preferences=prefs,
         ))
 

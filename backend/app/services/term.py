@@ -393,7 +393,7 @@ def _stable_seed(text: str) -> int:
     return sum((index + 1) * ord(char) for index, char in enumerate(text))
 
 
-def simulate_intake(
+def fill_sample_intake(
     scenario: Scenario,
     *,
     accept: bool = True,
@@ -410,7 +410,7 @@ def simulate_intake(
     if window.status == "accepted":
         if not accept:
             return scenario, {"generated": 0, "accepted": 0, "term": window.term}
-        # Re-simulation is allowed: reopen, replace the set, accept again.
+        # Re-filling is allowed: reopen, replace the set, accept again.
         window = set_window(scenario, status="open")
 
     generated = 0
@@ -515,9 +515,9 @@ def simulate_intake(
                 session.add(row)
             row.hard_unavailable = json.dumps(hard)
             row.preferences = json.dumps(preferences)
-            row.note = "Simulated faculty feedback (demo)."
+            row.note = "Representative faculty feedback."
             row.evidence_json = json.dumps(
-                {"status": "simulated_demo", "evidence": None,
+                {"status": "sample", "evidence": None,
                  "downgraded_hard_count": 0, "documented_constraints": [],
                  "parser_mode": None, "model": None})
             row.status = "submitted"

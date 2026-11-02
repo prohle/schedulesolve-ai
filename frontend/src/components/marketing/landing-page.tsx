@@ -18,6 +18,9 @@ import {
   LogIn,
   Pause,
   Play,
+  ScrollText,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 import { MatrixDemo } from "./matrix-demo";
@@ -287,6 +290,24 @@ export function LandingPage() {
                   <FileText className="h-4 w-4 text-teal-brand-600" />
                   <span>Request Campus ROI Report</span>
                 </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 rounded-2xl border border-editorial-border bg-white/70 p-2.5 shadow-xs sm:grid-cols-3">
+                {[
+                  { icon: ShieldCheck, label: "Provable", detail: "Every timetable re-verified, constraint by constraint" },
+                  { icon: SlidersHorizontal, label: "Flexible", detail: "Reality changes; re-solve in seconds, not weeks" },
+                  { icon: ScrollText, label: "Audit-ready", detail: "A trace naming every actor, from parse to proof" },
+                ].map(({ icon: Icon, label, detail }) => (
+                  <div key={label} className="flex items-start gap-2 rounded-xl bg-gradient-to-br from-slate-50 to-white px-2.5 py-2 ring-1 ring-slate-100">
+                    <span className="mt-0.5 rounded-lg bg-teal-brand-50 p-1.5 text-teal-brand-700 ring-1 ring-teal-brand-200">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-black uppercase tracking-wider text-navy-900">{label}</div>
+                      <div className="text-[10px] leading-snug text-slate-500">{detail}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-2 gap-4 border-t border-editorial-border pt-6 text-xs sm:grid-cols-4">

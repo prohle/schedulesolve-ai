@@ -559,28 +559,36 @@ export function DeliverablesView({
               {status || "solved"}
             </span>
           </div>
-          <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900">What each role receives</h2>
+          <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900">
+            {user.role === "coordinator" ? "What each role receives" : "Your role deliverable"}
+          </h2>
           <p className="text-xs text-slate-500">
             Every number below is computed from {placements.length} placed sections, {scenario.instructors.length} faculty and{" "}
-            {scenario.rooms.length} rooms in the current model (synthetic demo data unless you imported your own).
+            {scenario.rooms.length} rooms in the current institution model.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl border border-border bg-muted/60 p-1">
-            {(["admin", "instructor", "student"] as RoleTab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setRole(tab)}
-                className={cn(
-                  "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold transition-all",
-                  role === tab ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {ROLE_LABEL[tab]}
-              </button>
-            ))}
-          </div>
+          {user.role === "coordinator" ? (
+            <div className="flex rounded-xl border border-border bg-muted/60 p-1">
+              {(["admin", "instructor", "student"] as RoleTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setRole(tab)}
+                  className={cn(
+                    "min-h-8 rounded-lg px-2.5 text-[11px] font-semibold transition-all",
+                    role === tab ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {ROLE_LABEL[tab]}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="inline-flex min-h-9 items-center rounded-xl bg-blue-50 px-3 text-[11px] font-bold text-blue-700 ring-1 ring-blue-200/70">
+              {ROLE_LABEL[role]}
+            </span>
+          )}
           <div className="flex rounded-xl border border-border bg-muted/60 p-1">
             {(
               [

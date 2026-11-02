@@ -143,7 +143,7 @@ class TermChangeResponse(BaseModel):
     chosen: dict[str, str]           # section_id -> chosen instructor_id
     healing_notes: list[str]
     result: Optional[SolveResult] = None
-    parser_mode: Literal["muse-spark", "mock"]
+    parser_mode: Literal["muse-spark", "deterministic"]
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None
     transcript: Optional[str] = None
@@ -251,7 +251,7 @@ class StudentPlanResponse(BaseModel):
     notes: list[str] = []
     missing_inputs: list[str] = []   # what the student can supply to sharpen this
     conflicts: list[StudentPlanConflict] = []  # contradictions they must arbitrate
-    parser_mode: Literal["muse-spark", "mock"]
+    parser_mode: Literal["muse-spark", "deterministic"]
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None
     agent_trace: list[AgentStep] = []
@@ -273,7 +273,7 @@ class CopilotResponse(BaseModel):
     conflicts: Optional[ConflictReport] = None
     applied_option_index: Optional[int] = None
     result: Optional[SolveResult] = None
-    parser_mode: Literal["muse-spark", "mock"]
+    parser_mode: Literal["muse-spark", "deterministic"]
     model: Optional[str] = None
     parser_latency_ms: Optional[int] = None
     agent_trace: list[AgentStep] = []

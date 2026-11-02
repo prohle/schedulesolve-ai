@@ -10,19 +10,30 @@ and submits it through the normal parse -> solve -> verify pipeline.
 from __future__ import annotations
 
 import json
+import re
 
 import httpx
 from fastapi import HTTPException
 
 from app import config
 
-ASR_MODEL = "muse-voice-transcribe-1.0"
+ASR_MODEL = config.MUSE_ASR_MODEL
 MAX_BYTES = 32 * 1024 * 1024
 
 
+def clean_transcript(text: str) -> str:
+    """Collapse ASR whitespace, stutters and duplicate sentence punctuation."""
+    text = re.sub(r"\s+", " ", text or "").strip()
+    text = re.sub(r"\b([A-Za-z]+)(?:\s+\1\b)+", r"\1", text, flags=re.IGNORECASE)
+    text = re.sub(r"([.!?])\1+", r"\1", text)
+    return text.strip()
+
+
 def transcribe_wav(audio: bytes, filename: str = "note.wav") -> str:
-    if not config.MUSE_API_KEY:
-        raise HTTPException(status_code=503, detail="Voice transcription needs MODEL_API_KEY.")
+    if not config.MUSE_ASR_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Voice transcription needs MUSE_API_KEY (Meta Model API).")
     if len(audio) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="Audio exceeds the 32 MB limit.")
     request = {
@@ -37,8 +48,8 @@ def transcribe_wav(audio: bytes, filename: str = "note.wav") -> str:
     try:
         with httpx.Client(timeout=config.MUSE_TIMEOUT_S) as client:
             response = client.post(
-                f"{config.MUSE_BASE_URL}/asr/transcribe",
-                headers={"Authorization": f"Bearer {config.MUSE_API_KEY}"},
+                f"{config.MUSE_ASR_BASE_URL}/asr/transcribe",
+                headers={"Authorization": f"Bearer {config.MUSE_ASR_API_KEY}"},
                 files=files,
             )
         response.raise_for_status()
@@ -54,4 +65,7 @@ def transcribe_wav(audio: bytes, filename: str = "note.wav") -> str:
     transcript = (response.json().get("transcript") or "").strip()
     if not transcript:
         raise HTTPException(status_code=422, detail="No speech detected in the recording.")
-    return transcript
+    # ASR occasionally repeats a word at a turn boundary ("Tuesdays Tuesdays")
+    # or doubles the final period. Keep the draft readable without changing the
+    # speaker's meaning.
+    return clean_transcript(transcript)

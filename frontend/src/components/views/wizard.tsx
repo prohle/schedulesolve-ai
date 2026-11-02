@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck, AlertTriangle, Zap,
   Users, Loader2, CircleCheck, CircleX, Sparkles, Wrench, Radar, Database,
-  UploadCloud, FileText, X, ListChecks,
+  UploadCloud, X, ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,20 @@ const STEPS = [
 ] as const;
 
 type StepId = (typeof STEPS)[number]["id"];
+
+const FILE_TONES: Record<string, string> = {
+  pdf: "bg-rose-50 text-rose-700 ring-rose-200",
+  docx: "bg-blue-50 text-blue-700 ring-blue-200",
+  doc: "bg-blue-50 text-blue-700 ring-blue-200",
+  xlsx: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  xls: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  csv: "bg-teal-50 text-teal-700 ring-teal-200",
+  tsv: "bg-teal-50 text-teal-700 ring-teal-200",
+  json: "bg-amber-50 text-amber-700 ring-amber-200",
+  md: "bg-violet-50 text-violet-700 ring-violet-200",
+  txt: "bg-slate-100 text-slate-600 ring-slate-200",
+  zip: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReviewSection = [string, keyof InstitutionData, (x: any) => string];
@@ -179,9 +193,9 @@ export function WizardView({ onToast }: WizardViewProps) {
   const [engine, setEngine] = useState<string>("cpsat");
   const [lastEngine, setLastEngine] = useState<string>("cpsat");
   const [engineList, setEngineList] = useState<{ id: string; label: string; kind?: string; description: string }[]>([
-    { id: "cpsat", label: "OR-Tools CP-SAT", kind: "industrial", description: "Google's C++ constraint solver — proven optima in milliseconds." },
-    { id: "ours", label: "ScheduleSolve solver (ours)", kind: "ai-crafted", description: "AI-authored native C++ search core built for this problem (Python reference search when the binary is unbuilt)." },
-    { id: "greedy", label: "Greedy descent (ours, fast)", kind: "ai-crafted", description: "First descent only — shows what the optimization phases buy." },
+    { id: "cpsat", label: "CP-SAT", kind: "industrial", description: "Google OR-Tools CP-SAT — clause learning, conflict cores, proven optima in milliseconds." },
+    { id: "ours", label: "C-Solve", kind: "ai-crafted", description: "AI-authored native C++17 search core built for this problem; Python reference search when the binary is unbuilt." },
+    { id: "greedy", label: "Greedy", kind: "ai-crafted", description: "The home solver's first descent only — shows what the optimization phases buy." },
   ]);
   useEffect(() => {
     fetch("/api/engines")
@@ -385,6 +399,10 @@ export function WizardView({ onToast }: WizardViewProps) {
   const solveWith = async (eng: string) => {
     setLastEngine(eng);
     setSolveResult(await post("/api/solve", { operations: [], engine: eng }));
+    // The race is part of the proof, not an optional extra: after a solve,
+    // run both engines on identical data so the coordinator always sees the
+    // head-to-head result for CP-SAT and C-Solve.
+    await runCompare();
   };
 
   const runCompare = async () => {
@@ -632,30 +650,73 @@ export function WizardView({ onToast }: WizardViewProps) {
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
                 onClick={() => document.getElementById("file-input")?.click()}
                 className={cn(
-                  "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors",
-                  dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  "group relative overflow-hidden rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-200",
+                  dragOver
+                    ? "border-primary bg-primary/5 shadow-inner"
+                    : "border-border bg-gradient-to-b from-white to-slate-50/70 hover:border-primary/40 hover:shadow-sm"
                 )}
               >
-                <UploadCloud className="w-6 h-6 mx-auto text-muted-foreground" />
-                <p className="text-sm font-medium mt-2">Drop files, or tap to browse</p>
-                <p className="text-[11px] text-muted-foreground mt-1">PDF · DOCX · XLSX · CSV · JSON · TXT · ZIP</p>
+                <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-blue-400/10 blur-2xl transition-opacity group-hover:opacity-100" />
+                <div className="pointer-events-none absolute -bottom-14 -left-8 h-28 w-28 rounded-full bg-violet-400/10 blur-2xl" />
+                <span className={cn(
+                  "relative mx-auto flex h-11 w-11 items-center justify-center rounded-2xl ring-1 transition-all",
+                  dragOver
+                    ? "scale-110 bg-primary text-primary-foreground ring-primary/30 shadow-lg shadow-primary/20"
+                    : "bg-white text-primary ring-border shadow-sm group-hover:-translate-y-0.5 group-hover:shadow-md"
+                )}>
+                  <UploadCloud className="h-5 w-5" />
+                </span>
+                <p className="relative mt-2.5 text-sm font-bold tracking-tight">
+                  {dragOver ? "Release to autoclean — any format" : "Drop files, or tap to browse"}
+                </p>
+                <p className="relative mt-1 text-[11px] text-muted-foreground">PDF · DOCX · XLSX · CSV · JSON · TXT · ZIP</p>
                 <input id="file-input" type="file" multiple className="hidden"
                   accept=".pdf,.docx,.xlsx,.csv,.tsv,.json,.txt,.md,.html,.zip"
                   onChange={(e) => e.target.files && addFiles(e.target.files)} />
               </div>
 
               {files.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  {files.map((f, i) => (
-                    <div key={`${f.name}-${i}`} className="flex items-center gap-2 text-xs bg-muted/50 border border-border rounded px-2 py-1">
-                      <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{f.name}</span>
-                      <span className="text-muted-foreground">{(f.size / 1024).toFixed(0)} KB</span>
-                      <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/15 bg-gradient-to-r from-blue-50 via-white to-violet-50 px-3 py-2">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[11px] font-bold text-slate-700">
+                      {files.length} files · Muse autocleans into one institution model
+                    </span>
+                    <span className="ml-auto rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary ring-1 ring-primary/15">
+                      {new Set(files.map((f) => f.name.split(".").pop()?.toLowerCase() || "file")).size} formats
+                    </span>
+                  </div>
+                  {files.map((f, i) => {
+                    const ext = f.name.split(".").pop()?.toLowerCase() || "file";
+                    const size = f.size < 1024 ? "<1 KB" : `${Math.max(1, Math.round(f.size / 1024))} KB`;
+                    return (
+                      <div
+                        key={`${f.name}-${i}`}
+                        className="group flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-2 text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                      >
+                        <span className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[9px] font-black uppercase tracking-wide ring-1",
+                          FILE_TONES[ext] ?? "bg-slate-100 text-slate-600 ring-slate-200"
+                        )}>
+                          {ext.slice(0, 4)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold text-slate-800">{f.name}</span>
+                          <span className="block text-[10px] text-muted-foreground">{size} · ready for autoclean</span>
+                        </span>
+                        <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 ring-1 ring-emerald-200 sm:inline-flex">
+                          <CircleCheck className="h-2.5 w-2.5" /> ready
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setFiles((prev) => prev.filter((_, j) => j !== i)); }}
+                          aria-label={`Remove ${f.name}`}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
                   <Button variant="primary" size="md" onClick={handleImportFiles} disabled={ingestBusy} className="mt-2 flex items-center gap-2">
                     {ingestBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                     Process {files.length} file{files.length > 1 ? "s" : ""}
@@ -934,8 +995,9 @@ export function WizardView({ onToast }: WizardViewProps) {
                 <span className="text-xs font-semibold text-emerald-900">Engine</span>
                 <Button variant="outline" size="sm" onClick={runCompare} disabled={compareBusy} className="ml-auto flex items-center gap-1.5">
                   {compareBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                  Compare engines
+                  Head-to-head
                 </Button>
+                <InfoTip text="Runs both engines on identical data and ranks the outputs: status first, then penalty, then speed. Solver Lab always runs this race as part of its proof." />
               </div>
               <div className="grid sm:grid-cols-3 gap-2 mb-3">
                 {engineList.map((e) => (
@@ -948,20 +1010,21 @@ export function WizardView({ onToast }: WizardViewProps) {
                         : "bg-white border-emerald-200 hover:border-emerald-400 hover:shadow-sm")}
                   >
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-extrabold leading-tight">{e.label}</span>
-                      <span className={cn("text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded",
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-xs font-extrabold leading-tight">{e.label}</span>
+                        <span onClick={(event) => event.stopPropagation()} className="shrink-0">
+                          <InfoTip text={e.description} />
+                        </span>
+                      </span>
+                      <span className={cn("shrink-0 text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded",
                         engine === e.id ? "bg-white/25" : "bg-muted text-muted-foreground")}>
                         {e.kind ?? "engine"}
                       </span>
                     </span>
-                    <span className={cn("block text-[10px] leading-snug mt-1",
-                      engine === e.id ? "text-emerald-50" : "text-muted-foreground")}>
-                      {e.description}
-                    </span>
                   </button>
                 ))}
               </div>
-              <Button variant="primary" size="md" onClick={() => { solveWith(engine); onToast(engine === "ours" ? "Running ScheduleSolve solver…" : "Running CP-SAT…", "info"); }} disabled={busy !== null} className="flex items-center gap-2">
+              <Button variant="primary" size="md" onClick={() => { solveWith(engine); onToast(engine === "ours" ? "Running C-Solve…" : "Running CP-SAT…", "info"); }} disabled={busy !== null} className="flex items-center gap-2">
                 {busy === "solve" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Solve with {engineList.find((e) => e.id === engine)?.label ?? engine}
               </Button>
@@ -983,7 +1046,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                     </div>
                     <div className="bg-white border rounded p-2">
                       <div className="font-bold">{compare.ours.status} · {compare.ours.solve_time_ms} ms</div>
-                      <div className="text-muted-foreground">Ours · penalty {compare.ours.objective ?? "—"}</div>
+                      <div className="text-muted-foreground">C-Solve · penalty {compare.ours.objective ?? "—"}</div>
                       <div className={cn("mt-1 inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase",
                         compare.winner === "ours" ? "bg-emerald-100 text-emerald-800" : compare.winner === "tie" ? "bg-sky-100 text-sky-800" : "bg-muted")}>
                         {compare.winner === "ours" ? "Rank 1" : compare.winner === "tie" ? "Tied 1st" : "Rank 2"}
@@ -995,7 +1058,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                     </div>
                     <div className="bg-white border rounded p-2">
                       <div className="font-bold">{compare.objective_delta != null ? (compare.objective_delta > 0 ? `+${compare.objective_delta}` : compare.objective_delta) : "—"}</div>
-                      <div className="text-muted-foreground">penalty delta (ours − CP-SAT)</div>
+                      <div className="text-muted-foreground">penalty delta (C-Solve − CP-SAT)</div>
                     </div>
                   </div>
                   <p className="text-[11px] text-emerald-800 mb-2">
@@ -1008,7 +1071,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                         <TimetableGrid placements={compare.cpsat.timetable.placements} compact />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-emerald-700 mb-1">ScheduleSolve solver (ours)</div>
+                        <div className="text-xs font-bold text-emerald-700 mb-1">C-Solve</div>
                         <TimetableGrid
                           placements={compare.ours.timetable.placements}
                           changed={changedSections(compare.cpsat.timetable.placements, compare.ours.timetable.placements)}
@@ -1022,7 +1085,7 @@ export function WizardView({ onToast }: WizardViewProps) {
               <div className="mt-4 border-t border-emerald-200 pt-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs font-semibold text-emerald-900">Try it at scale</span>
-                  <InfoTip text="The demo story is one CS department slice. Department = 26 instructors · 25 sections · 12 cohorts. University = 38 instructors · 41 sections · 20 cohorts · 5 programs. Full University = 198 instructors · 361 sections · 100 cohorts · 25 programs · ~12,000 students — the stress scale the native solver completes (CP-SAT exceeds its budget there). Same engines, solved live." />
+                  <InfoTip text="This view is one CS department slice. Department = 26 instructors · 25 sections · 12 cohorts. University = 38 instructors · 41 sections · 20 cohorts · 5 programs. Full University = 198 instructors · 361 sections · 100 cohorts · 25 programs · ~12,000 students — the stress scale the native solver completes (CP-SAT exceeds its budget there). Same engines, solved live." />
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => loadScale("department")} disabled={scaleBusy} className="flex items-center gap-1.5">
@@ -1129,7 +1192,7 @@ export function WizardView({ onToast }: WizardViewProps) {
                   {termChange.removed_instructor_name ? `${termChange.removed_instructor_name} removed` : "No instructor identified"} — {termChange.affected_section_ids.length} section(s) affected
                   {termChange.parser_mode === "muse-spark"
                     ? ` · live Muse Spark${termChange.model ? ` (${termChange.model})` : ""}${termChange.parser_latency_ms != null ? ` · ${Math.round(termChange.parser_latency_ms / 100) / 10}s` : ""}`
-                    : " · mock parser"}
+                    : " · deterministic parser"}
                 </div>
                 {termChange.transcript && (
                   <div className="text-xs bg-sky-50 border border-sky-200 text-sky-900 rounded p-2">

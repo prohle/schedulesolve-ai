@@ -88,7 +88,7 @@ def run_copilot(
     record_submission(message, parsed.summary, parser.mode)  # type: ignore[arg-type]
 
     trace: list[AgentStep] = []
-    actor = f"Muse Spark · {parser.model}" if parser.mode == "muse-spark" else "Deterministic mock parser"
+    actor = f"Muse Spark · {parser.model}" if parser.mode == "muse-spark" else "Deterministic parser"
     latency = f" in {parser.last_latency_ms} ms" if parser.last_latency_ms else ""
     trace.append(AgentStep(
         step="parse", actor=actor,

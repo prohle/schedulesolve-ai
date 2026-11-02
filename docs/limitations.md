@@ -84,9 +84,9 @@ our word for it. Scoped claims are stronger than broad ones.
 ## Models
 
 - **Without a key, model roles degrade — visibly, not silently.** Ingest,
-  parse, explain, and tighten fall back to a deterministic mock/template
+  parse, explain, and tighten fall back to a deterministic fallback/template
   path, and every response carries `parser_mode` / `muse_mode` plus the
-  model name when live. A `MOCK` badge in the UI always means exactly
+  model name when live. A `FALLBACK` badge in the UI always means exactly
   that; the demo video was recorded live and shows `muse-spark` badges.
 - **Live latency is real.** Muse Spark parse/explain calls measure
   ~3–42 s (`backend/muse-verification.json`); the UI shows the latency

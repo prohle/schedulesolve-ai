@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.main import load_seed_scenario
 from app.models.scenario import Operation, TermClosure
-from app.parsing.mock import mock_parse
+from app.parsing.deterministic import deterministic_parse
 from app.services.apply import apply_operations
 from app.solver.scheduling_model import _options, solve
 
@@ -199,7 +199,7 @@ def test_hard_with_evidence_stays_hard(client):
 
 def test_plain_english_intake_is_documented_and_gated(client):
     """A professor types plain English before the deadline; the parser
-    (mock here, Muse Spark live) documents typed constraints from it:
+    (deterministic here, Muse Spark live) documents typed constraints from it:
     childcare Monday = hard candidate, 3-hour block = soft pattern wish,
     CS 301 = soft course wish. No evidence -> the hard candidate is
     downgraded, and the documented list says exactly what happened."""
@@ -311,9 +311,9 @@ def test_term_closure_endpoint_coordinator_only(client):
         assert not (3 in p["days"] and p["period"] == 2)
 
 
-def test_closure_op_round_trip_and_mock_parse(client):
+def test_closure_op_round_trip_and_deterministic_parse(client):
     sc = load_seed_scenario()
-    parsed = mock_parse("No classes on Friday — it's a holiday.", sc)
+    parsed = deterministic_parse("No classes on Friday — it's a holiday.", sc)
     assert [o.op for o in parsed.operations] == ["add_term_closure"]
     updated = apply_operations(sc, parsed.operations)
     assert updated.closures[0].day == 4

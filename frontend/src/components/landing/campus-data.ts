@@ -90,7 +90,7 @@ export const CAMPUSES: Record<string, Campus> = {
         code: "LECNT",
         floors: [
           { id: "g", name: "Ground Floor", count: 3, capPerRoom: 240, isHall: true, label: "3 Physics Auditoriums" },
-          { id: "1", name: "Floor 1", count: 5, capPerRoom: 35, isHall: false, label: "5 Demo Labs" },
+          { id: "1", name: "Floor 1", count: 5, capPerRoom: 35, isHall: false, label: "5 Computer Labs" },
           { id: "2", name: "Floor 2", count: 5, capPerRoom: 35, isHall: false, label: "5 Classrooms" },
           { id: "3", name: "Floor 3", count: 4, capPerRoom: 35, isHall: false, label: "4 Physics Labs" },
           { id: "4", name: "Floor 4", count: 4, capPerRoom: 30, isHall: false, label: "4 Seminars" },
@@ -233,7 +233,7 @@ export const CAMPUSES: Record<string, Campus> = {
         name: "Valley Life Sciences Building",
         code: "VLSB",
         floors: [
-          { id: "g", name: "Ground Floor", count: 2, capPerRoom: 400, isHall: true, label: "2 Bio Demonstrator Auds" },
+          { id: "g", name: "Ground Floor", count: 2, capPerRoom: 400, isHall: true, label: "2 Biology Teaching Halls" },
           { id: "1", name: "Floor 1", count: 8, capPerRoom: 40, isHall: false, label: "8 Classrooms" },
           { id: "2", name: "Floor 2", count: 8, capPerRoom: 35, isHall: false, label: "8 Bio Labs" },
           { id: "3", name: "Floor 3", count: 8, capPerRoom: 35, isHall: false, label: "8 Anat Labs" },

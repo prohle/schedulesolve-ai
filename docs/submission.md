@@ -12,7 +12,7 @@ Copy-paste source for the CV platform form. Deadline: **Wed Nov 4, 9:00 PM ET**
 | Problem statement | **Build for Your World** — the course-timetabling week every department coordinator loses, every term |
 | Team | Solo — Huong Le |
 | Repo (public) | https://github.com/prohle/schedulesolve-ai |
-| Demo video (≤3:00) | https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4 (2:54 live Puppeteer screencast, re-recorded Nov 1 live against Muse Spark Open on Baseten — every Muse beat asserts the `meta-models/muse-spark-open-1026` badge on screen, never mock; narration byte-identical to the final pitch, 12 beats) — _upload the same file to YouTube and add that link here too_ |
+| Demo video (≤3:00) | https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4 (2:54 live Puppeteer screencast, re-recorded Nov 1 live against Muse Spark Open on Baseten — every Muse beat asserts the `meta-models/muse-spark-open-1026` badge on screen, never a fallback; narration byte-identical to the final pitch, 12 beats) — _upload the same file to YouTube and add that link here too_ |
 | Live demo | **https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** (full UI, no account/key; backend API: https://prohle--schedulesolve-ai-api.us-east.modal.run/docs) — or judges run `docker compose up` (no key, no account — see README "Judges — try it in 2 minutes") |
 | X post (Most Viral) | _paste link after posting; engagement counts until Nov 8 EOD. Ready copy below — attach `final.mp4`_ |
 
@@ -144,7 +144,7 @@ engine source code on GitHub. Thank you.
 Live captured proof: `backend/muse-verification.json` (all structured roles,
 real outputs + latencies) and `backend/muse-verification-student.json`
 (student parse, verified end-to-end). No-key fallback is a deterministic
-mock parser, so judges can click every beat offline.
+deterministic parser, so judges can click every beat offline.
 
 ## Bonus prizes — what to flag
 
@@ -213,7 +213,7 @@ can reach, and quote any reply (with permission) in the form's Impact field:
 - [x] `docker compose up --build` boots cleanly (db Postgres 18 → backend → frontend; verified Oct 30 with port overrides — UI 200, proxied scenario, both engines `optimal` penalty −6 inside the containers, native binary built in-image)
 - [x] Backend tests pass (`cd backend && .venv/bin/python -m pytest -q` — 107 tests, verified Nov 1, incl. full-university stress scale)
 - [x] Frontend production build passes (`cd frontend && npm run build`, verified Oct 30)
-- [x] Video ≤ 3:00 (2:54), re-recorded Nov 1 live against Muse Spark Open on Baseten — recorder asserts the live `muse-spark` + `meta-models/muse-spark-open-1026` badge at every Muse beat (a mock fallback fails the recording); frame-checked
+- [x] Video ≤ 3:00 (2:54), re-recorded Nov 1 live against Muse Spark Open on Baseten — recorder asserts the live `muse-spark` + `meta-models/muse-spark-open-1026` badge at every Muse beat (a fallback fails the recording); frame-checked
 - [x] Video shows, in order: any-format import autoclean (PDF/DOCX/CSV/TXT/XLSX/MD) → Patel intake applied to the term → **dual-engine compare at department scale, Rank 1 / Rank 2 from outputs (native solver first)** → university scale (38/41/20, asserted on screen) + publish → Chen change request approved and re-published → term change with agent trace + ranked verified reassignment → Diaz impossible override (conflict core + verified repairs) → capacity what-ifs + end card
 - [x] Live demo deployed (Modal UI + API; full checklist in `docs/deploy_modal.md` verified live Oct 30: `/status`, reset, Patel copilot `muse-spark`, Chen term change probes, live voice transcription) — scenario left reset to seed
 - [x] Student schedule suggestion shipped (Oct 30): Spark student parse live-verified (`muse-verification-student.json`), exact selector + independent re-verification, My Schedule student panel; 58 backend tests pass

@@ -38,7 +38,7 @@ export async function authFetch(path: string, init?: RequestInit): Promise<Respo
   const token = getToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (init?.body && !headers.has("Content-Type")) {
+  if (init?.body && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   return fetch(path, { ...init, headers });

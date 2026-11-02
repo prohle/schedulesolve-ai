@@ -12,7 +12,7 @@
 > `MUSE_MODEL=meta-models/muse-spark-open-1026`, `MODEL_API_KEY` = the
 > Baseten key. Every Muse beat in the recorder asserts the on-screen live
 > `muse-spark` badge **and** the `meta-models/muse-spark-open-1026` model
-> name (`assertLiveMuse`, `EXPECT_MODEL`); a mock fallback or a different
+> name (`assertLiveMuse`, `EXPECT_MODEL`); a fallback or a different
 > model fails the recording instead of shipping a video that claims live
 > Muse it did not use. This is the hackathon's open-weights path running
 > the product, not a separate verification script.
@@ -78,7 +78,7 @@ for the video. Total narration at the TTS pace used (`--speed 1.08`) is
 - [ ] `sha256sum local_final_pitch.md local-demo/narration.txt` — identical
 - [ ] `cd local-demo && python3 narrate.py --voice dee_us --cfg 2.8 --expr 0.15 --speed 1.08`
 - [ ] `BASE_URL=http://localhost:3021 node record_live.js` — all
-      `assertLiveMuse` gates pass (no mock, open-weights model on screen)
+      `assertLiveMuse` gates pass (no fallback, open-weights model on screen)
 - [ ] `python3 assemble_live.py final.mp4` (≤3:00), spot-check frames
       (text only): engine verdict, term-change After grid, documented
       faculty constraints, student Projected term, end cards

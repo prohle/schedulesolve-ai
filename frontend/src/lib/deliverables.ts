@@ -23,7 +23,7 @@ export type TimeWindow = "Morning" | "Afternoon" | "Evening";
 
 // The live inputs every role deliverable is rendered from. The first-page
 // preview and the signed-in Deliverables view share this exact shape, so the
-// preview is the app rather than a mock of it.
+// preview is the app rather than a canned preview of it.
 export interface DeliverablesData {
   scenario: Scenario;
   placements: Placement[];

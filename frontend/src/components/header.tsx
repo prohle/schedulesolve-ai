@@ -38,13 +38,17 @@ export function Header({ user, onLogout }: { user?: AuthUser | null; onLogout?: 
             <h1 className="flex items-center gap-1.5 truncate text-sm font-extrabold tracking-tight text-foreground">
               ScheduleSolve AI
               <Tip label="Every schedule is solver-proven — the AI proposes, the solver verifies. No guesswork." side="bottom">
-                <span className="hidden cursor-help rounded-md bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-blue-200/70 min-[420px]:inline-block">
+                <span className="hidden cursor-help items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 ring-1 ring-blue-200/70 min-[420px]:inline-flex">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  </span>
                   solver-proven
                 </span>
               </Tip>
             </h1>
             <p className="hidden truncate text-[10px] text-muted-foreground sm:block">
-              Scheduling co-pilot
+              Powered by Meta Muse Spark
             </p>
           </div>
         </div>

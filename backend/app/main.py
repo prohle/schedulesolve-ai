@@ -23,7 +23,7 @@ from app.ingestion import check_completeness, ingest
 from app.ingestion.conflicts import detect_conflicts, diff_data, resolve_conflicts
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
-from app.intelligence import analyze, build_matrices, compute_utilization, run_tightener, whatif
+from app.intelligence import CHANGES, analyze, build_matrices, compute_utilization, run_tightener, whatif
 from app.intelligence.load import instructor_loads, suggest_load_policy
 from app.intelligence.matrices import compute_margins
 from app.models.ingestion import (
@@ -82,7 +82,7 @@ async def lifespan(_: FastAPI):
         # Judges should see a full intake board immediately: seed randomized
         # faculty feedback if none exists yet (accepting stays the
         # coordinator's explicit action).
-        term_service.simulate_intake(scenario, accept=False, only_missing=True)
+        term_service.fill_sample_intake(scenario, accept=False, only_missing=True)
     except Exception:  # noqa: BLE001 — demo seeding must never block solving
         pass
     yield
@@ -510,6 +510,244 @@ def solve_compare(req: CompareRequest) -> CompareResult:
     )
 
 
+class ProofRequest(BaseModel):
+    """Solver Lab: prove one timetable against every institutional group."""
+    scale: str = "current"  # current | seed | department | university | full-university
+    engine: str = "ours"
+    objective: str = "preference"
+
+
+def _proof_scenario(scale: str) -> Scenario:
+    """Build the requested scale without mutating the live term."""
+    from app.data.department import (
+        build_department_scenario,
+        build_full_university_scenario,
+        build_university_scenario,
+    )
+    if scale == "current":
+        return get_current_scenario()
+    seed = load_seed_scenario()
+    if scale == "seed":
+        return seed
+    if scale == "department":
+        return build_department_scenario(seed)
+    if scale == "university":
+        return build_university_scenario(seed)
+    if scale == "full-university":
+        return build_full_university_scenario(seed)
+    raise HTTPException(status_code=400, detail=f"unknown scale {scale!r}")
+
+
+@app.post("/solve/proof")
+def solve_proof(req: ProofRequest) -> dict:
+    """Solve one scale with both engines and return a grouped constraint proof.
+
+    The proof is derived from the scenario and the placements alone (never
+    from the search's own bookkeeping), so the Solver Lab can show *why* a
+    timetable is admissible for faculty, cohorts, students, facilities and
+    campus at once.
+    """
+    from app.services.proof import build_proof
+    from app.solver.engine import ENGINE_IDS, rank_results
+
+    if req.engine not in ENGINE_IDS:
+        raise HTTPException(status_code=400, detail=f"unknown engine {req.engine!r}")
+    sc = _proof_scenario(req.scale)
+    ours = solve(sc, [], engine="ours", objective=req.objective)
+    cpsat = solve(sc, [], engine="cpsat", objective=req.objective)
+    winner, verdict = rank_results([("cpsat", cpsat), ("ours", ours)])
+    chosen = ours if req.engine == "ours" else cpsat
+    proof = build_proof(sc, chosen)
+    total_seats = sum(r.capacity for r in sc.rooms)
+    placed = chosen.timetable.placements if chosen.timetable else []
+    return {
+        "scale": req.scale,
+        "engine": req.engine,
+        "status": chosen.status,
+        "objective": chosen.objective,
+        "solve_time_ms": chosen.solve_time_ms,
+        "input": {
+            "name": sc.name,
+            "faculty": len(sc.instructors),
+            "sections": len(sc.sections),
+            "courses": len(sc.courses),
+            "rooms": len(sc.rooms),
+            "buildings": len(sc.buildings),
+            "cohorts": len(sc.cohorts),
+            "programs": len(sc.programs),
+            "students": sum(c.size for c in sc.cohorts),
+            "walk_limit_min": sc.walk_limit_min,
+            "closures": len(sc.closures),
+            "room_blackouts": len(sc.room_blackouts),
+            "total_seats": total_seats,
+            "placed_sections": len(placed),
+        },
+        "race": {
+            "ours": {"status": ours.status, "objective": ours.objective,
+                     "solve_time_ms": ours.solve_time_ms},
+            "cpsat": {"status": cpsat.status, "objective": cpsat.objective,
+                      "solve_time_ms": cpsat.solve_time_ms},
+            "winner": winner,
+            "verdict": verdict,
+        },
+        "proof": proof,
+        "placements": [
+            {
+                "section_id": p.section_id,
+                "course_code": sc.course_code(p.course_id),
+                "instructor": sc.instructor(p.instructor_id).name,
+                "room": sc.room(p.room_id).name,
+                "days": p.days,
+                "periods": p.periods,
+                "period": p.period,
+            }
+            for p in placed
+        ],
+    }
+
+
+@app.get("/solver/source")
+def solver_source(file: str = "native/schedulesolve_solver.cpp") -> dict:
+    """The actual AI-authored C++ search core, served for the Solver Lab.
+
+    Whitelisted to the two files that make up the native engine so the
+    endpoint can never be used to read arbitrary paths.
+    """
+    import hashlib
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    allowed = {
+        "native/schedulesolve_solver.cpp": ("C++17", "schedulesolve_solver.cpp"),
+        "app/solver/native_solver.py": ("Python", "native_solver.py"),
+    }
+    if file not in allowed:
+        raise HTTPException(status_code=404, detail="source file not available")
+    path = root / file
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"{file} not found")
+    code = path.read_text(encoding="utf-8")
+    language, name = allowed[file]
+    return {
+        "file": name,
+        "path": file,
+        "language": language,
+        "lines": len(code.splitlines()),
+        "bytes": len(code.encode("utf-8")),
+        "sha256": hashlib.sha256(code.encode("utf-8")).hexdigest(),
+        "code": code,
+        "files": [{"path": p, "label": label} for p, (_, label) in allowed.items()],
+    }
+
+
+@app.get("/runtime/config")
+def runtime_config(authorization: Optional[str] = Header(None)) -> dict:
+    """Non-secret model-runtime configuration for the AI Runtime screen.
+
+    Never returns the key: only whether one is present and a short hint, so
+    the settings page can show what the server is actually using.
+    """
+    _current_user(authorization)
+    key = config.MUSE_API_KEY or ""
+    base = config.MUSE_BASE_URL or ""
+    provider = (
+        "Baseten" if "baseten" in base else
+        "Meta Model API" if "meta.ai" in base else
+        "Self-hosted / OpenAI-compatible"
+    )
+    verification = {}
+    root = __import__("pathlib").Path(__file__).resolve().parents[1]
+    for name, path in (
+        ("open", root / "muse-verification-open.json"),
+        ("hosted", root / "muse-verification.json"),
+        ("student", root / "muse-verification-student.json"),
+        ("voice", root / "muse-verification-voice.json"),
+    ):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        calls = sum(len(v) for v in data.values() if isinstance(v, list))
+        verification[name] = {
+            "model": data.get("model") or data.get("asr_model"),
+            "base_url": data.get("base_url") or data.get("endpoint"),
+            "calls": calls,
+            "verified": data.get("verified"),
+        }
+    return {
+        "provider": provider,
+        "base_url": base,
+        "model": config.MUSE_MODEL,
+        "key_present": bool(key),
+        "key_hint": (f"{key[:4]}…{key[-4:]}" if len(key) >= 8 else "configured"),
+        "timeout_s": config.MUSE_TIMEOUT_S,
+        "reasoning_effort": config.MUSE_REASONING_EFFORT,
+        "live": bool(key),
+        "roles": [
+            {"role": "Ingest autoclean", "model": config.MUSE_MODEL,
+             "schema": "InstitutionData", "endpoint": "POST /ingest/files"},
+            {"role": "Constraint parse", "model": config.MUSE_MODEL,
+             "schema": "ParsedRequest", "endpoint": "POST /parse"},
+            {"role": "Conflict explanation", "model": config.MUSE_MODEL,
+             "schema": "ExplanationResult", "endpoint": "POST /copilot"},
+            {"role": "Typed tightening", "model": config.MUSE_MODEL,
+             "schema": "TightenResponse", "endpoint": "POST /intelligence/tighten"},
+            {"role": "Student plan parse", "model": config.MUSE_MODEL,
+             "schema": "StudentConstraints", "endpoint": "POST /student/plan"},
+            {"role": "Voice note (draft)", "model": "muse-voice-transcribe-1.0",
+             "schema": "TranscriptDraft", "endpoint": "POST /term-change/audio"},
+        ],
+        "verification": verification,
+    }
+
+
+@app.post("/runtime/test")
+def runtime_test(authorization: Optional[str] = Header(None)) -> dict:
+    """A real structured call through the configured endpoint.
+
+    The settings page uses this as a connection test: same client, same
+    schema, same fallback rules as production — never a hard-coded "ok".
+    """
+    _current_user(authorization)
+    from app.parsing.parser import ConstraintParser
+    parser = ConstraintParser()
+    parsed = parser.parse(
+        "Prof. Patel cannot teach Mondays — committee duty. Prefer mornings.",
+        get_current_scenario(), speaker_id="patel")
+    return {
+        "ok": True,
+        "mode": parser.mode,
+        "model": parser.model,
+        "latency_ms": parser.last_latency_ms,
+        "summary": parsed.summary,
+        "operations": [
+            {"op": op.op, "explanation": op.explanation}
+            for op in parsed.operations
+        ],
+    }
+
+
+@app.post("/student/transcript")
+async def student_transcript(file: UploadFile = File(...)) -> dict:
+    """Extract a student's uploaded transcript to text for the record box.
+
+    Any readable format works (PDF, DOCX, TXT, CSV, …) through the same
+    format layer the institution import uses. Extraction only: the student
+    still reviews the text before a plan is suggested.
+    """
+    from app.ingestion.extract import extract_text
+    content = await file.read()
+    text = extract_text(file.filename or "transcript", content).strip()
+    if not text:
+        raise HTTPException(
+            status_code=422,
+            detail="No readable text in that file — paste the courses instead.")
+    return {
+        "filename": file.filename or "transcript",
+        "text": text[:6000],
+        "chars": len(text),
+    }
+
+
 class OptionsRequest(BaseModel):
     scenario: Optional[Scenario] = None
     operations: Optional[list] = None
@@ -680,7 +918,7 @@ class TermOptionsIn(BaseModel):
     options: dict = {}
 
 
-class SimulateIntakeIn(BaseModel):
+class SampleIntakeIn(BaseModel):
     accept: bool = True
     publish: bool = False
     only_missing: bool = False
@@ -1228,14 +1466,19 @@ def term_calendar_update(req: TermCalendarIn,
     return _calendar_payload()
 
 
-@app.post("/term/window/simulate")
-def term_window_simulate(req: SimulateIntakeIn,
+@app.post("/term/window/sample")
+def term_window_fill_sample(req: SampleIntakeIn,
                          authorization: Optional[str] = Header(None)) -> dict:
-    """Demo: fill every professor's feedback with randomized constraints."""
+    """Fill missing faculty feedback with a representative sample.
+
+    This is an evaluation-environment utility, not a what-if analysis: it
+    writes normal faculty submissions so a coordinator can exercise the
+    deadline flow without waiting for every professor to type. Real
+    institutions receive the submissions through the faculty intake window."""
     user = _current_user(authorization)
     _require_role(user, "coordinator")
     try:
-        updated, summary = term_service.simulate_intake(
+        updated, summary = term_service.fill_sample_intake(
             get_current_scenario(),
             accept=req.accept,
             only_missing=req.only_missing,
@@ -1248,8 +1491,8 @@ def term_window_simulate(req: SimulateIntakeIn,
     if req.publish:
         published = _publish_current("cpsat", user.email)
     audit.record_event(
-        "faculty-intake-simulated",
-        f"Simulated {summary.get('generated', 0)} faculty submission(s)",
+        "faculty-intake-filled",
+        f"Filled {summary.get('generated', 0)} faculty submission(s) from the sample set",
         summary,
     )
     return {
@@ -1612,9 +1855,36 @@ def intelligence_utilization() -> UtilizationReport:
 
 @app.get("/planning/whatif/{change_id}", response_model=WhatIfReport)
 def planning_whatif(change_id: str) -> WhatIfReport:
-    """What-if planning: simulate a change (new lab, growth, repurpose) and
+    """What-if planning: preview a change (new lab, growth, repurpose) and
     report the before/after impact."""
     return whatif(get_current_scenario(), change_id)
+
+
+class WhatIfApplyRequest(BaseModel):
+    change_id: str
+
+
+@app.post("/planning/whatif/apply")
+def planning_whatif_apply(req: WhatIfApplyRequest,
+                          authorization: Optional[str] = Header(None)) -> dict:
+    """Apply a previously previewed what-if change to the live institution.
+
+    The preview is advisory; this is the explicit commit step. A coordinator
+    can also skip the preview and edit rooms or the calendar directly.
+    """
+    user = _current_user(authorization)
+    _require_role(user, "coordinator")
+    change = next((c for c in CHANGES if c["id"] == req.change_id), None)
+    if change is None:
+        raise HTTPException(status_code=404, detail=f"unknown what-if change {req.change_id!r}")
+    updated = change["apply"](get_current_scenario())
+    _set_current_scenario(updated)
+    audit.record_event(
+        "what-if-applied",
+        f"Applied {change['label']} after what-if preview",
+        {"change_id": change["id"], "label": change["label"]},
+    )
+    return {"applied": True, "change_id": change["id"], "label": change["label"]}
 
 
 @app.post("/intelligence/tighten", response_model=TightenResponse)

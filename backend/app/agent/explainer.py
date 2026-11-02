@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class ConflictExplainer:
-    """Mirrors ConstraintParser: Muse Spark when a key exists, template mock otherwise."""
+    """Mirrors ConstraintParser: Muse Spark when a key exists, template fallback otherwise."""
 
     def __init__(self) -> None:
-        self.mode: str = "mock" if not config.MUSE_API_KEY else "muse-spark"
+        self.mode: str = "deterministic" if not config.MUSE_API_KEY else "muse-spark"
         self.model: str | None = config.MUSE_MODEL if config.MUSE_API_KEY else None
         self._client = None
         if config.MUSE_API_KEY:
@@ -47,7 +47,7 @@ class ConflictExplainer:
         to the conflict core and capped at 3."""
         core = conflicts.conflicting_operation_indices
         if self._client is None:
-            return _mock_explanation(ops, core), self.mode
+            return _deterministic_explanation(ops, core), self.mode
         try:
             response = self._client.beta.chat.completions.parse(
                 model=config.MUSE_MODEL,
@@ -64,7 +64,7 @@ class ConflictExplainer:
             return _validate(parsed, core), self.mode
         except Exception:
             logger.exception("Muse Spark explanation failed; falling back to template")
-            return _mock_explanation(ops, core), "mock"
+            return _deterministic_explanation(ops, core), "deterministic"
 
 
 def _validate(parsed: ExplanationResult, core: list[int]) -> ExplanationResult:
@@ -77,7 +77,7 @@ def _validate(parsed: ExplanationResult, core: list[int]) -> ExplanationResult:
     return ExplanationResult(explanation=parsed.explanation, resolutions=resolutions[:3])
 
 
-def _mock_explanation(ops: list[Operation], core: list[int]) -> ExplanationResult:
+def _deterministic_explanation(ops: list[Operation], core: list[int]) -> ExplanationResult:
     named = " / ".join(f"'{ops[i].explanation}'" for i in core)
     resolutions = [
         Resolution(drop_operation_index=i, tradeoff=f"Weakest link: drops '{ops[i].explanation}' and keeps the rest.")

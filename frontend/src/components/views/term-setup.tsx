@@ -687,23 +687,24 @@ export function TermSetupView({
     }
   };
 
-  const simulate = async (accept: boolean, publish: boolean) => {
-    const label = publish ? "Simulate & publish" : accept ? "Simulate & accept" : "Simulate faculty";
+  const fillSample = async (accept: boolean, publish: boolean, onlyMissing = false) => {
+    const label = onlyMissing ? "Fill missing"
+      : publish ? "Fill & publish" : accept ? "Fill & accept" : "Fill all";
     setBusy(label);
     try {
-      const res = await authFetch("/api/term/window/simulate", {
+      const res = await authFetch("/api/term/window/sample", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept, publish }),
+        body: JSON.stringify({ accept, publish, only_missing: onlyMissing }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.error || "Simulation failed.");
+      if (!res.ok) throw new Error(data.detail || data.error || "Sample intake failed.");
       await load();
       const generated = data.summary?.generated ?? 0;
       const published = data.published ? ` · published schedule #${data.published.id}` : "";
-      onToast(`Simulated ${generated} faculty submission(s)${published}`, "success");
+      onToast(`Filled ${generated} faculty submission(s) from the sample set${published}`, "success");
     } catch (e) {
-      onToast(e instanceof Error ? e.message : "Simulation failed.", "error");
+      onToast(e instanceof Error ? e.message : "Sample intake failed.", "error");
     } finally {
       setBusy(null);
     }
@@ -803,7 +804,7 @@ export function TermSetupView({
               {window.weeks} weeks
             </span>
             <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-              Demo institution
+              Institution model
             </span>
           </div>
           <h2 className="mt-1 text-xl font-black tracking-tight text-slate-900">{window.term}</h2>
@@ -908,35 +909,42 @@ export function TermSetupView({
               </div>
               <div className="col-span-full rounded-xl border border-blue-200 bg-blue-50/70 p-3">
                 <div className="text-[11px] font-bold text-blue-900">
-                  Demo: simulate the rest of the faculty
+                  Sample faculty input
                 </div>
                 <p className="mt-0.5 text-[10.5px] text-blue-800">
-                  Generate randomized hard blackouts, day/period preferences and course wishes
-                  for all {window.total_faculty} professors — then accept and publish in one click.
+                  For evaluation environments: populate the remaining submissions from a representative sample, then accept and publish when ready. Real faculty can also submit through their own intake window.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
-                    onClick={() => void simulate(false, false)}
+                    onClick={() => void fillSample(false, false)}
                     disabled={busy !== null}
                     className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                   >
-                    Simulate all
+                    Fill all
                   </button>
                   <button
-                    onClick={() => void simulate(true, false)}
+                    onClick={() => void fillSample(false, false, true)}
+                    disabled={busy !== null}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-blue-300 bg-white px-2.5 text-[11px] font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    {busy === "Fill missing" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Fill missing
+                  </button>
+                  <button
+                    onClick={() => void fillSample(true, false)}
                     disabled={busy !== null}
                     className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {busy === "Simulate & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Simulate &amp; accept
+                    {busy === "Fill & accept" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Fill &amp; accept
                   </button>
                   <button
-                    onClick={() => void simulate(true, true)}
+                    onClick={() => void fillSample(true, true)}
                     disabled={busy !== null}
                     className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
-                    {busy === "Simulate & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Simulate, accept &amp; publish
+                    {busy === "Fill & publish" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                    Fill, accept &amp; publish
                   </button>
                 </div>
               </div>
@@ -984,6 +992,91 @@ export function TermSetupView({
           </div>
         </Section>
       </div>
+
+      {isCoordinator && overview && window && (
+        <Section
+          title="Deadline evaluation — every input the solver will receive"
+          hint="The deadline run checks the faculty's plain-language requests against the campus calendar, load policy and degree maps before the solver is allowed to build the term."
+          icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
+          className="mt-3"
+          action={
+            <span className={cn(
+              "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+              window.status === "accepted"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-amber-50 text-amber-700",
+            )}>
+              {window.status === "accepted" ? "Model built" : "Awaiting acceptance"}
+            </span>
+          }
+        >
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                label: "Faculty submissions",
+                value: `${window.submitted_count}/${window.total_faculty}`,
+                detail: window.pending.length
+                  ? `Pending: ${window.pending.join(", ")}`
+                  : "Every professor submitted before the deadline",
+                ok: window.submitted_count === window.total_faculty,
+              },
+              {
+                label: "Schema-validated requests",
+                value: `${window.submissions.reduce((n, s) => n + s.hard_count + s.preference_count, 0)} ops`,
+                detail: `${window.submissions.reduce((n, s) => n + s.hard_count, 0)} hard · ${window.submissions.reduce((n, s) => n + s.preference_count, 0)} soft — parsed by Muse Spark, checked by the validator`,
+                ok: window.submissions.length > 0,
+              },
+              {
+                label: "Campus calendar",
+                value: `${calendar?.totals.holidays ?? 0} holidays`,
+                detail: `${calendar?.totals.swaps ?? 0} day swap(s) · ${calendar?.totals.teaching_days ?? 0} teaching days applied to the term`,
+                ok: true,
+              },
+              {
+                label: "Campus-wide rules",
+                value: `${overview.constraints.walk_limit_min} min walk`,
+                detail: `${overview.constraints.closures} closure(s) · ${overview.constraints.room_blackouts} room blackout(s) · ${overview.constraints.instructor_pins} instructor pin(s)`,
+                ok: true,
+              },
+              {
+                label: "Load policy",
+                value: `${overview.load_rules.total_sections} sections`,
+                detail: `Capacity ${overview.load_rules.faculty_capacity_sections} · spare ${overview.load_rules.capacity_gap} · max ${overview.load_rules.max_sections_per_instructor} sections / ${overview.load_rules.max_preps_per_instructor} preps`,
+                ok: overview.load_rules.capacity_gap >= 0,
+              },
+              {
+                label: "Degree maps",
+                value: `${overview.degree_maps.programs.length} programs`,
+                detail: `${overview.degree_maps.cohorts.length} cohorts checked for the four-course guarantee`,
+                ok: overview.degree_maps.programs.length > 0,
+              },
+            ].map((row) => (
+              <div key={row.label} className={cn(
+                "rounded-xl border p-2.5",
+                row.ok ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/60",
+              )}>
+                <div className="flex items-center gap-1.5">
+                  {row.ok
+                    ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    : <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">{row.label}</span>
+                  <span className="ml-auto text-[11px] font-black tabular-nums text-slate-900">{row.value}</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-snug text-slate-600">{row.detail}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-[10px] text-slate-600">
+            <Clock className="h-3.5 w-3.5 text-slate-500" />
+            {window.deadline_passed
+              ? `Deadline passed · ${new Date(window.deadline).toLocaleString()}`
+              : `Deadline in ${window.days_left}d ${Math.floor((window.seconds_left % 86400) / 3600)}h — accept the set to freeze the institution model.`}
+            <span className="ml-auto font-semibold text-slate-700">
+              Muse parses · validator checks · solver proves
+            </span>
+          </div>
+        </Section>
+      )}
         </>
       )}
 
@@ -2337,9 +2430,9 @@ export function TermSetupView({
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Solver engine
               <select value={engine} onChange={(e) => setEngine(e.target.value)} className={cn(FIELD, "mt-1")}>
-                <option value="cpsat">OR-Tools CP-SAT</option>
+                <option value="cpsat">CP-SAT</option>
                 <option value="ours">ScheduleSolve native</option>
-                <option value="greedy">Greedy descent (fast)</option>
+                <option value="greedy">Greedy</option>
               </select>
             </label>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">

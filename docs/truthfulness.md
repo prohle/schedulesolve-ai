@@ -21,7 +21,7 @@ code or by calling the API.
 | Institution model is durable | `institution_state` in Postgres; survives restarts |
 | Auth is real PBKDF2 + hashed bearer sessions | `backend/app/services/auth.py` |
 | Audit trail records submissions/events | `submissions`, `events` tables; `GET /history` |
-| Muse Spark is live when a key is set | `MUSE_API_KEY` set in the running container; `parser.mode = "muse-spark"`; mock fallback is visibly labelled |
+| Muse Spark is live when a key is set | `MUSE_API_KEY` set in the running container; `parser.mode = "muse-spark"`; deterministic fallback is visibly labelled |
 | Import/autoclean is bounded by the source | no OCR; unreadable files produce `[unreadable]`; completeness check names missing inputs |
 | Tests pass | `backend/tests` (realism, randomized, policy, API, solver parity) |
 | Conflicts name their sources and are electable | ingestion `InstitutionConflict.sources/options` + `resolve_conflicts`; copilot `ConflictReport.sources` + verified `ResolutionOption`s (least-disruptive default, any verified option electable); term-change `CandidateProposal.source` + elected `chosen`; student `StudentPlanConflict.sources` + `resolutions`; tightener moves re-verified at `/intelligence/tighten/apply` before applying (`backend/tests/test_conflict_election.py`) |

@@ -1,7 +1,7 @@
 "use client";
 
 // "Interactive Analytics" workspace modal: live-ish telemetry, constraint
-// tuning controls, a simulated dual-kernel benchmark, and the master schedule
+// tuning controls, a dual-kernel benchmark, and the master schedule
 // matrix with CSV export. Preview-only; the real workspace lives behind login.
 
 import { useEffect, useRef, useState } from "react";

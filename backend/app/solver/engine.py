@@ -40,18 +40,18 @@ class EngineInfo:
 
 ENGINES: list[EngineInfo] = [
     EngineInfo(
-        id="cpsat", label="OR-Tools CP-SAT", kind="industrial",
+        id="cpsat", label="CP-SAT", kind="industrial",
         description="Google's C++ constraint solver — clause learning, "
                     "assumption-literal conflict cores, proven optima in milliseconds."),
     EngineInfo(
-        id="ours", label="ScheduleSolve solver (ours)", kind="ai-crafted",
+        id="ours", label="C-Solve", kind="ai-crafted",
         description="AI-authored solver built for this problem: native C++ search "
                     "core (MRV + forward checking, branch-and-bound with an admissible "
                     "bound, ejection hill-climbing, deletion-minimized conflict cores) "
                     "over the identical domains CP-SAT uses; Python reference search "
                     "when the native binary is not built."),
     EngineInfo(
-        id="greedy", label="Greedy descent (ours, fast)", kind="ai-crafted",
+        id="greedy", label="Greedy", kind="ai-crafted",
         description="The home solver's first greedy descent only — no optimization "
                     "phases. Milliseconds-fast, visibly worse preferences."),
 ]

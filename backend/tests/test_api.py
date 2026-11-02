@@ -59,6 +59,14 @@ def test_voice_endpoint_requires_a_meta_key(client):
     assert response.status_code == 503
 
 
+def test_voice_transcript_cleanup_keeps_the_request_readable():
+    from app.services.voice import clean_transcript
+
+    raw = "  I work Tuesdays Tuesdays and Thursdays..  Help me choose choose my classes.. "
+    assert clean_transcript(raw) == (
+        "I work Tuesdays and Thursdays. Help me choose my classes.")
+
+
 def test_reset_returns_to_the_seed(client):
     client.post("/apply", json={"operations": [{
         "op": "remove_instructor", "instructor_id": "chen", "explanation": "out"}]})

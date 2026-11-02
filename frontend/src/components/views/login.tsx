@@ -432,7 +432,7 @@ export function LoginView({ onLogin, onToast }: { onLogin: (user: AuthUser) => v
                   </div>
                   <p className="text-[10.5px] leading-snug text-slate-500">
                     Tap vertical tabs (<strong className="text-slate-700">CO, PC, CS</strong>) on the left edge
-                    to instantly populate demo credentials, then press{" "}
+                    to instantly populate sample credentials, then press{" "}
                     <strong className="text-slate-700">Sign in</strong>.
                   </p>
                 </div>

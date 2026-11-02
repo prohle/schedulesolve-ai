@@ -4,8 +4,9 @@
 // The four workflow views come first; every university fact then gets its own
 // first-class tab (Facility, Map, People, Degree Map, …).
 
-import { Zap, Brain, CalendarDays, LayoutDashboard } from "lucide-react";
+import { Zap, Brain, CalendarDays, LayoutDashboard, Cpu, PlugZap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AuthUser } from "@/lib/auth";
 import { Tip } from "@/components/ui/tip";
 import {
   UNIVERSITY_TABS,
@@ -17,6 +18,8 @@ export type ActiveView =
   | "deliverables"
   | "intelligence"
   | "schedule"
+  | "solver"
+  | "runtime"
   | UniversitySection;
 
 interface NavItem {
@@ -32,7 +35,7 @@ const MAIN_VIEWS: NavItem[] = [
     id: "wizard",
     label: "Express",
     icon: Zap,
-    desc: "Guided — step by step: Import → Intake → Build → Review → Term Change",
+    desc: "Guided end-to-end workflow — Import → Intake → Build → Review → Term Change. The other rail tabs are direct workspaces for one job.",
   },
   {
     id: "deliverables",
@@ -52,6 +55,18 @@ const MAIN_VIEWS: NavItem[] = [
     icon: Brain,
     desc: "Advanced — spectral radar · 4-course audit · solver · verified tightening",
   },
+  {
+    id: "solver",
+    label: "Solver Lab",
+    icon: Cpu,
+    desc: "Native C-Solve engine — source, input, race and the full constraint proof",
+  },
+  {
+    id: "runtime",
+    label: "AI Runtime",
+    icon: PlugZap,
+    desc: "Muse Spark connection: provider, model, live test, captured verification",
+  },
 ];
 
 const VIEWS: NavItem[] = [
@@ -65,20 +80,43 @@ const VIEWS: NavItem[] = [
   })),
 ];
 
+// Role-scoped navigation: a coordinator runs the institution, so they get the
+// full toolkit. Instructors and students get exactly the two surfaces that are
+// theirs — their own schedule and their role's deliverable — instead of the
+// admin editors (catalog, rooms, degree maps, holidays, calendar, settings).
+const ROLE_VIEWS: Record<AuthUser["role"], ActiveView[]> = {
+  coordinator: VIEWS.map((view) => view.id),
+  instructor: ["schedule", "deliverables"],
+  student: ["schedule", "deliverables"],
+};
+
+export function viewsForRole(role: AuthUser["role"]): NavItem[] {
+  const byId = new Map<ActiveView, NavItem>(VIEWS.map((view) => [view.id, view]));
+  return ROLE_VIEWS[role]
+    .map((id) => byId.get(id))
+    .filter((view): view is NavItem => view != null);
+}
+
+export function isViewAllowed(role: AuthUser["role"], view: ActiveView): boolean {
+  return ROLE_VIEWS[role].includes(view);
+}
+
 interface NavProps {
+  role: AuthUser["role"];
   activeView: ActiveView;
   setActiveView: (view: ActiveView) => void;
 }
 
 /** Desktop / tablet: slim rail. Hidden below lg — MobileNav takes over. */
-export function Sidebar({ activeView, setActiveView }: NavProps) {
+export function Sidebar({ role, activeView, setActiveView }: NavProps) {
+  const views = viewsForRole(role);
   return (
     <aside className="sticky top-0 hidden h-full w-[84px] shrink-0 flex-col border-r border-border bg-card lg:flex">
       <nav
         className="custom-scrollbar flex flex-1 flex-col items-stretch gap-1 overflow-y-auto p-2"
         aria-label="Main navigation"
       >
-        {VIEWS.map((view) => {
+        {views.map((view) => {
           const Icon = view.icon;
           const isActive = activeView === view.id;
           return (
@@ -108,14 +146,15 @@ export function Sidebar({ activeView, setActiveView }: NavProps) {
 }
 
 /** Mobile: fixed bottom tab bar with safe-area padding. Hidden on lg+. */
-export function MobileNav({ activeView, setActiveView }: NavProps) {
+export function MobileNav({ role, activeView, setActiveView }: NavProps) {
+  const views = viewsForRole(role);
   return (
     <nav
       className="glass pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-border shadow-[0_-8px_30px_rgba(15,23,42,0.06)] lg:hidden"
       aria-label="Main navigation"
     >
       <div className="no-scrollbar flex gap-1 overflow-x-auto px-2 pt-1.5 pb-1.5">
-        {VIEWS.map((view) => {
+        {views.map((view) => {
           const Icon = view.icon;
           const isActive = activeView === view.id;
           return (

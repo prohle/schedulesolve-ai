@@ -7,7 +7,7 @@ time-of-day preferences. Muse Spark does the translation (structured
 output); a deterministic selector then proves a conflict-free schedule
 against those constraints — the model never picks the classes itself.
 
-Mock path: rule-based, zero credits, so dev/tests run the full flow offline.
+Deterministic path: rule-based, zero credits, so dev/tests run the full flow offline.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import re
 from app import config
 from app.models.results import StudentConstraints
 from app.models.scenario import DAY_NAMES, PERIOD_NAMES, Scenario
-from app.parsing.mock import _DAY, _mentioned_courses
+from app.parsing.deterministic import _DAY, _mentioned_courses
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def extract_course_ids(text: str, scenario: Scenario) -> list[str]:
     return found
 
 
-def mock_student_parse(message: str, scenario: Scenario, cohort) -> StudentConstraints:  # noqa: ANN001
+def deterministic_student_parse(message: str, scenario: Scenario, cohort) -> StudentConstraints:  # noqa: ANN001
     lower = message.lower()
     # Courses named in a "I've completed..." clause are record, not requests.
     completed: list[str] = []
@@ -112,15 +112,15 @@ RULES
 
 
 class StudentPlanParser:
-    """Muse Spark student parse with a deterministic mock fallback."""
+    """Muse Spark student parse with a deterministic fallback."""
 
     def __init__(self) -> None:
-        self.mode: str = "mock" if not config.MUSE_API_KEY else "muse-spark"
+        self.mode: str = "deterministic" if not config.MUSE_API_KEY else "muse-spark"
         self.model: str | None = config.MUSE_MODEL if config.MUSE_API_KEY else None
         self.last_latency_ms: int | None = None
         self._client = None
         if config.MUSE_API_KEY:
-            from openai import OpenAI  # lazy: mock mode needs no SDK
+            from openai import OpenAI  # lazy: offline mode needs no SDK
             self._client = OpenAI(
                 base_url=config.MUSE_BASE_URL, api_key=config.MUSE_API_KEY,
                 timeout=config.MUSE_TIMEOUT_S)
@@ -130,7 +130,7 @@ class StudentPlanParser:
         import time
         t0 = time.perf_counter()
         if self._client is None:
-            out = mock_student_parse(message, scenario, cohort)
+            out = deterministic_student_parse(message, scenario, cohort)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return self._clean(out, pool)
         try:
@@ -153,8 +153,8 @@ class StudentPlanParser:
             return self._clean(parsed, pool)
         except Exception:
             logger.exception("Muse Spark student parse failed; falling back to rules")
-            self.mode = "mock"
-            out = mock_student_parse(message, scenario, cohort)
+            self.mode = "deterministic"
+            out = deterministic_student_parse(message, scenario, cohort)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return self._clean(out, pool)
 

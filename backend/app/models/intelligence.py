@@ -168,7 +168,7 @@ class TighteningMove(BaseModel):
 class TightenResponse(BaseModel):
     trigger: Literal["infeasible", "margin_shortfall", "deadlock_warning", "none"]
     evidence: list[str]
-    muse_mode: Literal["muse-spark", "mock"]
+    muse_mode: Literal["muse-spark", "deterministic"]
     assessment: str
     moves: list[TighteningMove]
     result: Optional[object] = None    # SolveResult of the best verified move

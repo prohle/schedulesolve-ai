@@ -76,6 +76,8 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
   const [busyOptions, setBusyOptions] = useState(false);
   const [whatif, setWhatif] = useState<WhatIfReport | null>(null);
   const [whatifBusy, setWhatifBusy] = useState(false);
+  const [applyingWhatif, setApplyingWhatif] = useState(false);
+  const [appliedWhatif, setAppliedWhatif] = useState<string | null>(null);
   const [applyingMove, setApplyingMove] = useState<number | null>(null);
   const [appliedMove, setAppliedMove] = useState<number | null>(null);
 
@@ -100,10 +102,32 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
 
   const runWhatif = async (changeId: string) => {
     setWhatifBusy(true);
+    setAppliedWhatif(null);
     try {
       setWhatif(await (await fetch(`/api/planning/whatif/${changeId}`)).json());
     } finally {
       setWhatifBusy(false);
+    }
+  };
+
+  const applyWhatif = async () => {
+    if (!whatif) return;
+    setApplyingWhatif(true);
+    try {
+      const res = await authFetch("/api/planning/whatif/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ change_id: whatif.change_id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Could not apply this change");
+      setAppliedWhatif(whatif.change_id);
+      onToast(`${whatif.label} applied to the live institution`, "success");
+      await reload();
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Could not apply this change", "error");
+    } finally {
+      setApplyingWhatif(false);
     }
   };
 
@@ -572,9 +596,15 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
 
         {tab === "planning" && (
           <div className="space-y-4">
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <span>Simulate a change before committing</span>
-              <InfoTip text="Each what-if is re-solved first: feasibility, utilization, and 4-course guarantee deltas — before any money is spent." />
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <span>What-if analysis</span>
+                <InfoTip text="Each what-if is re-solved first: feasibility, utilization, and 4-course guarantee deltas — before any money is spent." />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Preview first, then apply the change to the live institution. Prefer to skip the preview?
+                Room and calendar changes can be applied directly from Facility or Calendar.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
@@ -616,6 +646,21 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                 </div>
                 <div className={cn("border rounded-lg p-3 text-sm", whatif.after_status === "infeasible" ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800")}>
                   {whatif.verdict}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => void applyWhatif()}
+                    disabled={applyingWhatif || appliedWhatif === whatif.change_id}
+                    className="flex items-center gap-1.5"
+                  >
+                    {applyingWhatif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CircleCheck className="h-3.5 w-3.5" />}
+                    {appliedWhatif === whatif.change_id ? "Applied to the live institution" : "Apply this change"}
+                  </Button>
+                  <Button variant="outline" size="md" onClick={() => setWhatif(null)} disabled={applyingWhatif}>
+                    Keep preview only
+                  </Button>
                 </div>
               </Card>
             )}

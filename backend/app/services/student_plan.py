@@ -84,7 +84,7 @@ def project_graduation(
 
     Inputs: degree-map depth (the sequence), completed courses, locked
     prerequisites, the current term's verified plan, and the student's course
-    load. Future terms are simulated at the student's target load, taking
+    load. Projected terms assume the student's target load, taking
     eligible mandatory courses in depth order. Optional electives are not
     counted against the mandatory chain (they are shown separately).
     """
@@ -143,7 +143,7 @@ def project_graduation(
     projected_label = _term_label(cohort, student, projected_term)
     if projected_term <= expected_term:
         # On track means graduating at the expected term; an earlier
-        # simulated finish is not an early-graduation promise.
+        # projected finish is not an early-graduation promise.
         return GraduationProjection(
             "on_track", expected_label, expected_label,
             f"On track for {expected_label}", 0, "")
@@ -462,7 +462,7 @@ def suggest_student_plan(
         optional_remaining=len(remaining_optional))
 
     trace: list[AgentStep] = []
-    actor = f"Muse Spark · {parser.model}" if parser.mode == "muse-spark" else "Deterministic mock parser"
+    actor = f"Muse Spark · {parser.model}" if parser.mode == "muse-spark" else "Deterministic parser"
     latency = f" in {parser.last_latency_ms} ms" if parser.last_latency_ms else ""
     trace.append(AgentStep(
         step="parse", actor=actor,

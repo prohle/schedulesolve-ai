@@ -13,7 +13,7 @@ set -euo pipefail
 #
 # Optional env overrides:
 #   BACKEND_PORT=8011 FRONTEND_PORT=3011 ./start.sh
-#   MODEL_API_KEY=... ./start.sh   # live Muse Spark (default: deterministic mock, zero credits)
+#   MODEL_API_KEY=... ./start.sh   # live Muse Spark (default: deterministic fallback, zero credits)
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-dev}"
@@ -94,7 +94,7 @@ else
   FRONTEND_CMD=(npx next dev -p "$FRONTEND_PORT")
 fi
 
-MUSE_MODE="mock parser/tightener (no MODEL_API_KEY — zero credits)"
+MUSE_MODE="deterministic parser/tightener (no MODEL_API_KEY — zero credits)"
 if [ -n "${MODEL_API_KEY:-}" ] || [ -n "${MUSE_API_KEY:-}" ]; then
   MUSE_MODE="live Muse Spark (Meta Model API key set)"
 fi

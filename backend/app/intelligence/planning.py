@@ -1,4 +1,4 @@
-"""What-if capacity planning: simulate future growth and repurposing.
+"""What-if capacity planning: preview future growth and repurposing.
 
 `whatif(scenario, change_id)` applies a hypothetical change to a copy of the
 scenario, re-solves, and compares before/after feasibility, utilization, loads

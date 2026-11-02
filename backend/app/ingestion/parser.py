@@ -1,7 +1,7 @@
 """Data-ingestion parser: free-form institutional dump -> typed entities.
 
 Real path: Muse Spark structured output (`InstitutionData`) — the LLM
-autocleans the messy dump. Mock path: a deterministic line parser for the same
+autocleans the messy dump. Deterministic path: a line parser for the same
 free-form shapes, so the ingestion flow is fully demoable with zero credits.
 
 Either way, the output feeds `normalize.build_scenario` and every id is
@@ -41,7 +41,7 @@ SECTION_HINTS = (
 
 class IngestionParser:
     def __init__(self) -> None:
-        self.mode: str = "mock" if not config.MUSE_API_KEY else "muse-spark"
+        self.mode: str = "deterministic" if not config.MUSE_API_KEY else "muse-spark"
         self.model: str | None = config.MUSE_MODEL if config.MUSE_API_KEY else None
         self.last_latency_ms: int | None = None
         self._client = None
@@ -55,7 +55,7 @@ class IngestionParser:
         import time
         t0 = time.perf_counter()
         if self._client is None:
-            parsed = mock_ingest(text)
+            parsed = deterministic_ingest(text)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
             return parsed
         try:
@@ -75,10 +75,10 @@ class IngestionParser:
             logger.info("muse-spark ingestion ok (model=%s)", config.MUSE_MODEL)
             return parsed
         except Exception:
-            logger.exception("Muse Spark ingestion failed; falling back to mock parser")
-            parsed = mock_ingest(text)
+            logger.exception("Muse Spark ingestion failed; falling back to the deterministic parser")
+            parsed = deterministic_ingest(text)
             self.last_latency_ms = int((time.perf_counter() - t0) * 1000)
-            self.mode = "mock"
+            self.mode = "deterministic"
             return parsed
 
 
@@ -100,8 +100,8 @@ def _parse_course_rest(rest: str):
     return pattern, rtype, seats, equipment
 
 
-def mock_ingest(text: str) -> InstitutionData:
-    data = InstitutionData(summary="mock-parsed institutional dump")
+def deterministic_ingest(text: str) -> InstitutionData:
+    data = InstitutionData(summary="Deterministic parse of the institutional dump")
     section: Optional[str] = None
     current_source: str = ""
     program: str = ""

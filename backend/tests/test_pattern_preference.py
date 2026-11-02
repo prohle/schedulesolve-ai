@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from app.main import load_seed_scenario
 from app.models.scenario import Operation
-from app.parsing.mock import mock_parse
+from app.parsing.deterministic import deterministic_parse
 from app.parsing.parser import validate_operations
 from app.solver.scheduling_model import solve
 
 
-def test_mock_parses_the_pitch_sentence_into_three_documented_ops():
+def test_deterministic_parses_the_pitch_sentence_into_three_documented_ops():
     sc = load_seed_scenario()
-    parsed = mock_parse(
+    parsed = deterministic_parse(
         "I have childcare on Mondays. A 3-hour class block works better "
         "for me. CS 301 is my preference.", sc, speaker_id="patel")
     ops = {(o.op, o.pattern or o.course_id or o.day) for o in parsed.operations}

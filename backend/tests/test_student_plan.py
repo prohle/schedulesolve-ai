@@ -1,6 +1,6 @@
 """Student advising: record/progress -> degree-map audit -> proven plan.
 
-Mock mode throughout (zero credits). Seed facts used below: the BSc CS
+Deterministic mode throughout (zero credits). Seed facts used below: the BSc CS
 roadmap is cs101 (term 1) -> cs201/math201 (term 3) -> cs210/cs301 +
 elective cs350 (term 5) -> cs310/cs401 (term 7): 7 mandatory + 1 optional.
 CS 2025 sits at term 3, so a progress lookup credits it with CS 101 only.
@@ -9,17 +9,17 @@ CS 2025 sits at term 3, so a progress lookup credits it with CS 101 only.
 from __future__ import annotations
 
 from app.main import load_seed_scenario
-from app.parsing.student import mock_student_parse
+from app.parsing.student import deterministic_student_parse
 from app.services.student_plan import suggest_student_plan
 
 MSG = "I work Tuesdays and Thursdays. I need CS 201 this term, and no 8:00 classes."
 MSG_FITS = "I work Tuesdays and Thursdays. I need CS 201 this term."
 
 
-def test_mock_student_parse_extracts_life_constraints():
+def test_deterministic_student_parse_extracts_life_constraints():
     sc = load_seed_scenario()
     cohort = next(c for c in sc.cohorts if c.id == "cs2025")
-    c = mock_student_parse(MSG, sc, cohort)
+    c = deterministic_student_parse(MSG, sc, cohort)
     assert c.must_course_ids == ["cs201"]
     assert c.avoid_days == [1, 3]          # Tue / Thu work days
     assert c.avoid_periods == [0]          # no 8:00
@@ -42,7 +42,7 @@ def test_progress_lookup_from_cohort():
 def test_suggestion_is_conflict_free_and_respects_availability():
     sc = load_seed_scenario()
     resp = suggest_student_plan(sc, "cs2025", MSG_FITS)
-    assert resp.parser_mode == "mock"
+    assert resp.parser_mode == "deterministic"
     codes = [c.course_code for c in resp.courses]
     # Both mandatory-ready courses, plus CS 301 co-enrolled with its gating
     # courses (Tue/Thu work rules out the Thursday-block CS 210).

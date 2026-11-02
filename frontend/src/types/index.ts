@@ -226,7 +226,7 @@ export interface CopilotResponse {
   explanation_mode?: string;
   options: ResolutionOption[];
   result?: SolveResult;
-  parser_mode: "muse-spark" | "mock";
+  parser_mode: "muse-spark" | "deterministic";
   model?: string;
   parser_latency_ms?: number;
   agent_trace?: AgentStep[];
@@ -261,7 +261,7 @@ export interface TermChangeResponse {
   chosen: Record<string, string>;
   healing_notes: string[];
   result?: SolveResult;
-  parser_mode: "muse-spark" | "mock";
+  parser_mode: "muse-spark" | "deterministic";
   model?: string;
   parser_latency_ms?: number;
   transcript?: string;
@@ -341,7 +341,7 @@ export interface StudentPlanResponse {
   notes: string[];
   missing_inputs?: string[];
   conflicts?: StudentPlanConflict[];
-  parser_mode: "muse-spark" | "mock";
+  parser_mode: "muse-spark" | "deterministic";
   model?: string;
   parser_latency_ms?: number;
   agent_trace?: AgentStep[];
@@ -484,7 +484,7 @@ export interface ChangeReport {
 export interface IngestResponse {
   scenario: Scenario;
   parsed: InstitutionData;
-  parser_mode: "muse-spark" | "mock" | "reviewed";
+  parser_mode: "muse-spark" | "deterministic" | "reviewed";
   completeness: CompletenessReport;
   conflicts?: InstitutionConflict[];
   changes?: ChangeReport | null;
@@ -590,7 +590,7 @@ export interface TighteningMove {
 export interface TightenResponse {
   trigger: "infeasible" | "margin_shortfall" | "deadlock_warning" | "none";
   evidence: string[];
-  muse_mode: "muse-spark" | "mock";
+  muse_mode: "muse-spark" | "deterministic";
   assessment: string;
   moves: TighteningMove[];
   result?: SolveResult;

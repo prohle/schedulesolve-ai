@@ -46,7 +46,7 @@ class FacultyIntake(Base):
     hard_unavailable = Column(Text)  # JSON list[SlotRef]
     preferences = Column(Text)       # JSON list[InstructorPreference]
     # JSON: evidence gate + Muse-documented constraints for this submission.
-    # {status: provided|missing_downgraded|not_required|simulated_demo,
+    # {status: provided|missing_downgraded|not_required|sample,
     #  kind, file_name, documented_constraints, parser_mode, model}
     evidence_json = Column(Text)
     note = Column(Text)

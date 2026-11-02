@@ -13,7 +13,7 @@ from itertools import combinations
 from app.data.department import build_comprehensive_scenario
 from app.intelligence.matrices import compute_utilization
 from app.main import load_seed_scenario
-from app.services.term import simulate_intake, window_state
+from app.services.term import fill_sample_intake, window_state
 from app.solver.scheduling_model import solve
 
 
@@ -132,9 +132,9 @@ def test_building_utilization_is_recomputed_per_term():
     assert first_by_building != second_by_building
 
 
-def test_simulated_intake_fills_every_professor_and_solves():
+def test_sample_intake_fills_every_professor_and_solves():
     sc = load_seed_scenario()
-    updated, summary = simulate_intake(sc, accept=True, only_missing=False)
+    updated, summary = fill_sample_intake(sc, accept=True, only_missing=False)
     assert summary["accepted"] == len(sc.instructors)
     state = window_state(updated)
     assert state["submitted_count"] == len(sc.instructors)

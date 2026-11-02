@@ -1,4 +1,4 @@
-"""Deterministic offline parser — the mock fallback when no MODEL_API_KEY is set.
+"""Deterministic offline parser — the deterministic fallback when no MODEL_API_KEY is set.
 
 Not a model: a rule-based stand-in so the full pipeline (parse -> validate ->
 solve -> self-heal -> propose) runs end-to-end without spending credits. The
@@ -57,7 +57,7 @@ def _first_period(message: str):
     return None
 
 
-def mock_parse(message: str, scenario: Scenario,
+def deterministic_parse(message: str, scenario: Scenario,
                speaker_id: str | None = None) -> ParsedRequest:
     lower = message.lower()
     instructors = _mentioned_instructors(message, scenario)
@@ -83,10 +83,10 @@ def mock_parse(message: str, scenario: Scenario,
                                  label="Holiday" if "holiday" in lower else "Closure",
                                  explanation=f"No classes on {DAY_NAMES[day]}s (term closure)."))
             return ParsedRequest(
-                summary=f"Mock parse: term closure on {DAY_NAMES[day]}.", operations=ops)
+                summary=f"Deterministic parse: term closure on {DAY_NAMES[day]}.", operations=ops)
 
     if not instructors and not courses:
-        return ParsedRequest(summary="(mock parser) No recognizable instructors or courses in this message.",
+        return ParsedRequest(summary="No recognizable instructors or courses in this message.",
                              operations=[])
 
     inst = instructors[0] if instructors else None
@@ -179,7 +179,7 @@ def mock_parse(message: str, scenario: Scenario,
                 parts.append(f"close {r.name}")
 
     if not ops:
-        return ParsedRequest(summary="(mock parser) Message recognized but no operations extracted.",
+        return ParsedRequest(summary="Message recognized but no operations extracted.",
                              operations=[])
 
-    return ParsedRequest(summary="Mock parse: " + "; ".join(parts) + ".", operations=ops)
+    return ParsedRequest(summary="Deterministic parse: " + "; ".join(parts) + ".", operations=ops)

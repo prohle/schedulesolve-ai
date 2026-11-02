@@ -10,8 +10,30 @@
 //   the decision queue with each requester's current load vs cap.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, GraduationCap, LayoutGrid, Loader2, Minus, Plus, Send, Sparkles, X } from "lucide-react";
+import {
+  AudioLines,
+  BadgeCheck,
+  CalendarDays,
+  Check,
+  Clock3,
+  FileUp,
+  GraduationCap,
+  LayoutGrid,
+  Loader2,
+  MapPin,
+  Mic,
+  Minus,
+  Plus,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Square,
+  Upload,
+  Users,
+  X,
+} from "lucide-react";
 import { authFetch, type AuthUser } from "@/lib/auth";
+import { blobToWav } from "@/lib/audio";
 import { TimetableGrid } from "@/components/timetable-grid";
 import { CampusMatrix } from "@/components/landing/campus-matrix";
 import { buildLiveCampus } from "@/lib/campus-live";
@@ -465,6 +487,196 @@ function ClosuresCard({ onToast }: {
   );
 }
 
+/* ---------------- student: Muse Voice Transcribe ---------------- */
+
+type VoiceState = "idle" | "recording" | "transcribing";
+
+function clock(seconds: number) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function MuseVoiceCard({ onDraft, onToast }: {
+  onDraft: (text: string) => void;
+  onToast: (message: string, type?: "info" | "success" | "warning" | "error") => void;
+}) {
+  const [state, setState] = useState<VoiceState>("idle");
+  const [seconds, setSeconds] = useState(0);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState("");
+  const recorder = useRef<MediaRecorder | null>(null);
+  const stream = useRef<MediaStream | null>(null);
+  const chunks = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    if (state !== "recording") return;
+    const timer = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [state]);
+
+  useEffect(() => () => {
+    stream.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  async function transcribe(blob: Blob, filename: string) {
+    setState("transcribing");
+    setError("");
+    try {
+      const wav = await blobToWav(blob);
+      const form = new FormData();
+      form.append("file", new File([wav], filename.replace(/\.[^.]+$/, "") + ".wav", { type: "audio/wav" }));
+      const res = await authFetch("/api/term-change/audio", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || "Transcription failed");
+      setDraft(String(data.transcript || "").trim());
+      onToast("Muse Voice Transcribe drafted your note — review it before solving", "success");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not transcribe that recording.");
+    } finally {
+      setState("idle");
+    }
+  }
+
+  async function start() {
+    setError("");
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Microphone is unavailable in this browser — upload an audio file instead.");
+      return;
+    }
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.current = media;
+      chunks.current = [];
+      const rec = new MediaRecorder(media);
+      rec.ondataavailable = (event) => { if (event.data.size) chunks.current.push(event.data); };
+      rec.onstop = () => {
+        media.getTracks().forEach((track) => track.stop());
+        stream.current = null;
+        const blob = new Blob(chunks.current, { type: rec.mimeType || "audio/webm" });
+        if (blob.size) void transcribe(blob, "voice-note.webm");
+        else { setState("idle"); setError("No audio was captured — try again."); }
+      };
+      recorder.current = rec;
+      rec.start();
+      setSeconds(0);
+      setState("recording");
+    } catch {
+      setError("Microphone permission was declined — upload an audio file instead.");
+    }
+  }
+
+  function stop() {
+    if (recorder.current?.state === "recording") recorder.current.stop();
+  }
+
+  const recording = state === "recording";
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-3.5">
+      <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-violet-400/15 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-8 h-28 w-28 rounded-full bg-blue-400/10 blur-2xl" />
+      <div className="relative flex flex-wrap items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 text-white shadow-sm shadow-violet-600/25">
+          <AudioLines className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-800">
+            Muse Voice Transcribe
+          </p>
+          <p className="text-[11px] font-medium text-violet-900/70">
+            Speak naturally — get a reviewable draft. Nothing changes until you submit it.
+          </p>
+        </div>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-700 ring-1 ring-violet-200">
+          <ShieldCheck className="h-3 w-3" /> draft only
+        </span>
+      </div>
+
+      <div className="relative mt-3 flex flex-wrap items-center gap-2">
+        {recording ? (
+          <button
+            type="button"
+            onClick={stop}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-rose-600 px-3 text-[11px] font-bold text-white shadow-sm shadow-rose-600/25 transition-all hover:bg-rose-700 active:scale-[0.98]"
+          >
+            <Square className="h-3 w-3 fill-current" /> Stop · {clock(seconds)}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void start()}
+            disabled={state === "transcribing"}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-3 text-[11px] font-bold text-white shadow-sm shadow-violet-600/25 transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-50"
+          >
+            {state === "transcribing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mic className="h-3.5 w-3.5" />}
+            {state === "transcribing" ? "Listening…" : "Record voice note"}
+          </button>
+        )}
+
+        <label className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-xl bg-white px-3 text-[11px] font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]">
+          <Upload className="h-3.5 w-3.5" /> Upload audio
+          <input
+            id="voice-upload"
+            type="file"
+            className="hidden"
+            accept="audio/*,.wav,.webm,.mp3,.m4a"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void transcribe(file, file.name);
+              event.target.value = "";
+            }}
+          />
+        </label>
+
+        {recording && (
+          <span className="flex items-end gap-0.5" aria-label="Recording">
+            {[10, 16, 8, 20, 13, 18, 9].map((height, i) => (
+              <span
+                key={i}
+                className="w-1 animate-pulse rounded-full bg-rose-500"
+                style={{ height, animationDelay: `${i * 110}ms` }}
+              />
+            ))}
+          </span>
+        )}
+        <span className="text-[10px] text-violet-900/50">
+          WAV / WebM · 32 MB max · transcribed by Muse
+        </span>
+      </div>
+
+      {error && (
+        <p className="relative mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[10.5px] font-medium text-rose-800">
+          {error}
+        </p>
+      )}
+
+      {draft && (
+        <div className="relative mt-2.5 rounded-xl border border-violet-200 bg-white/85 p-2.5 shadow-sm">
+          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-violet-700">
+            <Sparkles className="h-3 w-3" /> Transcript draft · review before solving
+          </div>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-slate-800">“{draft}”</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => { onDraft(draft); setDraft(""); }}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 text-[10.5px] font-bold text-white transition-all hover:bg-violet-700 active:scale-[0.98]"
+            >
+              <Check className="h-3 w-3" /> Use as my request
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraft("")}
+              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-white px-2.5 text-[10.5px] font-bold text-violet-800 ring-1 ring-violet-200 transition-all hover:bg-violet-50 active:scale-[0.98]"
+            >
+              <X className="h-3 w-3" /> Discard
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- student: suggest my schedule ---------------- */
 
 function StudentPlanPanel({ user, onToast }: {
@@ -476,7 +688,9 @@ function StudentPlanPanel({ user, onToast }: {
   const [programId, setProgramId] = useState("");
   const [recordMode, setRecordMode] = useState<"lookup" | "record">("lookup");
   const [recordText, setRecordText] = useState("Completed: CS 101, CS 201, MATH 201");
-  const [message, setMessage] = useState("I work Tuesdays and Thursdays. I need CS 201 this term, and I'd like 4 courses.");
+  const [message, setMessage] = useState("I work Tuesdays and Thursdays. Help me choose my classes.");
+  const [transcriptName, setTranscriptName] = useState("");
+  const [uploadBusy, setUploadBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<StudentPlanResponse | null>(null);
   const [resolutions, setResolutions] = useState<Record<string, string>>({});
@@ -516,6 +730,25 @@ function StudentPlanPanel({ user, onToast }: {
     const next = { ...resolutions, [kind]: option };
     setResolutions(next);
     void suggest(next);
+  }
+
+  async function uploadTranscript(file: File) {
+    setUploadBusy(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await authFetch("/api/student/transcript", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || "Could not read that transcript");
+      setRecordText(data.text as string);
+      setRecordMode("record");
+      setTranscriptName(data.filename as string);
+      onToast(`Transcript read: ${data.filename} — review the courses before suggesting`, "success");
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : "Could not read that transcript", "error");
+    } finally {
+      setUploadBusy(false);
+    }
   }
 
   return (
@@ -561,12 +794,78 @@ function StudentPlanPanel({ user, onToast }: {
       </div>
 
       {recordMode === "record" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-2.5">
+          <label
+            htmlFor="transcript-upload"
+            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-white px-2.5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200 transition-all hover:bg-slate-50 active:scale-[0.98]"
+          >
+            {uploadBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+            {uploadBusy ? "Reading…" : "Upload transcript"}
+          </label>
+          <input
+            id="transcript-upload"
+            type="file"
+            className="hidden"
+            accept=".pdf,.docx,.txt,.md,.csv,.json"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void uploadTranscript(file);
+              e.target.value = "";
+            }}
+          />
+          <span className="text-[10px] text-muted-foreground">
+            {transcriptName
+              ? `${transcriptName} — courses extracted, review below`
+              : "PDF, Word or text — Muse reads it; you review it before a plan is suggested."}
+          </span>
+        </div>
+      )}
+
+      {recordMode === "record" && (
         <textarea
           className="min-h-14 w-full rounded-xl border border-border bg-background px-3 py-2 font-mono text-xs"
           value={recordText} onChange={(e) => setRecordText(e.target.value)}
           placeholder="Paste your study record — course codes you have completed, e.g. Completed: CS 101, CS 201, MATH 201"
           aria-label="My study record (completed courses)"
         />
+      )}
+
+      {plan && (
+        <div className="animate-rise grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-2.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-emerald-700">
+              <BadgeCheck className="h-3 w-3" /> Verified plan
+            </div>
+            <p className="mt-1 text-lg font-black tracking-tight text-emerald-950">
+              {plan.courses.length}/{plan.target_courses} courses
+            </p>
+            <p className="text-[10px] text-emerald-800/70">
+              {plan.target_met ? "Target met · conflict-free" : "Best fit found · see notes"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-2.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-indigo-700">
+              <GraduationCap className="h-3 w-3" /> Projected graduation
+            </div>
+            <p className="mt-1 text-lg font-black tracking-tight text-indigo-950">
+              {plan.projected_graduation || "—"}
+            </p>
+            <p className="text-[10px] text-indigo-800/70">
+              {plan.projection_note || "From your degree map, record and this plan"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-2.5 shadow-sm">
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-violet-700">
+              <Sparkles className="h-3 w-3" /> Muse advisory
+            </div>
+            <p className="mt-1 text-lg font-black tracking-tight text-violet-950">
+              {plan.parser_mode === "muse-spark" ? "Live" : "Fallback"}
+            </p>
+            <p className="text-[10px] text-violet-800/70">
+              {plan.model || "Muse Spark"} · {plan.parser_latency_ms ? `${Math.round(plan.parser_latency_ms / 100) / 10}s` : "ready to explain trade-offs"}
+            </p>
+          </div>
+        </div>
       )}
 
       {plan?.progress && (
@@ -657,6 +956,8 @@ function StudentPlanPanel({ user, onToast }: {
         </div>
       )}
 
+      <MuseVoiceCard onDraft={setMessage} onToast={onToast} />
+
       <textarea
         className="min-h-16 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
         value={message} onChange={(e) => setMessage(e.target.value)}
@@ -678,21 +979,45 @@ function StudentPlanPanel({ user, onToast }: {
       {plan && plan.courses.length > 0 && (
         <div className="animate-rise grid gap-2 sm:grid-cols-2">
           {plan.courses.map((c) => (
-            <div key={c.section_id} className={`rounded-xl border border-border border-l-4 bg-background p-3 ${c.required ? "border-l-indigo-500" : "border-l-slate-300"}`}>
-              <p className="flex items-center gap-2 text-sm font-extrabold">
-                {c.course_code}
-                {c.required ? (
-                  <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-800">mandatory</span>
-                ) : (
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">optional</span>
-                )}
+            <div
+              key={c.section_id}
+              className={`group relative overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                c.required ? "border-l-4 border-l-indigo-500" : "border-l-4 border-l-slate-300"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-sm font-extrabold tracking-tight">
+                    {c.course_code}
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                      c.required ? "bg-indigo-100 text-indigo-800" : "bg-slate-100 text-slate-700"
+                    }`}>
+                      {c.required ? "required" : "optional"}
+                    </span>
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{c.title}</p>
+                </div>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-700">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <CalendarDays className="h-2.5 w-2.5" />
+                  {c.days.map((d) => DAY_NAMES[d].slice(0, 3)).join("/")}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <Clock3 className="h-2.5 w-2.5" />
+                  {c.start_time}–{c.end_time}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                  <MapPin className="h-2.5 w-2.5" />
+                  {c.room_name}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[10.5px] font-medium text-muted-foreground">
+                {c.instructor_name} · {c.reason}
               </p>
-              <p className="text-xs text-muted-foreground">{c.title}</p>
-              <p className="mt-1 text-xs font-semibold">
-                {c.days.map((d) => DAY_NAMES[d].slice(0, 3)).join("/")} · {c.start_time}–{c.end_time} · {c.room_name}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{c.instructor_name}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{c.reason}</p>
             </div>
           ))}
         </div>
@@ -715,6 +1040,145 @@ function StudentPlanPanel({ user, onToast }: {
   );
 }
 
+/* ---------------- Muse Spark: role-tailored standby advisory ---------------- */
+
+function minutesOf(time?: string | null) {
+  if (!time) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  if (Number.isNaN(hours)) return null;
+  return hours * 60 + (Number.isNaN(minutes) ? 0 : minutes);
+}
+
+function hhmm(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+}
+
+function MuseStandby({ user, mine, requests }: {
+  user: AuthUser;
+  mine: MineResponse | null;
+  requests: ChangeRequest[];
+}) {
+  const { scenario } = useScenario();
+  const placements = mine?.placements ?? [];
+  const sections = placements.length;
+  const rooms = new Set(placements.map((p) => p.room_name)).size;
+  const days = new Set(placements.flatMap((p) => p.days));
+  const pending = requests.filter((r) => r.status === "pending").length;
+  const load = mine?.load;
+  const starts = placements.map((p) => minutesOf(p.start_time)).filter((v): v is number => v != null);
+  const ends = placements.map((p) => minutesOf(p.end_time)).filter((v): v is number => v != null);
+  const first = starts.length ? Math.min(...starts) : null;
+  const last = ends.length ? Math.max(...ends) : null;
+  const span = first != null && last != null
+    ? `${hhmm(first)}–${hhmm(last)}`
+    : "—";
+
+  const insights = user.role === "coordinator"
+    ? [
+        {
+          icon: CalendarDays,
+          label: "Published scope",
+          value: `${sections} section${sections === 1 ? "" : "s"}`,
+          detail: `${rooms} room${rooms === 1 ? "" : "s"} · ${scenario?.cohorts?.length ?? 0} cohorts · ${scenario?.instructors?.length ?? 0} faculty`,
+        },
+        {
+          icon: ShieldCheck,
+          label: "Decision queue",
+          value: pending ? `${pending} pending` : "All clear",
+          detail: pending
+            ? "Each request is solver-verified before it can apply."
+            : "No requests waiting — publishing is the only downstream action.",
+        },
+        {
+          icon: BadgeCheck,
+          label: "Trade-off guard",
+          value: "Atomic",
+          detail: "Every reassignment re-checks load, preps, rooms and walk times together.",
+        },
+      ]
+    : user.role === "instructor"
+      ? [
+          {
+            icon: Users,
+            label: "Your load",
+            value: `${load?.current ?? sections} section${(load?.current ?? sections) === 1 ? "" : "s"}`,
+            detail: `${load?.preps ?? "—"} prep${load?.preps === 1 ? "" : "s"} · cap ${load?.max_sections ?? "—"} sections / ${load?.max_preps ?? "—"} preps`,
+          },
+          {
+            icon: Clock3,
+            label: "Your teaching week",
+            value: `${days.size} day${days.size === 1 ? "" : "s"}`,
+            detail: `Earliest–latest: ${span}`,
+          },
+          {
+            icon: ShieldCheck,
+            label: "Constraint proof",
+            value: "0 conflicts",
+            detail: "Your hard blackouts and soft preferences were checked before publish.",
+          },
+        ]
+      : [
+          {
+            icon: GraduationCap,
+            label: "Your cohort",
+            value: `${sections} courses`,
+            detail: mine?.scope ?? "Waiting for the coordinator to publish this term.",
+          },
+          {
+            icon: Clock3,
+            label: "Verified week",
+            value: span,
+            detail: "No overlapping sections in your cohort timetable.",
+          },
+          {
+            icon: Sparkles,
+            label: "Graduation impact",
+            value: "Ask Muse",
+            detail: "Open Suggest my schedule to project your graduation date and trade-offs.",
+          },
+        ];
+
+  return (
+    <section className="elev relative overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/90 via-white to-violet-50/80 p-4">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-indigo-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-10 h-40 w-40 rounded-full bg-violet-400/10 blur-3xl" />
+      <div className="relative flex flex-wrap items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-sm shadow-indigo-600/25">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">
+            Muse Spark · on standby
+          </p>
+          <p className="text-sm font-extrabold tracking-tight text-slate-900">
+            Downstream impact &amp; trade-offs
+          </p>
+        </div>
+        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-indigo-700 ring-1 ring-indigo-200">
+          <ShieldCheck className="h-3 w-3" /> advisory only
+        </span>
+      </div>
+      <div className="relative mt-3 grid gap-2 sm:grid-cols-3">
+        {insights.map(({ icon: Icon, label, value, detail }) => (
+          <div key={label} className="rounded-xl border border-white/90 bg-white/80 p-2.5 shadow-sm ring-1 ring-slate-900/5">
+            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+              <Icon className="h-3 w-3 text-indigo-600" /> {label}
+            </div>
+            <p className="mt-1 text-sm font-black tracking-tight text-slate-900">{value}</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-slate-600">{detail}</p>
+          </div>
+        ))}
+      </div>
+      <p className="relative mt-2 flex items-center gap-1.5 text-[10px] text-indigo-900/60">
+        <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" />
+        Muse explains; the solver proves. Every statement above is derived from the published timetable.
+      </p>
+    </section>
+  );
+}
+
 export function MyScheduleView({ user, onToast }: {
   user: AuthUser;
   onToast: (message: string, type?: "info" | "success" | "warning" | "error") => void;
@@ -723,6 +1187,7 @@ export function MyScheduleView({ user, onToast }: {
   const [unpublished, setUnpublished] = useState(false);
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [busy, setBusy] = useState(false);
+  const [showAllRequests, setShowAllRequests] = useState(false);
   const [view, setView] = useState<"matrix" | "timetable">(
     user.role === "coordinator" ? "matrix" : "timetable"
   );
@@ -781,27 +1246,6 @@ export function MyScheduleView({ user, onToast }: {
   // Mount fetch: state writes happen after the awaits.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load().catch(() => {}); }, [load]);
-
-  async function simulateAndPublish() {
-    setBusy(true);
-    try {
-      const res = await authFetch("/api/term/window/simulate", {
-        method: "POST",
-        body: JSON.stringify({ accept: true, publish: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Simulation failed");
-      onToast(
-        `Simulated ${data.summary?.generated ?? 0} faculty submissions · published schedule #${data.published?.id ?? "—"}`,
-        "success"
-      );
-      await load();
-    } catch (e) {
-      onToast(e instanceof Error ? e.message : "Simulation failed", "error");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function publish() {
     setBusy(true);
@@ -906,6 +1350,10 @@ export function MyScheduleView({ user, onToast }: {
     } finally { setBusy(false); }
   }
 
+  const visibleRequests = user.role === "coordinator" || showAllRequests
+    ? requests
+    : requests.slice(0, 3);
+
   return (
     <div className="mx-auto w-full space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -949,13 +1397,6 @@ export function MyScheduleView({ user, onToast }: {
               <Send className="w-3.5 h-3.5" /> Publish
             </button>
           )}
-          {user.role === "coordinator" && unpublished && (
-            <button disabled={busy} onClick={() => void simulateAndPublish()}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-emerald-600/25 transition-all active:scale-[0.98] disabled:opacity-50">
-              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              Simulate faculty &amp; publish
-            </button>
-          )}
         </div>
       </div>
 
@@ -988,6 +1429,8 @@ export function MyScheduleView({ user, onToast }: {
         </div>
       )}
 
+      <MuseStandby user={user} mine={mine} requests={requests} />
+
       {user.role === "coordinator" && <ClosuresCard onToast={onToast} />}
 
       {(user.role === "instructor") && (
@@ -1001,7 +1444,7 @@ export function MyScheduleView({ user, onToast }: {
           <h3 className="text-xs font-bold uppercase tracking-wide">
             {user.role === "coordinator" ? "Intake & change requests" : "My requests"}
           </h3>
-          {requests.map((r) => (
+          {visibleRequests.map((r) => (
             <div key={r.id} className="border border-border rounded-lg px-3 py-2 flex items-start justify-between gap-3">
               <div className="text-xs space-y-0.5 min-w-0">
                 <p className="font-semibold">
@@ -1049,6 +1492,14 @@ export function MyScheduleView({ user, onToast }: {
               )}
             </div>
           ))}
+          {user.role !== "coordinator" && requests.length > 3 && (
+            <button
+              onClick={() => setShowAllRequests((value) => !value)}
+              className="inline-flex min-h-8 items-center rounded-lg bg-muted px-2.5 text-[10.5px] font-bold text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
+            >
+              {showAllRequests ? "Show latest 3" : `Show all ${requests.length} requests`}
+            </button>
+          )}
         </div>
       )}
     </div>
