@@ -17,6 +17,7 @@ import {
   CircleSlash,
   Code2,
   Cpu,
+  Download,
   GraduationCap,
   Loader2,
   Play,
@@ -179,6 +180,33 @@ export function SolverLabView() {
   const totalChecks = proof?.proof.groups.reduce((n, g) => n + g.total, 0) ?? 0;
   const passedChecks = proof?.proof.groups.reduce((n, g) => n + g.passed, 0) ?? 0;
 
+  // A portable artifact: the exact race, proof and placements a coordinator
+  // (or judge) can keep, diff, or hand to an accreditation review.
+  const downloadProof = useCallback(() => {
+    if (!proof) return;
+    const pack = {
+      generated_at: new Date().toISOString(),
+      scale,
+      engine: "C-Solve (native C++17)",
+      source: source ? {
+        file: source.file, sha256: source.sha256, lines: source.lines, bytes: source.bytes,
+      } : null,
+      input: proof.input,
+      race: proof.race,
+      proof: proof.proof,
+      objective: proof.objective,
+      solve_time_ms: proof.solve_time_ms,
+      placements: proof.placements,
+    };
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `schedulesolve-proof-${scale}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [proof, scale, source]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -213,6 +241,14 @@ Proof Lab
             </button>
           ))}
           <button
+            onClick={downloadProof}
+            disabled={!proof}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-bold transition-all hover:bg-accent active:scale-[0.98] disabled:opacity-50"
+            title="Download the race, constraint proof, input model and solver-proven placements as JSON"
+          >
+            <Download className="h-3.5 w-3.5" /> Proof JSON
+          </button>
+          <button
             onClick={() => void run()}
             disabled={busy}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:opacity-50"
@@ -221,6 +257,13 @@ Proof Lab
             {busy ? "Proving…" : "Run proof"}
           </button>
         </div>
+      </div>
+
+      {/* Provenance strip: which layer owns which claim. */}
+      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-wider">
+        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-800">Muse Spark · proposes constraints</span>
+        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">C-Solve / CP-SAT · prove placements</span>
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">Independent verifier · re-derives every hard rule</span>
       </div>
 
       {error && (

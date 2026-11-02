@@ -130,6 +130,41 @@ university grade, and married Meta's open-weights intelligence with hard
 deterministic mathematics. Check out the live demo and the native C++
 engine source code on GitHub. Thank you.
 
+## Architecture (one diagram — who proposes, who proves)
+
+```mermaid
+flowchart LR
+  A["Any-format files"] --> B["Muse Spark<br/>ingest autoclean<br/>schema: InstitutionData"]
+  B --> C["Deterministic<br/>normalizer + validator"]
+  C --> D["Institution model"]
+
+  NL["Plain language"] --> P["Muse Spark<br/>parse<br/>schema: ParsedRequest"]
+  P --> V["Schema + scenario<br/>validation"]
+  V --> D
+
+  D --> S1["Native C++ C-Solve"]
+  D --> S2["OR-Tools CP-SAT"]
+  S1 <-->|"identical data · ranked from outputs"| S2
+  S1 --> R["Constraint proof +<br/>solver-proven placements"]
+  S2 --> R
+  R --> T["Published timetable<br/>coordinator · instructor · student"]
+
+  R -->|"infeasible"| U["Minimal conflict core"]
+  U --> X["Muse Spark<br/>explain + rank repairs"]
+  X --> Y["CP-SAT re-proves<br/>every repair"]
+  Y --> Z["Agent auto-applies<br/>least-disruptive proven fix"]
+  Z --> AUD["Audit trail<br/>every actor named"]
+
+  subgraph SERVE["Serving"]
+    S["One OpenAI-compatible client<br/>Baseten Muse Spark Open · Meta Model API · self-hosted"]
+  end
+  B -.-> S
+  P -.-> S
+  X -.-> S
+```
+
+**Read it as three lanes:** Muse Spark handles unstructured ingestion, constraint schema generation, and the plain-English explanation of the solver's proof. The deterministic engines (C++ C-Solve and OR-Tools CP-SAT) own feasibility, ranking, conflict cores, and every repair. The agent applies only what the solver has proved, and the trace names every actor.
+
 ## Meta AI tooling used (runtime — every runtime model is a Meta model)
 
 | Role | Model | Where |
@@ -179,7 +214,7 @@ deterministic parser, so judges can click every beat offline.
 | Impact (30%) | Coordinator-week → minutes, quantified in README "Proof at university scale" + benchmark script; real domain (degree roadmaps, walk matrix, prep caps) at three measured scales — department (26 instructors), university (38), and a full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students); students get the same proof in reverse — a personal plan that fits their job and degree roadmap, an honest warning before a must-take course slips a semester, and a projected graduation term that names the course that pushes it out |
 | Use of Meta AI tooling (25%) | 5 runtime Muse Spark roles (ingest, parse, explain, tighten, student plan) + Muse Voice Transcribe as a draft-only input (identity comes from the signed-in session — voice alone never changes the term), live badges (model + latency) on screen, `muse-verification.json` + `muse-verification-open.json` + `muse-verification-student.json`, agent trace names Muse at every proposing step |
 | Technical depth & execution (20%) | AI-authored **native C++ rival solver proving CP-SAT's optimum faster** at every demo scale and the only engine to complete the **full-university stress instance (198 instructors · 361 sections · 100 cohorts · ~12,000 students; CP-SAT reports `unknown` inside its budget there)** (docs/solver_evidence.md, benchmark + parity tests), CP-SAT assumption-literal minimal conflict cores, feasibility probes, spectral (Laplacian/Fiedler/Hoffman/max-clique) warm-start + deadlock radar, C39 guarantee audit (100/100 at stress scale), **multi-user roles** (coordinator/instructor/student logins, published schedules, verified change requests, per-professor intake before the deadline — grid picks or plain English documented by Muse Spark, with an evidence gate: hard stays hard only with evidence attached, otherwise it is downgraded to the strongest soft preference — + term closures), **coordinator-owned academic policy** (student-credit load curve, research/teaching tracks, full-time thresholds), **catalog decisions** (not-offered/dormant/special topics with records), **PhD 1-3 credit Fall reservations** with supervisor caps, **national-holiday/term-date suggestions + day swaps**, **realism audit + seeded randomized solver performance record** (docs/data_realism_audit.md, docs/solver_performance.md), 108 passing tests, CI |
-| Demo (25%) | Working live stack (`docker compose up`, Postgres 18), before/after zero-ripple term change, solver-verified resolutions, department-scale solve in the Build step |
+| Demo (25%) | Working live stack (`docker compose up`, Postgres 18), before/after zero-ripple term change, solver-verified resolutions, department-scale solve in the Build step; one-click proof JSON, downloadable agent trace, and calendar export (ICS) with holidays/closures excluded |
 
 ## What was built during the hackathon (Oct 27 – Nov 4)
 

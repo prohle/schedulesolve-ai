@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck, AlertTriangle, Zap,
   Users, Loader2, CircleCheck, CircleX, Sparkles, Wrench, Radar, Database,
-  UploadCloud, X, ListChecks,
+  UploadCloud, X, ListChecks, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -171,6 +171,13 @@ function AgentTrace({ steps }: { steps?: AgentStep[] }) {
   if (!steps || steps.length === 0) return null;
   return (
     <Section title="Agent trace" hint="Parse → verify → apply. The model proposes at every step; the solver proves each move before it stands." icon={<ListChecks className="w-5 h-5 text-sky-600" />} tone="sky">
+      {/* Who owns which step, at a glance: the model proposes, the solver proves. */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-wider">
+        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-800">Muse Spark · proposes</span>
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">Validator · schema</span>
+        <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">CP-SAT · proves</span>
+        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">Agent · applies</span>
+      </div>
       <ol className="space-y-1.5">
         {steps.map((s, i) => (
           <li key={i} className="flex items-start gap-2 text-xs">
@@ -186,7 +193,104 @@ function AgentTrace({ steps }: { steps?: AgentStep[] }) {
           </li>
         ))}
       </ol>
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            const blob = new Blob(
+              [JSON.stringify({ exported_at: new Date().toISOString(), steps }, null, 2)],
+              { type: "application/json" },
+            );
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "schedulesolve-agent-trace.json";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 hover:underline"
+        >
+          <Download className="h-3 w-3" /> Download trace
+        </button>
+      </div>
     </Section>
+  );
+}
+
+// What the model actually returned, before normalization. Judges can open
+// this and see the schema, the model, the latency and the typed entities —
+// the API call is on screen, not just its side effects.
+function extractionPreview(parsed: InstitutionData) {
+  return {
+    schema: "InstitutionData",
+    summary: parsed.summary,
+    counts: {
+      buildings: parsed.buildings?.length ?? 0,
+      courses: parsed.courses?.length ?? 0,
+      instructors: parsed.instructors?.length ?? 0,
+      rooms: parsed.rooms?.length ?? 0,
+      cohorts: parsed.cohorts?.length ?? 0,
+      degree_requirements: parsed.degree_map?.length ?? 0,
+      distances: parsed.distances?.length ?? 0,
+    },
+    sample: {
+      course: parsed.courses?.[0] ?? null,
+      instructor: parsed.instructors?.[0] ?? null,
+      room: parsed.rooms?.[0] ?? null,
+      cohort: parsed.cohorts?.[0] ?? null,
+      requirement: parsed.degree_map?.[0] ?? null,
+    },
+  };
+}
+
+function MuseExtraction({ ingest }: { ingest: IngestResponse }) {
+  const live = ingest.parser_mode === "muse-spark";
+  const preview = extractionPreview(ingest.parsed);
+  return (
+    <details className="rounded-xl border border-sky-200 bg-sky-50/50 text-xs">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-2 p-3">
+        <span className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white",
+          live ? "bg-sky-600" : "bg-slate-500",
+        )}>
+          <Sparkles className="h-3 w-3" />
+          {live ? "Muse Spark extraction" : "Deterministic extraction"}
+        </span>
+        <span className="rounded bg-white px-1.5 py-0.5 font-mono font-bold text-slate-700 ring-1 ring-slate-200">
+          InstitutionData
+        </span>
+        <span className="font-mono text-[11px] text-slate-600">
+          {ingest.model ?? "deterministic parser"}
+        </span>
+        {ingest.parser_latency_ms != null && (
+          <span className="font-bold text-slate-600">
+            {Math.round(ingest.parser_latency_ms / 100) / 10}s
+          </span>
+        )}
+        <span className="ml-auto font-bold text-sky-800">View structured output →</span>
+      </summary>
+      <div className="border-t border-sky-200 p-3">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            ["Schema", "InstitutionData"],
+            ["Endpoint", "POST /ingest/files"],
+            ["Gate", "schema + scenario validation"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-sky-200 bg-white px-2.5 py-1.5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{label}</div>
+              <div className="truncate font-mono text-[11px] font-semibold" title={value}>{value}</div>
+            </div>
+          ))}
+        </div>
+        <pre className="custom-scrollbar mt-2 max-h-[260px] overflow-auto rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-[11px] leading-[1.55] text-slate-200">
+          {JSON.stringify(preview, null, 2)}
+        </pre>
+        <p className="mt-2 text-[11px] leading-snug text-sky-900">
+          The model&apos;s typed output before normalization. Every field is schema-validated,
+          then scenario-validated; the solver — not the model — decides feasibility.
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -758,6 +862,8 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
                         : <span className="text-amber-700 font-semibold">Missing {missing.length}: {missing.join(", ")}</span>;
                     })()}
                   </div>
+
+                  <MuseExtraction ingest={ingest} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {(localCompleteness(edited) ?? []).map((chk) => (

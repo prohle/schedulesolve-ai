@@ -14,6 +14,7 @@ import {
   AudioLines,
   BadgeCheck,
   CalendarDays,
+  CalendarPlus,
   Check,
   Clock3,
   FileUp,
@@ -37,6 +38,7 @@ import { blobToWav } from "@/lib/audio";
 import { TimetableGrid } from "@/components/timetable-grid";
 import { CampusMatrix } from "@/components/landing/campus-matrix";
 import { buildLiveCampus } from "@/lib/campus-live";
+import { buildTimetableIcs, downloadIcs, type TermCalendar } from "@/lib/ics";
 import { InfoTip } from "@/components/ui/tip";
 import { useScenario } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
@@ -1281,6 +1283,23 @@ export function MyScheduleView({ user, onToast }: {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load().catch(() => {}); }, [load]);
 
+  const exportCalendar = useCallback(async () => {
+    if (!mine?.placements?.length) return;
+    try {
+      const res = await authFetch("/api/term/calendar");
+      const calendar = res.ok ? (await res.json()) as TermCalendar : null;
+      const ics = buildTimetableIcs({
+        placements: mine.placements,
+        calendar,
+        calendarName: `${mine.scope} — ScheduleSolve AI`,
+      });
+      downloadIcs(ics, `schedulesolve-${user.role}-timetable.ics`);
+      onToast("Calendar file ready — import into Google Calendar or Outlook", "success");
+    } catch {
+      onToast("Could not build the calendar file", "error");
+    }
+  }, [mine, onToast, user.role]);
+
   async function publish() {
     setBusy(true);
     try {
@@ -1422,6 +1441,15 @@ export function MyScheduleView({ user, onToast }: {
               className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/25 active:scale-[0.98]"
             >
               <Sparkles className="h-3.5 w-3.5" /> Advising
+            </button>
+          )}
+          {mine && mine.placements.length > 0 && (
+            <button
+              onClick={() => void exportCalendar()}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-xs font-bold transition-all hover:bg-accent active:scale-[0.98]"
+              title="Download a calendar file for Google Calendar or Outlook — holidays and closures are excluded"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" /> Add to calendar
             </button>
           )}
           <div className="flex rounded-xl border border-border bg-muted/60 p-1">

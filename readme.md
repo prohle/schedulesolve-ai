@@ -60,7 +60,7 @@ This project is entered in the **Indie Developer track** (solo entrant, team-siz
 | **Impact (30%)** | A real, recurring, expensive problem at two scales at once: one student losing a year to one collision, and one coordinator losing a week per term (plus hours per mid-term disruption) to an NP-hard puzzle run on spreadsheets. The fix is quantified, not asserted: coordinator-week → a Muse parse (~8–25 s live) + a solve (~0.15–0.16 s at department scale) + seconds per verified disruption; a student's graduation risk → a named course and an exact term (`+N terms`, named culprit). It runs at the scale a real registrar schedules: 26-instructor department, 38-instructor university, and a 198-instructor / 361-section / 100-cohort / ~12,000-student stress instance with the four-course graduation guarantee at **100/100**. | Scale + timing table in [Proof at university scale](#proof-at-university-scale); reproduce with `backend/scripts/benchmark.py`; C39 audit at `GET /intelligence/margins`; student projection in `backend/tests/test_student_plan.py` (`test_projection_is_on_track_for_an_on_time_cohort`, `test_projection_names_the_course_that_delays_a_senior`) |
 | **Use of Meta AI tooling (25%)** | Meta models are the intelligence layer of the whole product, not a chatbot bolted on: **five structured Muse Spark roles** (ingest autoclean, constraint parse, conflict explanation, typed tightening, student-plan parse) plus **Muse Voice Transcribe** as a draft-only input — every one schema-validated, every one visibly badged with model + latency, every one degrading to a labelled deterministic fallback with no key. The same four structured roles are **verified live on open-weight Muse Spark Open served by Baseten (18/18 calls)**, and the client is endpoint-agnostic, so the open weights are a configuration swap, not a rewrite. The surprise the rubric asks for: the model was also used to *build a second solver* — an AI-authored native C++ engine that races CP-SAT — and is then never allowed to decide anything. **The LLM proposes; the solver proves.** | Role table + captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime); `backend/muse-verification.json`, `backend/muse-verification-student.json`, `backend/muse-verification-voice.json`, `backend/muse-verification-open.json` (12 parse + 3 explanation + 2 tighten + 1 ingestion = 18) |
 | **Technical depth & execution (20%)** | Two independent solver engines behind one contract cross-checking each other on identical inputs; CP-SAT assumption-literal **minimal conflict cores**; a native C++ search core (MRV, unit propagation, live + pairwise-conflict admissible bounds) that proves CP-SAT's optimum faster on every measured row of this problem class and is the only engine to complete the 361-section instance; spectral graph intelligence (Laplacian, Fiedler vector, Hoffman bound, exact max clique) feeding warm-start hints and a deadlock radar; a closed-grammar AI tightener whose every move is re-solved before it can be shown; Postgres-backed multi-user roles; **108 tests passing from the repo root (107 backend + 1 root smoke)**, CI on every push. Boundaries are published, not hidden. | [Two engines, one contract](#two-engines-one-contract-industrial-cp-sat-vs-an-ai-crafted-solver); `docs/solver_evidence.md`; `docs/constraint_catalog.md`; `docs/limitations.md`; `docs/truthfulness.md`; `backend/.venv/bin/python -m pytest -q` from the repo root → `108 passed` (107 from `backend/`) |
-| **Demo (25%)** | A working product, not a prototype of one: hosted live demo with sample-account evaluation logins (no API key), a 2:57 live Puppeteer screencast of the running app, recorded live against Muse Spark Open on Baseten with narration byte-identical to the final pitch, and a two-minute local path (`docker compose up`). Every headline beat is clickable in order — any-format import with a 6/6 completeness check, one-sentence Patel intake applied to the term, dual-engine compare ranked Rank 1 / Rank 2 from outputs alone, university-scale publish, instructor change request re-proven and re-published, Chen term change with solver-verified zero-ripple coverage and a live agent trace, Diaz impossible override with conflict core and verified repairs, and a student's verified plan with its projected graduation term. | [For judges — verify any claim in under 5 minutes](#run-it); live demo and video links at the top of this README; `docs/demo_script.md` |
+| **Demo (25%)** | A working product, not a prototype of one: hosted live demo with sample-account evaluation logins (no API key), a 2:57 live Puppeteer screencast of the running app, recorded live against Muse Spark Open on Baseten with narration byte-identical to the final pitch, and a two-minute local path (`docker compose up`). Every headline beat is clickable in order — any-format import with a 6/6 completeness check, one-sentence Patel intake applied to the term, dual-engine compare ranked Rank 1 / Rank 2 from outputs alone, university-scale publish, instructor change request re-proven and re-published, Chen term change with solver-verified zero-ripple coverage and a live agent trace, Diaz impossible override with conflict core and verified repairs, and a student's verified plan with its projected graduation term. The product also ships the last mile: one-click **proof JSON** (race + constraint proof + placements), a downloadable **agent trace**, and **calendar export (ICS)** for coordinators, instructors and students — with term holidays and closures already excluded. | [For judges — verify any claim in under 5 minutes](#run-it); live demo and video links at the top of this README; `docs/demo_script.md` |
 
 **Bonus prizes — claimed only where the evidence exists:**
 
@@ -68,6 +68,45 @@ This project is entered in the **Indie Developer track** (solo entrant, team-siz
 - **Best Agentic Use-Case ($5K) — claim.** An autonomous multi-step agent with a visible trace naming every actor: `parse (Muse Spark) → validate → solve → minimal-conflict-core → explain (Muse Spark) → verify every resolution (CP-SAT) → auto-apply the least-disruptive proven fix → audit`, plus the term-change loop `parse → impact → probe every qualified candidate → choose → re-solve → audit`. Self-correction is bounded and proven: no repair, coverage name, or student plan is shown until a solver has verified it.
 - **Most Viral ($20K) / Community Vote ($10K) — eligible, account actions.** Ready X copy and the gallery path are in `docs/submission.md`; posting and voting are human steps after submission, not code claims.
 - **Best Creative Build ($5K) — explicitly not claimed.** No Muse Image / Wonder surface exists in this project; flagging it would waste reviewer attention.
+
+## Architecture — who proposes, who proves
+
+```mermaid
+flowchart TB
+  subgraph INGEST["1 · Ingest — Muse Spark proposes"]
+    A["Any-format files<br/>PDF · DOCX · XLSX · CSV · TXT · MD · ZIP"] --> B["Muse Spark autoclean<br/>schema: InstitutionData"]
+  end
+  B --> C["Deterministic normalizer + validator"]
+  C --> D["Institution model (scenario)"]
+
+  subgraph PROVE["2 · Prove — deterministic solvers"]
+    D --> E["Native C++ C-Solve"]
+    D --> F["Google OR-Tools CP-SAT"]
+    E <-->|"race on identical data · ranked from outputs"| F
+    E --> G["Constraint proof + solver-proven placements"]
+    F --> G
+  end
+
+  subgraph EXPLAIN["3 · Explain / repair — Muse Spark + solver"]
+    G -->|"infeasible request"| H["Minimal conflict core<br/>assumption literals"]
+    H --> I["Muse Spark explains in plain English<br/>and ranks repair options"]
+    I --> J["CP-SAT re-proves every repair"]
+    J --> K["Agent auto-applies the least-disruptive proven fix"]
+    K --> L["Audit trail names every actor"]
+  end
+
+  G --> M["Published timetable<br/>coordinator · instructor · student"]
+  M --> N["Student plan<br/>Muse parse → solver verify → projected graduation"]
+
+  subgraph SERVE["Serving"]
+    S["One OpenAI-compatible client<br/>Baseten Muse Spark Open · Meta Model API · self-hosted vLLM"]
+  end
+  B -.-> S
+  I -.-> S
+  N -.-> S
+```
+
+The LLM never writes the schedule. Muse Spark proposes typed constraints, explanations and ranked repairs; the deterministic engines prove every placement, every coverage swap, every repair and every student plan before it can stand. The swap between hosted Muse Spark, open-weight Muse Spark Open on Baseten, and a self-hosted endpoint is environment configuration, not a code change.
 
 ## How it works
 
