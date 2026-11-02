@@ -13,11 +13,11 @@ Copy-paste source for the CV platform form. Deadline: **Wed Nov 4, 9:00 PM ET**
 | Team | Solo — Huong Le |
 | Repo (public) | https://github.com/prohle/schedulesolve-ai |
 | Demo video (≤3:00) | https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4 (2:57 live Puppeteer screencast, re-recorded Nov 2 live against Muse Spark Open on Baseten — every Muse beat asserts the `meta-models/muse-spark-open-1026` badge on screen, never a fallback; narration byte-identical to the final pitch, 12 beats) — _upload the same file to YouTube and add that link here too_ |
-| Live demo | **https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** (full UI, sample-account login, no API key; backend API: https://prohle--schedulesolve-ai-api.us-east.modal.run/docs) — or judges run `docker compose up` (no key, no account — see README "Judges — try it in 2 minutes") |
+| Live demo | **https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** (full UI, sample-account login, no API key; backend API: https://prohle--schedulesolve-ai-api.us-east.modal.run/docs). Chat runs on **open-weight Muse Spark Open** `meta-models/muse-spark-open-1026` via Baseten; voice ASR stays on the Meta Model API. A durable daily model budget + per-identity rate limits protect the demo from credit-drain bots, and budget exhaustion degrades to the labelled deterministic fallback instead of breaking a judge's flow. Or judges run `docker compose up` (no key, no account — see README "Judges — try it in 2 minutes") |
 | X post (Most Viral) | _paste link after posting; engagement counts until Nov 8 EOD. Ready copy below — attach `final.mp4`_ |
 
 **X post (ready to publish, attach the video):**
-> Every term, one coordinator loses a week to the course timetable. ScheduleSolve AI takes the messy files as they are — PDF, Word, Excel, plain text — and returns a *proven* timetable for the whole university. The AI proposes. The solver proves. Our own C++ solver proves the same answer faster on every measured instance — and finishes a 361-section university the industrial engine can't. Live demo + full build log in the replies. #BuildForYourWorld
+> Every term, one coordinator loses a week to the course timetable. ScheduleSolve AI takes the messy files as they are — PDF, Word, Excel, scans, plain text — and returns a *proven* timetable for the whole university. The AI proposes. The solver proves. Our own C++ solver proves the same answer faster on every measured instance — and finishes a 361-section university the industrial engine can't. Runs on Meta's open-weight Muse Spark Open via Baseten. Live demo + full build log in the replies. #BuildForYourWorld #MetaHackathon
 >
 > Reply 1: Live demo (sample-account login, no API key): https://prohle--schedulesolve-ai-ui-web.us-east.modal.run
 > Reply 2: Code + evidence: https://github.com/prohle/schedulesolve-ai
@@ -167,6 +167,8 @@ flowchart LR
 
 ## Meta AI tooling used (runtime — every runtime model is a Meta model)
 
+> **Live demo configuration:** all five chat roles run on **open-weight Muse Spark Open** `meta-models/muse-spark-open-1026` served by **Baseten**; voice ASR runs on `muse-voice-transcribe-1.0` via the Meta Model API. The table below names the code path; the default `muse-spark-1.3-contributor` is for synthetic local runs, and the swap is environment-only (`MUSE_BASE_URL`, `MUSE_MODEL`, `MODEL_API_KEY`).
+
 | Role | Model | Where |
 |---|---|---|
 | Ingestion autoclean → typed scenario | Muse Spark `muse-spark-1.3-contributor` | `backend/app/ingestion/parser.py` |
@@ -203,7 +205,11 @@ deterministic parser, so judges can click every beat offline.
   `https://inference.baseten.co/v1`, real structured outputs + latencies.
   The swap is env-only (`MUSE_BASE_URL` + `MUSE_MODEL` + the Baseten key as
   `MODEL_API_KEY`); recording with it makes the on-screen badge read
-  `muse-spark · meta-models/muse-spark-open-1026`.
+  `muse-spark · meta-models/muse-spark-open-1026`. **The hosted demo is now
+  deployed on this exact path** (verified Nov 2: `/runtime/config` reports
+  provider Baseten, model `meta-models/muse-spark-open-1026`, live=true), so
+  the infrastructure partner can verify the live product, not only the
+  recording.
 - **Best Creative Build ($5K) — do not claim** (no Muse Image/Wonder surface;
   a false flag wastes reviewer attention).
 
@@ -250,7 +256,7 @@ can reach, and quote any reply (with permission) in the form's Impact field:
 - [x] Frontend production build passes (`cd frontend && npm run build`, verified Oct 30)
 - [x] Video ≤ 3:00 (2:57), re-recorded Nov 2 live against Muse Spark Open on Baseten — recorder asserts the live `muse-spark` + `meta-models/muse-spark-open-1026` badge at every Muse beat (a fallback fails the recording); frame-checked
 - [x] Video shows, in order: any-format import autoclean (PDF/DOCX/CSV/TXT/XLSX/MD) → Patel intake applied to the term → **dual-engine compare at department scale, Rank 1 / Rank 2 from outputs (native solver first)** → university scale (38/41/20, asserted on screen) + publish → Chen change request approved and re-published → term change with agent trace + ranked verified reassignment → Diaz impossible override (conflict core + verified repairs) → capacity what-ifs + end card
-- [x] Live demo deployed (Modal UI + API; full checklist in `docs/deploy_modal.md` verified live Oct 30: `/status`, reset, Patel copilot `muse-spark`, Chen term change probes, live voice transcription) — scenario left reset to seed
+- [x] Live demo deployed (Modal UI + API) and **redeployed Nov 2 with the current UI** — chat on open-weight Muse Spark Open via Baseten (`/runtime/config` verified: provider Baseten, model `meta-models/muse-spark-open-1026`, live=true; a real `/runtime/test` returned schema-valid operations), sample login works, AI Runtime page shows the open-weight badge. Cost guard deployed: durable daily budget (`model_usage`), per-identity rate limits, request caps; budget exhaustion degrades to the labelled deterministic fallback. Scenario left reset to seed.
 - [x] Student schedule suggestion shipped (Oct 30): Spark student parse live-verified (`muse-verification-student.json`), exact selector + independent re-verification, My Schedule student panel; 58 backend tests pass
 - [x] Voice hardened to draft-only (Oct 30): `/term-change/audio` returns a transcript for a signed-in reviewer and never changes the term by itself — speaker identity cannot be established from audio
 - [x] Claim consistency pass (Oct 30): test badge = 108, engine-speed claims aligned to `docs/solver_evidence.md` (same proven optimum, faster on every measured row; deterministic single-worker contract stated explicitly)
