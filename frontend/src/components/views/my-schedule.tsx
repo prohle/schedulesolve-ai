@@ -751,6 +751,13 @@ function StudentPlanPanel({ user, onToast }: {
     }
   }
 
+  const defaultMessage = "I work Tuesdays and Thursdays. Help me choose my classes.";
+  const requestTouched = message.trim().length > 0 && message.trim() !== defaultMessage;
+  const planStep = plan ? 3
+    : requestTouched ? 2
+      : recordMode === "record" ? (transcriptName ? 2 : 1) : 0;
+  const planSteps = ["Degree", "Record", "Request", "Verified plan"];
+
   return (
     <div className="elev space-y-3 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-1.5">
@@ -763,6 +770,32 @@ function StudentPlanPanel({ user, onToast }: {
             {plan.courses.length}/{plan.target_courses} courses · {plan.target_met ? "target met" : "target not met"}
           </span>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {planSteps.map((label, index) => {
+          const done = index < planStep;
+          const active = index === planStep;
+          return (
+            <span
+              key={label}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${
+                active
+                  ? "bg-primary text-primary-foreground ring-primary shadow-sm"
+                  : done
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                    : "bg-muted/60 text-muted-foreground ring-transparent"
+              }`}
+            >
+              <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] ${
+                active ? "bg-white/20" : done ? "bg-emerald-500 text-white" : "bg-white ring-1 ring-border"
+              }`}>
+                {done ? <Check className="h-2.5 w-2.5" /> : index + 1}
+              </span>
+              {label}
+            </span>
+          );
+        })}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

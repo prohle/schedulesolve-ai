@@ -187,7 +187,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
     { id: "matrices" as const, label: "Matrices", icon: <Database className="w-3.5 h-3.5" /> },
     { id: "solve" as const, label: "Solve", icon: <Sparkles className="w-3.5 h-3.5" /> },
     { id: "tighten" as const, label: "Tighten", icon: <Wrench className="w-3.5 h-3.5" /> },
-    { id: "planning" as const, label: "Planning", icon: <Building2 className="w-3.5 h-3.5" /> },
+    { id: "planning" as const, label: "What-if", icon: <Building2 className="w-3.5 h-3.5" /> },
     { id: "audit" as const, label: "Audit", icon: <ScrollText className="w-3.5 h-3.5" /> },
   ];
 

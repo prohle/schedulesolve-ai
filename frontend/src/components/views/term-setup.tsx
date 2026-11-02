@@ -313,6 +313,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 }
 
 function Section({
+  id,
   title,
   hint,
   icon,
@@ -320,6 +321,7 @@ function Section({
   className,
   children,
 }: {
+  id?: string;
   title: string;
   hint?: string;
   icon?: React.ReactNode;
@@ -328,7 +330,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn(CARD, className)}>
+    <section id={id} className={cn(CARD, className)}>
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2">
           {icon && <div className="mt-0.5 shrink-0">{icon}</div>}
@@ -832,9 +834,28 @@ export function TermSetupView({
 
       {section === "people" && (
         <>
+      <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card/95 p-1.5 shadow-sm backdrop-blur">
+        <span className="px-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+          On this page
+        </span>
+        {[
+          ["intake-window", "Intake window"],
+          ["deadline-evaluation", "Deadline evaluation"],
+          ["faculty-submissions", "Faculty submissions"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="rounded-lg px-2 py-1 text-[10.5px] font-bold text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {/* Intake window + progress */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Section
+          id="intake-window"
           title="Faculty intake window"
           hint="Every faculty member submits hard unavailability and soft preferences before this deadline."
           icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
@@ -995,6 +1016,7 @@ export function TermSetupView({
 
       {isCoordinator && overview && window && (
         <Section
+          id="deadline-evaluation"
           title="Deadline evaluation — every input the solver will receive"
           hint="The deadline run checks the faculty's plain-language requests against the campus calendar, load policy and degree maps before the solver is allowed to build the term."
           icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
@@ -1165,6 +1187,7 @@ export function TermSetupView({
       {/* Coordinator submissions table */}
       {section === "people" && isCoordinator && (
         <Section
+          id="faculty-submissions"
           title="Faculty submissions"
           hint="Who has submitted, what they asked for, and whether it was accepted into the model."
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}

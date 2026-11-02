@@ -22,13 +22,21 @@ export type ActiveView =
   | "runtime"
   | UniversitySection;
 
+type NavGroup = "flow" | "workspaces" | "institution";
+
 interface NavItem {
   id: ActiveView;
   label: string;
   icon: typeof Zap;
   desc: string;
-  divider?: boolean;
+  group: NavGroup;
 }
+
+const GROUP_LABELS: Record<NavGroup, string> = {
+  flow: "Guided",
+  workspaces: "Workspaces",
+  institution: "Institution",
+};
 
 const MAIN_VIEWS: NavItem[] = [
   {
@@ -36,47 +44,53 @@ const MAIN_VIEWS: NavItem[] = [
     label: "Express",
     icon: Zap,
     desc: "Guided end-to-end workflow — Import → Intake → Build → Review → Term Change. The other rail tabs are direct workspaces for one job.",
+    group: "flow",
   },
   {
     id: "deliverables",
     label: "Outputs",
     icon: LayoutDashboard,
     desc: "Per-role deliverables — proof chips, telemetry, master extract, degree map",
+    group: "workspaces",
   },
   {
     id: "schedule",
     label: "Schedule",
     icon: CalendarDays,
     desc: "Campus calendar matrix + your published timetable",
+    group: "workspaces",
   },
   {
     id: "intelligence",
     label: "Full",
     icon: Brain,
     desc: "Advanced — spectral radar · 4-course audit · solver · verified tightening",
+    group: "workspaces",
   },
   {
     id: "solver",
     label: "Solver Lab",
     icon: Cpu,
     desc: "Native C-Solve engine — source, input, race and the full constraint proof",
+    group: "workspaces",
   },
   {
     id: "runtime",
     label: "AI Runtime",
     icon: PlugZap,
     desc: "Muse Spark connection: provider, model, live test, captured verification",
+    group: "workspaces",
   },
 ];
 
 const VIEWS: NavItem[] = [
   ...MAIN_VIEWS,
-  ...UNIVERSITY_TABS.map((tab, index) => ({
+  ...UNIVERSITY_TABS.map((tab) => ({
     id: tab.id,
     label: tab.label,
     icon: tab.icon,
     desc: tab.desc,
-    divider: index === 0,
+    group: "institution" as const,
   })),
 ];
 
@@ -116,12 +130,20 @@ export function Sidebar({ role, activeView, setActiveView }: NavProps) {
         className="custom-scrollbar flex flex-1 flex-col items-stretch gap-1 overflow-y-auto p-2"
         aria-label="Main navigation"
       >
-        {views.map((view) => {
+        {views.map((view, index) => {
           const Icon = view.icon;
           const isActive = activeView === view.id;
+          const groupStart = index === 0 || views[index - 1].group !== view.group;
           return (
             <div key={view.id} className="w-full">
-              {view.divider && <div className="my-1 border-t border-border" />}
+              {groupStart && (
+                <div className={cn(
+                  "px-1 text-center text-[7px] font-black uppercase tracking-[0.14em] text-muted-foreground/45",
+                  index > 0 && "pt-2",
+                )}>
+                  {GROUP_LABELS[view.group]}
+                </div>
+              )}
               <Tip label={view.desc} side="right" className="w-full">
                 <button
                   onClick={() => setActiveView(view.id)}
