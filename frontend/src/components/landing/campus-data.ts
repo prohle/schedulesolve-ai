@@ -55,8 +55,8 @@ export const CAMPUSES: Record<string, Campus> = {
     buildings: [
       {
         id: "main-wheeler",
-        name: "Wheeler Hall (Humanities)",
-        code: "WHEEL",
+        name: "Arts & Humanities Hall",
+        code: "ARTS",
         floors: [
           { id: "g", name: "Ground Floor", count: 2, capPerRoom: 350, isHall: true, label: "2 Large Auditoriums" },
           { id: "1", name: "Floor 1", count: 7, capPerRoom: 45, isHall: false, label: "7 Classrooms" },
@@ -69,8 +69,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "main-evans",
-        name: "Evans Hall (Mathematics & Stats)",
-        code: "EVANS",
+        name: "Science Hall (Mathematics & Stats)",
+        code: "SCI",
         floors: [
           { id: "1", name: "Floor 1", count: 6, capPerRoom: 40, isHall: false, label: "6 Classrooms" },
           { id: "2", name: "Floor 2", count: 6, capPerRoom: 40, isHall: false, label: "6 Classrooms" },
@@ -86,8 +86,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "main-leconte",
-        name: "LeConte Physics Hall",
-        code: "LECNT",
+        name: "Physics Hall",
+        code: "PHYS",
         floors: [
           { id: "g", name: "Ground Floor", count: 3, capPerRoom: 240, isHall: true, label: "3 Physics Auditoriums" },
           { id: "1", name: "Floor 1", count: 5, capPerRoom: 35, isHall: false, label: "5 Computer Labs" },
@@ -100,8 +100,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "main-dwinelle",
-        name: "Dwinelle Hall (Languages & SocSci)",
-        code: "DWIN",
+        name: "Languages & Social Science Hall",
+        code: "LANG",
         floors: [
           { id: "1", name: "Floor 1", count: 11, capPerRoom: 45, isHall: false, label: "11 Classrooms" },
           { id: "2", name: "Floor 2", count: 11, capPerRoom: 40, isHall: false, label: "11 Classrooms" },
@@ -114,8 +114,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "main-soda",
-        name: "Soda Hall (CS & Electrical Eng)",
-        code: "SODA",
+        name: "Computing & Electrical Engineering Hall",
+        code: "COMP",
         floors: [
           { id: "g", name: "Ground Floor", count: 2, capPerRoom: 150, isHall: true, label: "2 CS Auditoriums" },
           { id: "1", name: "Floor 1", count: 5, capPerRoom: 50, isHall: false, label: "5 Computing Labs" },
@@ -134,8 +134,8 @@ export const CAMPUSES: Record<string, Campus> = {
     buildings: [
       {
         id: "eng-etch",
-        name: "Etcheverry Hall (Mech & Aero)",
-        code: "ETCH",
+        name: "Mechanical & Aerospace Hall",
+        code: "MECH",
         floors: [
           { id: "1", name: "Floor 1", count: 4, capPerRoom: 45, isHall: false, label: "4 Design Labs" },
           { id: "2", name: "Floor 2", count: 4, capPerRoom: 40, isHall: false, label: "4 Aero Labs" },
@@ -150,8 +150,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "eng-cory",
-        name: "Cory Hall (Microelectronics)",
-        code: "CORY",
+        name: "Microelectronics Laboratory",
+        code: "MICRO",
         floors: [
           { id: "1", name: "Floor 1", count: 4, capPerRoom: 40, isHall: false, label: "4 Cleanroom Labs" },
           { id: "2", name: "Floor 2", count: 4, capPerRoom: 35, isHall: false, label: "4 Circuits Labs" },
@@ -164,8 +164,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "eng-davis",
-        name: "Davis Hall (Civil & Environ Eng)",
-        code: "DAVIS",
+        name: "Civil & Environmental Engineering Hall",
+        code: "CIVIL",
         floors: [
           { id: "1", name: "Floor 1", count: 4, capPerRoom: 50, isHall: false, label: "4 Structural Labs" },
           { id: "2", name: "Floor 2", count: 4, capPerRoom: 45, isHall: false, label: "4 Geo Labs" },
@@ -183,8 +183,8 @@ export const CAMPUSES: Record<string, Campus> = {
     buildings: [
       {
         id: "biz-haas",
-        name: "Haas Business School Complex",
-        code: "HAAS",
+        name: "Business School Complex",
+        code: "BIZ",
         floors: [
           { id: "g", name: "Ground Floor", count: 2, capPerRoom: 300, isHall: true, label: "2 Innovation Auditoriums" },
           { id: "1", name: "Floor 1", count: 6, capPerRoom: 65, isHall: false, label: "6 Tiered Case Classrooms" },
@@ -215,8 +215,8 @@ export const CAMPUSES: Record<string, Campus> = {
     buildings: [
       {
         id: "life-stanley",
-        name: "Stanley Hall (Bioengineering)",
-        code: "STAN",
+        name: "Life Sciences Hall (Bioengineering)",
+        code: "LIFE",
         floors: [
           { id: "1", name: "Floor 1", count: 4, capPerRoom: 55, isHall: false, label: "4 Bioeng Labs" },
           { id: "2", name: "Floor 2", count: 4, capPerRoom: 45, isHall: false, label: "4 Biotech Rooms" },
@@ -230,8 +230,8 @@ export const CAMPUSES: Record<string, Campus> = {
       },
       {
         id: "life-vlsb",
-        name: "Valley Life Sciences Building",
-        code: "VLSB",
+        name: "Biology Teaching Building",
+        code: "BIO",
         floors: [
           { id: "g", name: "Ground Floor", count: 2, capPerRoom: 400, isHall: true, label: "2 Biology Teaching Halls" },
           { id: "1", name: "Floor 1", count: 8, capPerRoom: 40, isHall: false, label: "8 Classrooms" },
@@ -346,7 +346,7 @@ export function generateRoomData(
     "ECON 100A Microeconomics",
     "EECS 16A Linear Alg & Circuits",
     "ME C85 Statics",
-    "UGBA 101A Microeconomic Analysis",
+    "BUS 101A Microeconomic Analysis",
     "BIO 1B Introductory Biology",
   ];
   const profs = [

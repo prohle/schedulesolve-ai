@@ -39,6 +39,8 @@ jobs:
         run: bash backend/scripts/build_native.sh
       - name: Tests
         run: cd backend && python -m pytest -q
+      - name: Docs consistency
+        run: python backend/scripts/check_docs.py
 
   frontend:
     runs-on: ubuntu-latest
