@@ -6,6 +6,28 @@ reject on day one. Every finding below is now a regression test
 (`backend/tests/test_realism.py`) and a check in
 `backend/app/data/realism.py`.
 
+## Current state — enforced in CI
+
+`backend/scripts/data_audit.py` audits every builder plus ten randomised
+department seeds and exits non-zero on any error. It runs in CI on every push,
+next to the invariant suite in `backend/tests/test_data_quality.py`.
+
+Latest run — **15 scenarios, 0 errors**:
+
+| Scenario | Errors | Warnings |
+|---|---:|---:|
+| Story seed | 0 | 6 |
+| Department | 0 | 10 |
+| University | 0 | 17 |
+| Northgate (default institution) | 0 | 0 |
+| Full university (stress, 361 sections) | 0 | 17 |
+| Random department, seeds 0–9 | 0 | 9 each |
+
+Warnings are reported, not suppressed: `roadmap-load` (a degree-map term with
+fewer than 4–5 courses), `thin-term-plan` (a cohort with fewer than three
+courses in its current term), `single-room-option`, and `uniform-prep-caps`.
+A registrar would want to see those; the gate fails only on errors.
+
 ## What the audit found (before)
 
 `audit_scenario(build_comprehensive_scenario(...))` reported **426 errors**:

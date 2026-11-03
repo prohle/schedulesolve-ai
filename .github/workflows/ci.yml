@@ -41,6 +41,8 @@ jobs:
         run: cd backend && python -m pytest -q
       - name: Docs consistency
         run: python backend/scripts/check_docs.py
+      - name: Data audit
+        run: python backend/scripts/data_audit.py
 
   frontend:
     runs-on: ubuntu-latest
