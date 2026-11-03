@@ -42,13 +42,31 @@ Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* 
 >
 > **▶ Demo video (2:59, recorded live from the running app): https://youtu.be/5ZOxGZKQw54** — also as a file: [final.mp4](https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4). Recorded **live against Muse Spark Open on Baseten** (`meta-models/muse-spark-open-1026`; every Muse beat asserts the live open-weights badge + model name on screen, never a fallback), narration **is [the pitch script](./docs/final_pitch.md), read unedited** (12 beats): Sarah → registrar → any-format import autoclean → Patel plain-language intake **and** Patel's own per-professor documented constraints with evidence → **dual-engine compare Rank 1 / Rank 2 from outputs alone** → Chen term change with solver-verified zero-ripple coverage + agent trace → Diaz impossible override (conflict core, proven repairs) → student verified plan with projected graduation term → publish, faculty-only view → Baseten open-weights end card. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md). B-roll is HeyGen royalty-free stock under a paid subscription; every frame of the product is the real app — asset provenance in [docs/truthfulness.md](./docs/truthfulness.md#assets-and-licences).
 
-**Meta models at runtime:** Muse Spark `muse-spark-1.3-contributor` (ingest, constraint parse, explanation, tightener, student plan) · Muse Voice Transcribe `muse-voice-transcribe-1.0` (draft-only voice notes) · verified **Muse Spark Open** `meta-models/muse-spark-open-1026` path on Baseten (18/18 live calls) — full table and captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime). The LLM proposes; the solver proves.
+**Meta models at runtime:** Muse Spark `muse-spark-1.3-contributor` (ingest, constraint parse, explanation, tightener, student plan) · Muse Voice Transcribe `muse-voice-transcribe-1.0` (draft-only voice notes) · verified **Muse Spark Open** `meta-models/muse-spark-open-1026` path on Baseten (18/18 live calls) — full table and captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime). The LLM proposes; the solver proves — and the proposing is a search, not a formality ([what that means](#the-model-is-a-search-operator-not-an-author)).
 
 **The proof in one line:** a 38-instructor / 41-section / 20-cohort university solves to a **proven optimum in 39 ms**; a 198-instructor / 361-section / ~12,000-student institution solves in **5.8 s**, where Google's CP-SAT reports `unknown` inside its 60 s budget — and every placement is re-verified from the output alone, not trusted from the engine that produced it.
 
 **CP-SAT is the baseline, not the product.** OR-Tools CP-SAT is the industrial gold standard for this problem class — lazy clause generation, cutting planes, presolve, assumption literals that yield minimal unsatisfiable cores, and years of production use behind it. That is exactly why we measure against it: a weak baseline would prove nothing. The engine this project ships is a 540-line C++17 search core written during the hackathon — same proven optimum, faster on every measured row, and the only engine that finishes the 361-section instance. **Neither engine is a model:** no weights, no training, no inference, no network call — they are deterministic search over the constraint model, and the only models in this project are Meta's, documented [below](#meta-ai-tooling-at-runtime).
 
 **This is not an "AI for education" chatbot.** The model never writes a schedule: Muse Spark proposes typed constraints and plain-English explanations, and deterministic solvers prove every placement, repair, and student plan before it can be shown. That separation is the product.
+
+## The model is a search operator, not an author
+
+Most projects in this field say the same sentence: *the model proposes, the solver verifies.* It is true, and on its own it is not interesting — it is a safety property, and safety properties are what you claim when you have nothing else to claim.
+
+The claim that is actually ours: **the model widens the search space, and the solver closes it.** A coordinator facing a deadlock will consider two or three repairs, because enumerating forty of them by hand and re-solving each one before deciding is not something a person can do in a week. Muse Spark does exactly that, and the solver discards everything it cannot prove.
+
+Three places in this repo where that happens:
+
+| Where | What the model contributes | What the solver refuses |
+|---|---|---|
+| **Repair election** — [`agent/explainer.py`](./backend/app/agent/explainer.py), [`services/copilot.py`](./backend/app/services/copilot.py) | Turns a proven infeasible core into ranked, plain-English repair paths | Every path is re-solved; only verified options are shown, the least-disruptive verified one is applied as the default, and any other verified option stays electable |
+| **Tightening grammar** — [`intelligence/tightener.py`](./backend/app/intelligence/tightener.py) | Proposes typed moves from a closed grammar: raise a load cap, split a section, cross-train an instructor, open an elective, withdraw a request | Each move is a full CP-SAT re-solve of the mutated scenario; rejected moves come back labelled rejected, and an elected move is re-verified again at apply time |
+| **Coverage probes** — term change | Names the qualified instructors worth testing when a professor leaves mid-term | Tests every one of them and returns only the zero-ripple cover the solver can prove |
+
+The grammar is the safety envelope, and it is deliberately small: a proposed move cannot invent a room, delete a section, or touch anyone's hard constraints. So this is not open-ended creativity — it is **bounded enumeration at machine speed behind a proof filter.** That boundary is the design, not a limitation to apologise for: an unbounded model could propose a schedule nobody can defend, which is the exact failure this project exists to remove.
+
+Evidence: `backend/tests/test_conflict_election.py::test_tightener_election_reverifies_before_applying` and `::test_term_change_coverage_is_electable_and_unproven_elections_refused` — both run offline, no API key.
 
 [Measured scale table](#proof-at-university-scale) · [5-minute judge path](#for-judges--verify-any-claim-in-under-5-minutes) · [claim-by-claim audit](#the-pitch-measured-against-this-repo-and-against-the-rules) · [ours vs. rented](#what-we-built-vs-what-we-rent)
 
