@@ -8,6 +8,8 @@
 
 # ScheduleSolve AI — Agentic Constraint Solver & Timetable Infrastructure
 
+**What are you solving?**
+
 > **Category:** Autonomous Agents & Workflows · Education & Knowledge Systems
 > **Domain:** Combinatorial optimization, operations research, constraint programming (CP-SAT), spectral graph analysis
 > **Stack:** Meta Model API (Muse Spark) · **dual solver engines — OR-Tools CP-SAT and an AI-built native C++ rival solver that proves the same optima faster on this problem class (evidence: [docs/solver_evidence.md](./docs/solver_evidence.md))** · FastAPI · Next.js · Postgres 18 · multi-user (coordinator / instructor / student logins)
