@@ -55,6 +55,36 @@ Python layer, which is what makes the comparison fair.
 CI all gain a second runtime) buy nothing at 8–41 sections; C++ compiles
 with the `g++` already present in every build image we use.
 
+## Difficulty sweep — size and demand (`backend/scripts/difficulty_sweep.py`)
+
+One instance is a sample, not evidence. The sweep runs both engines under the
+same 20 s budget across the two axes that make timetabling hard: instance size,
+and demand pressure (every cohort grows, so the same rooms must absorb more
+students).
+
+| Instance | Sections | CP-SAT | C-Solve | Same optimum? |
+|---|---:|---|---|---|
+| Seed (demo) | 8 | optimal · 12 ms | optimal · 6 ms | yes |
+| Department | 25 | optimal · 79 ms | optimal · 22 ms | yes |
+| University | 41 | optimal · 144 ms | optimal · 34 ms | yes |
+| Full university (stress) | 361 | **unknown · 22,284 ms** | **optimal · 5,568 ms** | — |
+
+| University, demand | Sections | CP-SAT | C-Solve | Same optimum? |
+|---|---:|---|---|---|
+| ×1 | 41 | optimal · 165 ms | optimal · 37 ms | yes |
+| ×2 | 41 | infeasible · 4 ms | infeasible · 21 ms | — |
+| ×3 | 41 | infeasible · 3 ms | infeasible · 17 ms | — |
+| ×5 | 41 | infeasible · 3 ms | infeasible · 18 ms | — |
+
+**What this says, including the part that is not in our favour.** On
+optimisation, C-Solve returns the same proven optimum 3.5–6× faster at every
+size, and it is the only engine that finishes the 361-section instance. On
+*gross infeasibility* — a campus that cannot physically hold twice the students
+— CP-SAT spots it faster (3–4 ms vs 17–21 ms), because that is a propagation
+check rather than a search. Both report the same verdict. Demand pressure
+saturates at ×2: past that the instance is infeasible, so the axis stops being
+a timing gradient and becomes a feasibility check.
+
 ## Measured head-to-head (`backend/scripts/benchmark.py`, dev laptop, re-measured 2026-11-01 — timings vary by machine; the Northgate row is from `backend/scripts/solver_audit.py`)
 
 | Scenario | CP-SAT | Ours (native C++) | Ours (Python ref) |
