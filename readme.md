@@ -267,11 +267,16 @@ At department scale every cohort still gets its four-course guarantee, every cou
 
 **Coordinator-time impact:** the manual baseline this replaces is roughly a coordinator-week per term (~30–40 hours of email, spreadsheets, and rework, plus hours per mid-term disruption). ScheduleSolve AI's measured loop is: one Muse parse (~8–25 s live), one CP-SAT solve (~0.15 s at department scale), and — per disruption — a probe-verified coverage decision in seconds. Across a 20-department college at two terms a year that baseline is **1,200–1,600 coordinator-hours annually**, before counting mid-term rework; the 30–40 h figure is an estimate from the domain, and the solver/parse timings next to it are measured. The honest claim is not "AI schedules for you"; it is that a week of constraint-wrangling compresses into an auditable review of solver-proven options.
 
-**Public evidence for that baseline** — independent, so it does not rest on our own say-so. AACRAO's *Beyond Next Semester* (Sept 2025; 471 institutional responses, statistically representative of US Title-IV institutions) reports:
+**Public evidence for that baseline** — independent, so it does not rest on our own say-so. The strongest evidence is not a vendor's case study but a registrar's *own published process*:
 
-> "Our entire schedule is built manually, one course at a time. It is a huge undertaking."
+- **A registrar's production calendar.** St. Louis Community College publishes its schedule-building timeline. Fall 2026 begins **22 Sep 2025** (roll the previous year, sync to EMS), runs two five-week review phases, and "goes live" on **20 Feb 2026** — then **30 weeks of monitoring**. Sections that cannot be placed are assigned "TBA Building/Room until resolved". That is a five-month pipeline for one term. [stlcc.edu/office-of-the-registrar/schedule-building](https://stlcc.edu/office-of-the-registrar/schedule-building.aspx)
+- **A registrar's documented workflow.** Western Oregon University distributes "scheduling worksheets" to departments, routes them through Division Chairs for review, and finishes with: "Dean's Assistants will place sections into rooms." Room assignment is a human step. [wou.edu/registrar/course-scheduling](https://wou.edu/registrar/course-scheduling/)
+- **A national survey.** AACRAO's *Beyond Next Semester* (Sept 2025; 471 institutional responses, statistically representative of US Title-IV institutions): "Our entire schedule is built manually, one course at a time. It is a huge undertaking." A substantial subset operates with no scheduling technology; most describe "spreadsheets galore" and "good old fashioned Excel"; and homegrown tools "often create more problems than they solve," with "oversight difficulty in changing/modifying to meet needs."
+- **Practitioners, named.** The University of Leicester's Student Registry Services Manager: "It used to take over a fortnight to develop the exam timetable." Providence College's Associate Registrar: "it could take us easily a week to get everything working correctly again." (Both from vendor case studies, attributed as such.)
 
-A substantial subset of respondents "operates with no scheduling technology whatsoever"; most describe "spreadsheets galore" and "good old fashioned Excel." And on in-house tools specifically — the objection "we already built one" — the report notes they "often create more problems than they solve," with one respondent citing "oversight difficulty in changing/modifying to meet needs." That is the gap this project targets: not storage, but a proven timetable and a conflict core you can act on. Source: [aacrao-report-beyond-next-semester-9-2025.pdf](https://www.aais.com/hubfs/2025%20Content/aacrao-report-beyond-next-semester-9-2025.pdf).
+AACRAO's report is [here](https://www.aais.com/hubfs/2025%20Content/aacrao-report-beyond-next-semester-9-2025.pdf).
+
+
 
 ### The pitch, measured against this repo (and against the rules)
 
