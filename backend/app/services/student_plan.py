@@ -288,6 +288,15 @@ def suggest_student_plan(
         program_id = program_id or student.program_id
         completed_course_ids = list(completed_course_ids or []) + list(
             student.completed_course_ids)
+        # An approved PhD reservation is a 1-3 credit independent study with a
+        # supervisor and no meeting time. It satisfies that course requirement,
+        # so it belongs in the completed set the degree audit reads.
+        completed_course_ids += [
+            reservation.course_id
+            for reservation in scenario.phd_reservations
+            if reservation.student_id == student.id
+            and reservation.status == "approved"
+        ]
     cohort = next((c for c in scenario.cohorts if c.id == cohort_id), None)
     if cohort_id and cohort is None:
         raise ValueError(

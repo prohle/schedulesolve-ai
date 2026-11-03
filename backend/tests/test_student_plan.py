@@ -245,3 +245,37 @@ def test_student_plan_api(client):
     assert r.status_code == 400
     r = client.post("/student/plan", json={"message": "hi"})
     assert r.status_code == 400  # no cohort, no degree: cannot advise
+
+
+def test_approved_phd_reservation_counts_as_completed():
+    """A 1-3 credit PhD reservation has no meeting time; it satisfies the
+    course requirement, so the degree audit must credit it."""
+    from app.models.scenario import PhDReservation, Student
+
+    sc = load_seed_scenario()
+    sc.students.append(Student(
+        id="phd-one", name="PhD One", level="phd",
+        program_id="bscs", cohort_id="cs2025"))
+    sc.phd_reservations.append(PhDReservation(
+        id="res-one", student_id="phd-one",
+        instructor_id=sc.instructors[0].id, course_id="cs201",
+        credits=3, term="current", status="approved"))
+
+    resp = suggest_student_plan(sc, student_id="phd-one", message=MSG_FITS)
+    assert "cs201" in resp.progress.completed_course_ids
+
+
+def test_unapproved_phd_reservation_does_not_count():
+    from app.models.scenario import PhDReservation, Student
+
+    sc = load_seed_scenario()
+    sc.students.append(Student(
+        id="phd-two", name="PhD Two", level="phd",
+        program_id="bscs", cohort_id="cs2025"))
+    sc.phd_reservations.append(PhDReservation(
+        id="res-two", student_id="phd-two",
+        instructor_id=sc.instructors[0].id, course_id="cs201",
+        credits=3, term="current", status="requested"))
+
+    resp = suggest_student_plan(sc, student_id="phd-two", message=MSG_FITS)
+    assert "cs201" not in resp.progress.completed_course_ids
