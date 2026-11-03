@@ -403,8 +403,13 @@ export function CampusMatrix({
                   Side-by-Side Facility Matrix
                 </span>
                 <h2 className="mt-0.5 text-sm font-black text-slate-900">
-                  Global {list.length}-Building Academic Occupancy Matrix
+                  Campus Occupancy Matrix
                 </h2>
+                <p className="mt-0.5 text-[10.5px] font-semibold text-slate-500">
+                  {list.length} buildings ·{" "}
+                  {list.reduce((total, item) => total + item.building.totalRooms, 0)} rooms ·{" "}
+                  {list.reduce((total, item) => total + item.building.totalSeats, 0).toLocaleString()} seats — read from the placed term
+                </p>
               </div>
               <div className="text-[10.5px] font-semibold text-slate-500">
                 Click any cell to inspect room cards in spatial grid
