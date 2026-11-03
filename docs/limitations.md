@@ -179,6 +179,11 @@ our word for it. Scoped claims are stronger than broad ones.
   the same SQLAlchemy models, not a separate code path.
   The audit ledger is append-only by design; resetting a scenario
   returns the term to seed but keeps the provenance history.
+- **Schema management is `create_all`, not migrations.** Tables are created
+  from the SQLAlchemy models at startup; there is no Alembic history. That is
+  fine for a single-institution deployment with a seed, and it is not fine for
+  a schema that evolves while data matters. A real deployment needs a migration
+  framework before its first upgrade.
 - **The audit trail records submissions and change events**, not
   keystrokes or rejected drafts; infeasible instructor requests return
   with the solver-backed explanation and are visible to the coordinator
