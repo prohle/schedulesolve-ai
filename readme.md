@@ -8,7 +8,7 @@
 
 # ScheduleSolve AI — Agentic Constraint Solver & Timetable Infrastructure
 
-> **Provenance:** all code in this repository was written during the hackathon — Oct 27 to Nov 4, 2026. No pre-existing product. The commit history from the first commit is public and is the build log.
+> **Provenance:** all code in this repository was written during the hackathon — Oct 27 to Nov 4, 2026. No pre-existing product. The first commit (`0582d92`, 2026-10-27) is the project skeleton; all 164 commits fall inside the build window. Per-component first-commit dates, and the command to reproduce them: [What was built during the hackathon](#what-was-built-during-the-hackathon).
 
 **What are you solving?**
 
@@ -31,7 +31,7 @@ Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* 
 
 > **▶ Live demo (sample-account evaluation login, no API key needed): https://prohle--schedulesolve-ai-ui-web.us-east.modal.run** — the full Express flow (Import → Intake → Build → Review → Term Change) plus the Insights advanced workspace, proxied to the backend API at https://prohle--schedulesolve-ai-api.us-east.modal.run (`/docs`, `/status`, `/engines`). Both are scale-to-zero on Modal, so the first request may take a few seconds. The hosted demo persists to a single-tenant SQLite volume; the repo's Docker stack runs Postgres 18. Judges can also run everything locally in 2 minutes with `docker compose up` — see [Run it](#run-it).
 >
-> **▶ Demo video (2:59, recorded live from the running app): https://youtu.be/5ZOxGZKQw54** — also as a file: [final.mp4](https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4). Recorded **live against Muse Spark Open on Baseten** (`meta-models/muse-spark-open-1026`; every Muse beat asserts the live open-weights badge + model name on screen, never a fallback), narration **is [the pitch script](./docs/final_pitch.md), read unedited** (12 beats): Sarah → registrar → any-format import autoclean → Patel plain-language intake **and** Patel's own per-professor documented constraints with evidence → **dual-engine compare Rank 1 / Rank 2 from outputs alone** → Chen term change with solver-verified zero-ripple coverage + agent trace → Diaz impossible override (conflict core, proven repairs) → student verified plan with projected graduation term → publish, faculty-only view → Baseten open-weights end card. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md). B-roll is HeyGen royalty-free stock under a paid subscription; every frame of the product is the real app — asset provenance in [docs/truthfulness.md](./docs/truthfulness.md#assets-and-licences).
+> **▶ Demo video (2:59, recorded live from the running app): https://youtu.be/5ZOxGZKQw54** — also as a file: [final.mp4](https://github.com/prohle/schedulesolve-ai/releases/download/demo-video/final.mp4). Recorded **live against Muse Spark Open on Baseten** (`meta-models/muse-spark-open-1026`; every Muse beat asserts the live open-weights badge + model name on screen, never a fallback), narration **is [the pitch script](./docs/final_pitch.md), read unedited** (12 beats): Sarah → registrar → any-format import autoclean → Patel plain-language intake **and** Patel's own per-professor documented constraints with evidence → **dual-engine compare Rank 1 / Rank 2 from outputs alone** → Chen term change with solver-verified zero-ripple coverage + agent trace → Diaz impossible override (conflict core, proven repairs) → student verified plan with projected graduation term → publish, faculty-only view → Baseten open-weights end card. Script and recording pipeline: [docs/demo_script.md](./docs/demo_script.md). B-roll is HeyGen royalty-free stock under a paid subscription; every frame of the product is the real app — asset provenance in [docs/truthfulness.md](./docs/truthfulness.md#assets-and-licences). **Product footage starts at 0:23** — 0:00–0:23 is the framing beat (Sarah, the registrar's chair); chapter markers are in the YouTube description, and every claim made on screen is indexed in [For judges](#for-judges--verify-any-claim-in-under-5-minutes).
 
 **Meta models at runtime:** Muse Spark `muse-spark-1.3-contributor` (ingest, constraint parse, explanation, tightener, student plan) · Muse Voice Transcribe `muse-voice-transcribe-1.0` (draft-only voice notes) · verified **Muse Spark Open** `meta-models/muse-spark-open-1026` path on Baseten (18/18 live calls) — full table and captured runs in [Meta AI tooling at runtime](#meta-ai-tooling-at-runtime). The LLM proposes; the solver proves.
 
@@ -480,7 +480,20 @@ backend suite and a production frontend build on every push.
 ## What was built during the hackathon
 
 Everything in this repository is new work from the Oct 27 – Nov 4 build window;
-the commit history is the build log. The main pieces:
+the commit history is the build log. The first commit is the skeleton itself, and
+every component's first commit falls inside the window:
+
+| Component | First commit |
+|---|---|
+| Repo skeleton, `readme.md`, `docs/` | 2026-10-27 |
+| CP-SAT model, Muse Spark parsing | 2026-10-27 |
+| `frontend/src/` | 2026-10-28 |
+| Native C++ solver (`backend/native/`), `backend/tests/`, `tests/`, `docker-compose.yml` | 2026-10-29 |
+
+164 commits, `0582d92` (2026-10-27) → `2026-11-03`. Reproduce any row with
+`git log --reverse --format="%ad" --date=short -- <path> | head -1`.
+
+The main pieces:
 
 | Area | What | Where |
 |---|---|---|
