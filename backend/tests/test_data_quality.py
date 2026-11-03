@@ -166,3 +166,20 @@ def test_phd_reservations_respect_the_supervisor_cap(scenario):
         assert count <= cap, (
             f"{instructor_id} has {count} approved PhD students in {term}, cap {cap}"
         )
+
+
+def test_published_scale_figures_match_the_builders():
+    """The README quotes these counts. If a builder changes, the claim breaks."""
+    seed = load_seed_scenario()
+    department = build_department_scenario(seed)
+    university = build_university_scenario(seed)
+    stress = build_full_university_scenario(seed)
+
+    assert (len(department.instructors), len(department.sections),
+            len(department.cohorts)) == (26, 25, 12)
+    assert (len(university.instructors), len(university.sections),
+            len(university.cohorts)) == (38, 41, 20)
+    assert (len(stress.instructors), len(stress.sections),
+            len(stress.cohorts)) == (198, 361, 100)
+    assert sum(cohort.size for cohort in stress.cohorts) == 12_530
+    assert len({room.building_id for room in stress.rooms}) == 7
