@@ -537,7 +537,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
     }
   };
 
-  const loadScale = async (kind: "department" | "university" | "full-university" | "reset") => {
+  const loadScale = async (kind: "department" | "university" | "northgate" | "full-university" | "reset") => {
     setScaleBusy(true);
     try {
       const sc = await post(`/api/scenario/${kind}`, {});
@@ -548,6 +548,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
       if (kind === "full-university") setEngine("ours");
       solveWith(kind === "full-university" ? "ours" : engine);
       const label = kind === "full-university" ? "Full University"
+        : kind === "northgate" ? "Northgate"
         : kind === "university" ? "University" : "Department";
       onToast(
         kind === "reset"
@@ -1243,7 +1244,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
               <div className="mt-4 border-t border-emerald-200 pt-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs font-semibold text-emerald-900">Try it at scale</span>
-                  <InfoTip text="This view is one CS department slice. Department = 26 instructors · 25 sections · 12 cohorts. University = 38 instructors · 41 sections · 20 cohorts · 5 programs. Full University = 198 instructors · 361 sections · 100 cohorts · 25 programs · ~12,000 students — the stress scale the native solver completes (CP-SAT exceeds its budget there). Same engines, solved live." />
+                  <InfoTip text="This view is one CS department slice. Department = 26 instructors · 25 sections · 12 cohorts. University = 38 instructors · 41 sections · 20 cohorts · 5 programs. Northgate = 148 instructors · 271 sections · 110 cohorts · 2,983 students across 14 buildings — both engines prove the optimum here. Full University = 198 instructors · 361 sections · 100 cohorts · 25 programs · ~12,500 students — the stress scale the native solver completes (CP-SAT exceeds its budget there). Same engines, solved live." />
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => loadScale("department")} disabled={scaleBusy} className="flex items-center gap-1.5">
@@ -1253,6 +1254,10 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
                   <Button variant="outline" size="sm" onClick={() => loadScale("university")} disabled={scaleBusy} className="flex items-center gap-1.5">
                     {scaleBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
                     University
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => loadScale("northgate")} disabled={scaleBusy} className="flex items-center gap-1.5">
+                    {scaleBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
+                    Northgate
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => loadScale("full-university")} disabled={scaleBusy} className="flex items-center gap-1.5">
                     {scaleBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}

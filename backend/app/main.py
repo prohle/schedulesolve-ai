@@ -571,6 +571,26 @@ def full_university_scenario() -> Scenario:
     return _current_scenario
 
 
+@app.post("/scenario/northgate", response_model=Scenario)
+def northgate_scenario() -> Scenario:
+    """Load the Northgate institution — the comprehensive campus.
+
+    148 instructors · 271 sections · 110 cohorts · 2,983 students across
+    14 buildings and 83 rooms. Both engines prove the same optimum here
+    (native ~3 s, CP-SAT ~8 s), which makes it the honest "whole university"
+    view between the demo slice and the stress benchmark.
+    """
+    global _current_scenario
+    from app.data.department import build_comprehensive_scenario
+    _set_current_scenario(build_comprehensive_scenario(load_seed_scenario()))
+    audit.record_event(
+        "scenario", "Loaded Northgate institution "
+        f"({len(_current_scenario.instructors)} instructors, "
+        f"{len(_current_scenario.sections)} sections, "
+        f"{len(_current_scenario.cohorts)} cohorts)", {})
+    return _current_scenario
+
+
 @app.post("/apply", response_model=Scenario)
 def apply_request(req: ApplyOpsRequest) -> Scenario:
     """Commit a verified co-pilot/term-change proposal to the current term.
