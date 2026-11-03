@@ -28,6 +28,7 @@ from app.ingestion.conflicts import detect_conflicts, diff_data, resolve_conflic
 from app.ingestion.normalize import build_scenario
 from app.ingestion.parser import IngestionParser
 from app.intelligence import CHANGES, analyze, build_matrices, compute_utilization, run_tightener, whatif
+from app.intelligence.room_graph import build_room_graph
 from app.intelligence.load import instructor_loads, suggest_load_policy
 from app.intelligence.matrices import compute_margins
 from app.models.ingestion import (
@@ -2017,6 +2018,35 @@ def intelligence_utilization() -> UtilizationReport:
     scenario = get_current_scenario()
     result = solve(scenario)
     return compute_utilization(scenario, result.timetable)
+
+
+@app.get("/intelligence/room-graph")
+def intelligence_room_graph() -> dict:
+    """Rooms as a weighted graph: features on the nodes, walk minutes on edges.
+
+    Same data the solver constrains (C24 capacity, C25 type, C34 equipment,
+    C32 walk gap), exposed in the shape a clustering or warm-start pass wants.
+    """
+    graph = build_room_graph(get_current_scenario())
+    return {
+        "buildings": graph.buildings,
+        "total_seats": graph.total_seats,
+        "nodes": [
+            {
+                "id": node.id,
+                "name": node.name,
+                "building_id": node.building_id,
+                "capacity": node.capacity,
+                "room_type": node.room_type,
+                "equipment": list(node.equipment),
+            }
+            for node in graph.nodes
+        ],
+        "edges": [
+            {"source": edge.source, "target": edge.target, "minutes": edge.minutes}
+            for edge in graph.edges
+        ],
+    }
 
 
 @app.get("/planning/whatif/{change_id}", response_model=WhatIfReport)
