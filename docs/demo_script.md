@@ -1,9 +1,8 @@
 # ScheduleSolve AI — demo video script
 
-> The shipped video is a **real-time screen recording of the running
-> application** (CDP `Page.startScreencast`), not a screenshot slideshow.
-> Each beat is time-compressed to its narration length, so live Muse latency
-> appears as a fast-forward.
+> The shipped video is a **real-time recording of the running
+> application**, not a screenshot slideshow. Each beat is time-compressed to
+> its narration length, so live Muse latency appears as a fast-forward.
 >
 > **B-roll licence.** The non-app footage (opening corridor shot, graduation
 > end card) is HeyGen royalty-free stock used under a paid HeyGen
