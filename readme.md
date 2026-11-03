@@ -263,6 +263,12 @@ At department scale every cohort still gets its four-course guarantee, every cou
 
 **Coordinator-time impact:** the manual baseline this replaces is roughly a coordinator-week per term (~30–40 hours of email, spreadsheets, and rework, plus hours per mid-term disruption). ScheduleSolve AI's measured loop is: one Muse parse (~8–25 s live), one CP-SAT solve (~0.15 s at department scale), and — per disruption — a probe-verified coverage decision in seconds. Across a 20-department college at two terms a year that baseline is **1,200–1,600 coordinator-hours annually**, before counting mid-term rework; the 30–40 h figure is an estimate from the domain, and the solver/parse timings next to it are measured. The honest claim is not "AI schedules for you"; it is that a week of constraint-wrangling compresses into an auditable review of solver-proven options.
 
+**Public evidence for that baseline** — independent, so it does not rest on our own say-so. AACRAO's *Beyond Next Semester* (Sept 2025; 471 institutional responses, statistically representative of US Title-IV institutions) reports:
+
+> "Our entire schedule is built manually, one course at a time. It is a huge undertaking."
+
+A substantial subset of respondents "operates with no scheduling technology whatsoever"; most describe "spreadsheets galore" and "good old fashioned Excel." And on in-house tools specifically — the objection "we already built one" — the report notes they "often create more problems than they solve," with one respondent citing "oversight difficulty in changing/modifying to meet needs." That is the gap this project targets: not storage, but a proven timetable and a conflict core you can act on. Source: [aacrao-report-beyond-next-semester-9-2025.pdf](https://www.aais.com/hubfs/2025%20Content/aacrao-report-beyond-next-semester-9-2025.pdf).
+
 ### The pitch, measured against this repo (and against the rules)
 
 The final pitch was audited line by line against the implementation — 13 claims, all **True**, two with stated boundaries below. The numbers a judge will hear, re-measured 2026-11-01 with `backend/scripts/benchmark.py` on the dev laptop (single-worker deterministic contract; timings vary by machine, rerun the script for local numbers):
