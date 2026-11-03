@@ -255,8 +255,7 @@ export function buildingUtilization(
   scenario: Scenario,
   report: UtilizationReport | null,
   placements: Placement[] = []
-): BuildingUtilization[] {
-  if (!report) return [];
+): BuildingUtilization[] {  if (!report) return [];
   const rooms = new Map(scenario.rooms.map((r) => [r.id, r]));
   const buildings = new Map(scenario.buildings.map((b) => [b.id, b]));
 
@@ -305,6 +304,98 @@ export function buildingUtilization(
       utilization: value.capacity > 0 ? Math.round((100 * value.peak) / value.capacity) : 0,
     }))
     .sort((a, b) => b.utilization - a.utilization);
+}
+
+// --- time-resolved occupancy ------------------------------------------------
+
+export interface OccupancyCell {
+  day: number;
+  period: number;
+  seats: number;
+  utilization: number; // scheduled seats / building capacity at that slot
+}
+
+export interface BuildingOccupancyRow {
+  id: string;
+  name: string;
+  capacity: number;
+  peak: number;
+  cells: OccupancyCell[];
+}
+
+export interface OccupancyMatrix {
+  days: { index: number; label: string }[];
+  periods: { index: number; label: string }[];
+  buildings: BuildingOccupancyRow[];
+  overallPeak: number;
+}
+
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+/**
+ * Occupancy per building per (day, period), read from the placed term.
+ *
+ * Every placement already carries day, period, room and enrollment, so the
+ * slot-level answer needs no extra solve: seats in use at that slot divided by
+ * the building's total seat capacity. This is the time-resolved companion to
+ * `buildingUtilization`, which only reports each building's weekly peak.
+ */
+export function occupancyMatrix(scenario: Scenario, placements: Placement[] = []): OccupancyMatrix {
+  const roomBuilding = new Map(scenario.rooms.map((room) => [room.id, room.building_id]));
+  const capacity = new Map<string, number>();
+  scenario.rooms.forEach((room) => {
+    capacity.set(room.building_id, (capacity.get(room.building_id) ?? 0) + room.capacity);
+  });
+
+  const labelByPeriod = new Map<number, string>();
+  const periodSet = new Set<number>();
+  placements.forEach((placement) => {
+    (placement.periods ?? []).forEach((period) => {
+      periodSet.add(period);
+      if (placement.start_time && !labelByPeriod.has(period)) {
+        labelByPeriod.set(period, placement.start_time);
+      }
+    });
+  });
+  const periods = [...periodSet].sort((a, b) => a - b);
+  const days = DAY_LABELS.map((label, index) => ({ index, label }));
+
+  const load = new Map<string, number>();
+  placements.forEach((placement) => {
+    const buildingId = roomBuilding.get(placement.room_id);
+    if (!buildingId) return;
+    const seats = placement.enrollment ?? 0;
+    (placement.days ?? []).forEach((day) => {
+      (placement.periods ?? []).forEach((period) => {
+        const key = `${buildingId}|${day}|${period}`;
+        load.set(key, (load.get(key) ?? 0) + seats);
+      });
+    });
+  });
+
+  let overallPeak = 0;
+  const buildings = scenario.buildings.map((building) => {
+    const buildingCapacity = capacity.get(building.id) ?? 0;
+    let peak = 0;
+    const cells: OccupancyCell[] = [];
+    days.forEach((day) => {
+      periods.forEach((period) => {
+        const seats = load.get(`${building.id}|${day.index}|${period}`) ?? 0;
+        const utilization = buildingCapacity > 0 ? seats / buildingCapacity : 0;
+        if (utilization > peak) peak = utilization;
+        cells.push({ day: day.index, period, seats, utilization });
+      });
+    });
+    if (peak > overallPeak) overallPeak = peak;
+    return { id: building.id, name: building.name, capacity: buildingCapacity, peak, cells };
+  });
+
+  return {
+    days,
+    periods: periods.map((period) => ({ index: period, label: labelByPeriod.get(period) ?? `P${period + 1}` })),
+    buildings,
+    overallPeak,
+  };
 }
 
 export interface ProofMetrics {

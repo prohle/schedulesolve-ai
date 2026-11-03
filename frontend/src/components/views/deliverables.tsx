@@ -45,10 +45,12 @@ import {
   cohortPlan,
   downloadCsv,
   instructorMetrics,
+  occupancyMatrix,
   proofMetrics,
   rowsToCsv,
   type BuildingUtilization,
   type DeliverableRow,
+  type OccupancyMatrix,
   type PreferenceMetrics,
 } from "@/lib/deliverables";
 
@@ -134,8 +136,88 @@ function buildingOption(data: BuildingUtilization[]): EChartsOption {
   };
 }
 
-function cohortOption(margins: MarginsReport | null): EChartsOption {
-  const rows = margins?.cohorts ?? [];
+function occupancyTint(utilization: number): string {
+  if (utilization <= 0) return "bg-slate-50 text-slate-300";
+  if (utilization < 0.35) return "bg-sky-100 text-sky-800";
+  if (utilization < 0.6) return "bg-sky-200 text-sky-900";
+  if (utilization < 0.8) return "bg-amber-200 text-amber-900";
+  if (utilization < 0.95) return "bg-orange-300 text-orange-950";
+  return "bg-rose-400 text-white";
+}
+
+function OccupancyHeatmap({ matrix }: { matrix: OccupancyMatrix }) {
+  const slotCount = matrix.periods.length;
+  if (!slotCount || !matrix.buildings.length) {
+    return (
+      <p className="py-6 text-center text-xs text-slate-500">
+        Solve the term to see occupancy by building and time slot.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <div className="overflow-x-auto pb-1">
+        <table className="min-w-full border-separate border-spacing-[2px] text-[10px]">
+          <thead>
+            <tr>
+              <th className="sticky left-0 z-10 bg-white text-left font-semibold text-slate-500">Building</th>
+              {matrix.days.map((day) => (
+                <th
+                  key={day.index}
+                  colSpan={slotCount}
+                  className="border-b border-slate-200 px-1 pb-1 text-center font-bold uppercase tracking-wider text-slate-500"
+                >
+                  {day.label}
+                </th>
+              ))}
+            </tr>
+            <tr>
+              <th className="sticky left-0 z-10 bg-white" />
+              {matrix.days.map((day) =>
+                matrix.periods.map((period) => (
+                  <th key={`${day.index}-${period.index}`} className="px-0.5 text-center font-normal text-slate-400">
+                    {period.label}
+                  </th>
+                ))
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.buildings.map((building) => (
+              <tr key={building.id}>
+                <td className="sticky left-0 z-10 max-w-[9rem] truncate whitespace-nowrap bg-white pr-2 font-semibold text-slate-700">
+                  {building.name}
+                </td>
+                {building.cells.map((cell) => (
+                  <td
+                    key={`${building.id}-${cell.day}-${cell.period}`}
+                    title={`${building.name} · ${cell.seats}/${building.capacity} seats`}
+                    className={`h-6 min-w-[2.25rem] rounded text-center font-bold ${occupancyTint(cell.utilization)}`}
+                  >
+                    {cell.utilization > 0 ? Math.round(cell.utilization * 100) : ""}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+        <span>Scheduled seats ÷ building capacity at that slot, read from the placed term.</span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2.5 w-3 rounded bg-sky-100" /> &lt;35
+          <span className="inline-block h-2.5 w-3 rounded bg-sky-200" /> 35–60
+          <span className="inline-block h-2.5 w-3 rounded bg-amber-200" /> 60–80
+          <span className="inline-block h-2.5 w-3 rounded bg-orange-300" /> 80–95
+          <span className="inline-block h-2.5 w-3 rounded bg-rose-400" /> &gt;95
+          <span className="ml-1 font-bold text-slate-700">peak {Math.round(matrix.overallPeak * 100)}%</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function cohortOption(margins: MarginsReport | null): EChartsOption {  const rows = margins?.cohorts ?? [];
   return {
     tooltip: { trigger: "axis", formatter: "{b}: {c} courses" },
     grid: { top: 15, bottom: 15, left: 74, right: rows.length > 10 ? 44 : 34 },
@@ -668,6 +750,19 @@ export function DeliverablesView({
               icon={<Building2 className="h-4 w-4 text-primary" />}
             >
               <EChart option={buildingOption(proof.facility)} className="h-40 w-full" label="Utilization by building" />
+            </Panel>
+
+            <Panel
+              className="lg:col-span-2"
+              title="Occupancy by building and time slot"
+              hint="Scheduled seats ÷ building capacity for each day and period — the time-resolved view of the same placed term."
+              icon={<Building2 className="h-4 w-4 text-primary" />}
+            >
+              {scenario ? (
+                <OccupancyHeatmap matrix={occupancyMatrix(scenario, placements)} />
+              ) : (
+                <p className="py-6 text-center text-xs text-slate-500">Loading the institution model…</p>
+              )}
             </Panel>
 
             <Panel
