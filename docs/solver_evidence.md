@@ -15,10 +15,25 @@ ScheduleSolve ships two independent solvers behind one interface
 - **Greedy** (`greedy`) — the first descent only, to show what the
   optimization phases buy.
 
-**Why not CP-SAT alone?** Wrapping an industrial solver is commodity.
-The contribution is a domain-specialized engine that *proves the same
-optima* — with the receipts below — plus a standardized interface that
-lets the two cross-check each other live.
+**Why CP-SAT is the baseline, and why that is the point.** OR-Tools CP-SAT is
+the industrial gold standard for this class of problem: lazy clause generation,
+cutting planes, presolve, assumption literals that yield minimal unsatisfiable
+cores, and a decade of engineering behind it. It is consistently at or near the
+top of solver competitions and it is the default reach in production scheduling.
+That is precisely why it is the baseline here — **a weak baseline proves
+nothing**, and "we beat a toy solver" is not a result.
+
+Choosing the strongest available baseline costs us the easy win and buys the
+real one: on identical inputs, at every demo scale, our engine returns the
+*same proven optimum* faster (university: 39 ms vs 147 ms), and at 361 sections
+it is the only engine that finishes at all — CP-SAT honestly reports `unknown`
+inside its 60 s budget. Beating a reference implementation on a problem class
+you specialized for is a measurable claim. Beating a strawman is not.
+
+The honest boundary: CP-SAT remains the better *general* solver, and we still
+use it for term-change feasibility probes and for the conflict cores the
+product displays. The contribution is a domain-specialized engine behind the
+same interface — not a replacement for OR-Tools.
 
 **Why not pure Python?** We measured it: the Python search reaches
 CP-SAT's penalty at department/university scale but hits its 30 s budget
