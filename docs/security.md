@@ -55,6 +55,13 @@ coordinator office, not an institution — see
 The hosted demo is served over HTTPS by Modal. The Docker path is plain HTTP
 and is meant for local use or behind your own TLS terminator.
 
+## Observability
+
+Every response carries `X-Response-Time-Ms`, and any request slower than 2 s
+logs a warning with method, path and duration. That is the whole of it: there
+is no metrics endpoint, no distributed tracing and no alerting. `scripts/loadtest.py`
+is the only load measurement, and it is a smoke test, not a capacity benchmark.
+
 ## Not done (and known)
 
 - No external penetration test, no dependency-vulnerability gate in CI.

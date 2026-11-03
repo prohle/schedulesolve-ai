@@ -10,6 +10,8 @@ Built during the Meta Global AI Developer Hackathon (Oct 27 - Nov 4, 2026).
 from __future__ import annotations
 
 import json
+import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -91,6 +93,8 @@ async def lifespan(_: FastAPI):
     yield
 
 
+logger = logging.getLogger("schedulesolve")
+
 app = FastAPI(title="ScheduleSolve AI", version="0.2.0", lifespan=lifespan)
 
 
@@ -102,6 +106,7 @@ async def model_budget_guard(request: Request, call_next):
     runs when a live model key is configured, so the offline test suite and a
     no-key local run are untouched. The deterministic fallback still works.
     """
+    started = time.perf_counter()
     length = request.headers.get("content-length")
     if length and length.isdigit() and int(length) > config.MAX_REQUEST_BYTES:
         return JSONResponse(
@@ -131,6 +136,12 @@ async def model_budget_guard(request: Request, call_next):
                     },
                 )
     response = await call_next(request)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    response.headers["X-Response-Time-Ms"] = str(elapsed_ms)
+    if elapsed_ms >= 2000:
+        logger.warning(
+            "slow request %s %s %d ms", request.method, request.url.path, elapsed_ms
+        )
     if weight:
         response.headers["X-Demo-Budget-Remaining"] = str(guard.remaining_today())
         if not guard.model_allowed():
