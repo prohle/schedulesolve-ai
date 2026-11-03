@@ -33,9 +33,11 @@ Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* 
 
 **The proof in one line:** a 38-instructor / 41-section / 20-cohort university solves to a **proven optimum in 39 ms**; a 198-instructor / 361-section / ~12,000-student institution solves in **5.8 s**, where Google's CP-SAT reports `unknown` inside its 60 s budget — and every placement is re-verified from the output alone, not trusted from the engine that produced it.
 
+**CP-SAT is the baseline, not the product.** Wrapping Google's solver is a library call, and that is exactly why the engine this project ships is a 540-line C++17 search core written during the hackathon: same proven optimum, faster on every measured row, and the only engine that finishes the 361-section instance.
+
 **This is not an "AI for education" chatbot.** The model never writes a schedule: Muse Spark proposes typed constraints and plain-English explanations, and deterministic solvers prove every placement, repair, and student plan before it can be shown. That separation is the product.
 
-[Measured scale table](#proof-at-university-scale) · [5-minute judge path](#for-judges--verify-any-claim-in-under-5-minutes) · [claim-by-claim audit](#the-pitch-measured-against-this-repo-and-against-the-rules)
+[Measured scale table](#proof-at-university-scale) · [5-minute judge path](#for-judges--verify-any-claim-in-under-5-minutes) · [claim-by-claim audit](#the-pitch-measured-against-this-repo-and-against-the-rules) · [ours vs. rented](#what-we-built-vs-what-we-rent)
 
 ![Guided build · Build: visual timetable grid](docs/screenshot-build.png)
 
