@@ -511,11 +511,11 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
               <div>
                 <h4 className="text-sm font-black text-slate-900">Central Quad Academic Complex</h4>
                 <p className="text-xs font-medium text-slate-500">
-                  12 Buildings • 4 Quads • 361-Section Stress Tier
+                  7 Buildings • 25 Programs • 361-Section Stress Tier
                 </p>
               </div>
               <span className="rounded-lg bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">
-                Demo 78.4% Load
+                Demo 70% Room Use
               </span>
             </div>
 
@@ -526,7 +526,7 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Footprints className="h-3.5 w-3.5 text-sky-600" />
-                <span>≥12m Walk Buffer</span>
+                <span>10m Walk Limit</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-indigo-600" />

@@ -754,8 +754,8 @@ export function DeliverablesView({
 
             <Panel
               className="lg:col-span-2"
-              title="Occupancy by building and time slot"
-              hint="Scheduled seats ÷ building capacity for each day and period — the time-resolved view of the same placed term."
+              title="Physical facility utilization"
+              hint="Live spatial matrix — scheduled seats ÷ building capacity for each day and period, read from the placed term."
               icon={<Building2 className="h-4 w-4 text-primary" />}
             >
               {scenario ? (

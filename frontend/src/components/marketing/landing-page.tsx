@@ -60,7 +60,7 @@ const HERO_SLOTS = [
     id: 1,
     label: "10:00 Peak",
     time: "10:00 – 11:30",
-    utilization: "78.4% Peak",
+    utilization: "70% Room Use",
     utilBadge: "Optimal Flow",
     utilTone: "border-emerald-500/30 bg-emerald-950/80 text-emerald-400",
     students: "12,050 / 15,370",

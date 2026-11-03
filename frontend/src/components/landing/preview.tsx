@@ -82,12 +82,12 @@ const SLOT_BADGE: Record<string, string> = {
 };
 
 const PROOF_CARDS: { key: string; label: string; value: string; tone: string; labelTone?: string }[] = [
-  { key: "utilization", label: "Facility Peak", value: "88.6% Peak", tone: "text-slate-900" },
-  { key: "load", label: "Faculty Load", value: "68/68 within cap", tone: "text-emerald-600" },
-  { key: "pref", label: "Faculty Prefs", value: "100.00% Match", tone: "text-purple-700", labelTone: "text-purple-700" },
-  { key: "cohort", label: "4-Year Cohort", value: "0 Deadlocks", tone: "text-blue-600" },
-  { key: "walk", label: "Walk Transit", value: "≥12m Buffer", tone: "text-slate-900" },
-  { key: "evening", label: "Evening Tracks", value: "18:30+ Fit", tone: "text-purple-600" },
+  { key: "utilization", label: "Room Use (361 sections)", value: "70%", tone: "text-slate-900" },
+  { key: "load", label: "Faculty Load", value: "198/198 within cap", tone: "text-emerald-600" },
+  { key: "pref", label: "Faculty Prefs", value: "preference-weighted", tone: "text-purple-700", labelTone: "text-purple-700" },
+  { key: "cohort", label: "4-Year Cohort", value: "100/100 cohorts", tone: "text-blue-600" },
+  { key: "walk", label: "Walk Transit", value: "10m walk limit", tone: "text-slate-900" },
+  { key: "grid", label: "Time Grid", value: "08:00–14:00", tone: "text-slate-900" },
 ];
 
 const CHART_CARD =

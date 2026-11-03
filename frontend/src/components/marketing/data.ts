@@ -28,7 +28,7 @@ export const FACILITIES: Facility[] = [
     category: "tech",
     image: "/photo-1497366216548-37526070297c.avif",
     code: "SODA-201",
-    status: "78.4% Occupancy",
+    status: "70% Occupancy",
     statusTone: "bg-emerald-500",
     title: "Soda Hall Computing Lab",
     quad: "Main Tech Quad",

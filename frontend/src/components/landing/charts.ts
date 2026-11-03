@@ -27,7 +27,7 @@ export const facilityUtilOption: EChartsOption = {
   grid: { top: 20, bottom: 20, left: 30, right: 15 },
   xAxis: {
     type: "category",
-    data: ["Science", "Humanities", "Engineering", "Peak Avg"],
+    data: ["Science", "Engineering", "Library", "All rooms"],
     axisLabel: axisLabel("#64748b"),
   },
   yAxis: {
@@ -42,10 +42,10 @@ export const facilityUtilOption: EChartsOption = {
       itemStyle: { borderRadius: [4, 4, 0, 0] },
       label: { show: true, position: "top", formatter: "{c}%", fontSize: 9, fontWeight: "bold" },
       data: [
-        { value: 91, itemStyle: { color: barGradient("#3b82f6", "#1d4ed8") } },
-        { value: 88, itemStyle: { color: barGradient("#60a5fa", "#2563eb") } },
-        { value: 86, itemStyle: { color: barGradient("#93c5fd", "#3b82f6") } },
-        { value: 88.6, itemStyle: { color: barGradient("#10b981", "#047857") } },
+        { value: 36, itemStyle: { color: barGradient("#3b82f6", "#1d4ed8") } },
+        { value: 74, itemStyle: { color: barGradient("#60a5fa", "#2563eb") } },
+        { value: 74, itemStyle: { color: barGradient("#93c5fd", "#3b82f6") } },
+        { value: 70, itemStyle: { color: barGradient("#10b981", "#047857") } },
       ],
     },
   ],
