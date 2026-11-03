@@ -35,6 +35,13 @@ use it for term-change feasibility probes and for the conflict cores the
 product displays. The contribution is a domain-specialized engine behind the
 same interface — not a replacement for OR-Tools.
 
+**Provenance, stated plainly.** The C++ core was written during the hackathon
+with an AI coding agent and human review. That is a *craft* claim, not a
+Meta-model claim. Muse Spark is the *runtime* intelligence layer — it proposes
+typed constraints and plain-English explanations, and the solvers prove them.
+The two are deliberately kept separate: nothing in this repository claims that
+Muse Spark wrote the solver, and nothing claims the solver was a library call.
+
 **Why not pure Python?** We measured it: the Python search reaches
 CP-SAT's penalty at department/university scale but hits its 30 s budget
 **unproven** (`feasible`, not `optimal`). Language was not the goal —
