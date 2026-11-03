@@ -1,3 +1,7 @@
+# No model is bundled or called from this file. `openai` is only the
+# OpenAI-*compatible* HTTP client; it is pointed at Meta endpoints
+# (api.meta.ai, or Baseten for the open-weight Muse Spark Open path).
+# `ortools` is Google's deterministic constraint solver — not a model.
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
 ortools==9.15.6755

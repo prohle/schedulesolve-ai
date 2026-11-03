@@ -22,7 +22,7 @@ code or by calling the API.
 | Auth is real PBKDF2 + hashed bearer sessions | `backend/app/services/auth.py` |
 | Audit trail records submissions/events | `submissions`, `events` tables; `GET /history` |
 | Muse Spark is live when a key is set | `MUSE_API_KEY` set in the running container; `parser.mode = "muse-spark"`; deterministic fallback is visibly labelled |
-| Import/autoclean is bounded by the source | no OCR; unreadable files produce `[unreadable]`; completeness check names missing inputs |
+| Import/autoclean is bounded by the source | Digital files go through the deterministic text extractor; image files and scanned PDFs are rendered locally with pymupdf and read by **Muse Spark vision** under the same `InstitutionData` schema — **no third-party OCR engine and no external model**. Bounds are real (24 files, 24 rendered pages, ≤16 images per request, under Muse's 32-image cap); unreadable files produce `[unreadable]` and the completeness check names missing inputs |
 | Tests pass | `backend/tests` (realism, randomized, policy, API, solver parity) |
 | Conflicts name their sources and are electable | ingestion `InstitutionConflict.sources/options` + `resolve_conflicts`; copilot `ConflictReport.sources` + verified `ResolutionOption`s (least-disruptive default, any verified option electable); term-change `CandidateProposal.source` + elected `chosen`; student `StudentPlanConflict.sources` + `resolutions`; tightener moves re-verified at `/intelligence/tighten/apply` before applying (`backend/tests/test_conflict_election.py`) |
 
