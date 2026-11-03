@@ -543,10 +543,12 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
       const sc = await post(`/api/scenario/${kind}`, {});
       await reload();
       await refetchScenario();
-      // Full-university is the native solver's scale: CP-SAT does not
-      // complete it inside its budget, so solve with ours directly.
-      if (kind === "full-university") setEngine("ours");
-      solveWith(kind === "full-university" ? "ours" : engine);
+      // At the two largest scales the native engine is the fast one: it
+      // proves Northgate in ~3 s (CP-SAT ~8 s) and is the only engine that
+      // finishes the stress tier inside its budget.
+      const nativeScale = kind === "full-university" || kind === "northgate";
+      if (nativeScale) setEngine("ours");
+      solveWith(nativeScale ? "ours" : engine);
       const label = kind === "full-university" ? "Full University"
         : kind === "northgate" ? "Northgate"
         : kind === "university" ? "University" : "Department";
