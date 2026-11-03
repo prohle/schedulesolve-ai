@@ -22,11 +22,9 @@
 ## Narration — 100% the final pitch
 
 The narration is [the pitch script](./final_pitch.md), one paragraph per beat,
-12 beats. It is not edited, grouped, or paraphrased for the video. The shipped cut is
-**181.4 s (3:01)** end to end — 1.4 s
-over the 3:00 guidance, all of it trailing end-card hold. The assembly step
-enforces `total <= 180.0` before assembling, so a rebuild produces a compliant
-cut; the shipped file was held 1.4 s longer at the end card.
+12 beats. It is not edited, grouped, or paraphrased for the video. The shipped
+cut is **179.6 s (2:59)**, inside the 3:00 limit; the assembly step enforces
+`total <= 180.0` before assembling.
 
 ## Beats (12 + silent end-card hold)
 
