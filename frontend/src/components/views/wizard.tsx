@@ -517,14 +517,16 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
 
   const handleNext = () => goToStep(currentIndex + 1);
 
-  const solveWith = async (eng: string) => {
+  const solveWith = async (eng: string, withCompare = true) => {
     setLastEngine(eng);
     setSolveResult(await post("/api/solve", { operations: [], engine: eng }));
     markStep("build");
     // The race is part of the proof, not an optional extra: after a solve,
     // run both engines on identical data so the coordinator always sees the
-    // head-to-head result for CP-SAT and C-Solve.
-    await runCompare();
+    // head-to-head result for CP-SAT and C-Solve. At the two largest scales
+    // the race costs ~25 s on the demo container, so it stays one click away
+    // (Head-to-head) instead of blocking the scale switch.
+    if (withCompare) await runCompare();
   };
 
   const runCompare = async () => {
@@ -548,7 +550,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
       // finishes the stress tier inside its budget.
       const nativeScale = kind === "full-university" || kind === "northgate";
       if (nativeScale) setEngine("ours");
-      solveWith(nativeScale ? "ours" : engine);
+      solveWith(nativeScale ? "ours" : engine, !nativeScale);
       const label = kind === "full-university" ? "Full University"
         : kind === "northgate" ? "Northgate"
         : kind === "university" ? "University" : "Department";
