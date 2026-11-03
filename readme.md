@@ -10,6 +10,15 @@
 
 > **Provenance:** all code in this repository was written during the hackathon — Oct 27 to Nov 4, 2026. No pre-existing product. The first commit (`0582d92`, 2026-10-27) is the project skeleton; all 164 commits fall inside the build window. Per-component first-commit dates, and the command to reproduce them: [What was built during the hackathon](#what-was-built-during-the-hackathon).
 
+| | |
+|---|---|
+| **Track · problem statement** | Indie Developer (solo) · Build for Your World |
+| **Built** | From scratch during the hackathon window, Oct 27 – Nov 4, 2026 — first commit `0582d92` is the skeleton itself |
+| **Demo** | [2:59 video](https://youtu.be/5ZOxGZKQw54) · [live app](https://prohle--schedulesolve-ai-ui-web.us-east.modal.run) — no API key: *Use a sample account* → Coordinator → Sign in · `docker compose up` locally in 2 minutes |
+| **Meta models** | Muse Spark (ingest, parse, explain, tighten, student plan) · Muse Voice Transcribe · Muse Spark Open `meta-models/muse-spark-open-1026` on Baseten (18/18 live calls) |
+| **Evidence** | 181 tests · CI on every push · a benchmark script that regenerates every number below · 15-scenario data audit (10 randomised seeds, zero errors) |
+| **Bonus prizes in scope** | Best Build on Meta Open Weight Models · Best Agentic Use-Case |
+
 **What are you solving?**
 
 > **Category:** Autonomous Agents & Workflows · Education & Knowledge Systems
