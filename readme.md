@@ -8,6 +8,8 @@
 
 # ScheduleSolve AI — Agentic Constraint Solver & Timetable Infrastructure
 
+> **Provenance:** all code in this repository was written during the hackathon — Oct 27 to Nov 4, 2026. No pre-existing product. The commit history from the first commit is public and is the build log.
+
 **What are you solving?**
 
 > **Category:** Autonomous Agents & Workflows · Education & Knowledge Systems
@@ -316,7 +318,7 @@ Two pitch-adjacent claims are deliberately **not** made, because the repo cannot
 | A student's plan is verified, with a projected graduation term and named missing/conflicting inputs | Exact selector + independent re-verification + `project_graduation` (`backend/app/services/student_plan.py:74`); `backend/tests/test_student_plan.py` | Sign in as `cs2025@northgate.edu` → Suggest my schedule |
 | Muse Spark Open (Baseten) runs the same structured roles | 18/18 live capture, real outputs + latencies (`backend/muse-verification-open.json`) | Set `MUSE_BASE_URL` / `MUSE_MODEL` per [Meta AI tooling](#meta-ai-tooling-at-runtime); no code change |
 | Voice never changes the term by itself | `POST /term-change/audio` returns a reviewable draft only (`backend/muse-verification-voice.json`) | Term Change → dictate a note; a signed-in human submits it as text |
-| The test suite backs the behaviour, not just the prose | 181 tests from the repo root (180 backend + 1 smoke): solver parity, conflict election, student projection, intake deadline, department/full scales | `backend/.venv/bin/python -m pytest -q` from the repo root → `131 passed` |
+| The test suite backs the behaviour, not just the prose | 181 tests from the repo root (180 backend + 1 smoke): solver parity, conflict election, student projection, intake deadline, department/full scales | `backend/.venv/bin/python -m pytest -q` from the repo root → `181 passed` |
 
 ## What we built vs. what we rent
 
