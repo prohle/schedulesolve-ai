@@ -1,10 +1,7 @@
-import { forward } from "@/lib/backend";
+import { forwardAuth } from "@/lib/backend";
 
-// Commit the reviewed (keep/change) extraction and make it the current term.
+// Ingestion mutates the institution model, so the coordinator token is
+// forwarded to the backend.
 export async function POST(request: Request) {
-  return forward("/ingest/apply", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: await request.text(),
-  });
+  return forwardAuth(request, "/ingest/apply", "POST", await request.text());
 }

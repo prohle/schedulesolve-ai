@@ -1,7 +1,10 @@
 import { forward } from "@/lib/backend";
 
+// Multipart upload: forward the caller's token alongside the FormData body.
 export async function POST(request: Request) {
   const form = await request.formData();
-  // Node fetch sets the multipart boundary automatically for a FormData body.
-  return forward("/ingest/files", { method: "POST", body: form });
+  const headers: Record<string, string> = {};
+  const auth = request.headers.get("authorization");
+  if (auth) headers.Authorization = auth;
+  return forward("/ingest/files", { method: "POST", headers, body: form });
 }

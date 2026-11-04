@@ -1,8 +1,8 @@
-import { forward } from "@/lib/backend";
+import { forwardAuth } from "@/lib/backend";
 
-// Load the Northgate institution — the comprehensive campus (148 instructors /
-// 271 sections / 110 cohorts / 2,983 students across 14 buildings), where both
-// engines prove the same optimum.
-export async function POST() {
-  return forward("/scenario/northgate", { method: "POST" });
+// Load the whole-campus Northgate scale (148 instructors / 271 sections).
+// Scenario mutation requires the coordinator role, so the caller's token
+// must be forwarded — without it the backend answers 401.
+export async function POST(request: Request) {
+  return forwardAuth(request, "/scenario/northgate", "POST");
 }

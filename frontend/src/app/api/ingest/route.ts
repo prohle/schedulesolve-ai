@@ -1,9 +1,7 @@
-import { forward } from "@/lib/backend";
+import { forwardAuth } from "@/lib/backend";
 
+// Ingestion mutates the institution model, so the coordinator token is
+// forwarded to the backend.
 export async function POST(request: Request) {
-  return forward("/ingest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: await request.text(),
-  });
+  return forwardAuth(request, "/ingest", "POST", await request.text());
 }
