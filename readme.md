@@ -9,7 +9,7 @@
 # ScheduleSolve AI — a university timetable you can prove
 
 **The university timetable nobody can defend.** Every term a coordinator rebuilds it by
-hand; when a professor leaves, it collapses. So we wrote our own solver — a 540-line C++17
+hand; when a professor leaves, it collapses. So I wrote my own solver — a 540-line C++17
 engine that reaches Google CP-SAT's proven optimum faster and is the only engine that finishes
 the 361-section instance. The model proposes; the solver proves; a registrar, a professor and a
 student can each check the answer.
@@ -40,7 +40,7 @@ A department's instructors — twenty-six in the loadable department-scale scena
 > The LLM never touches the schedule. It only proposes constraints, and every
 > constraint — and every coverage proposal — is verified by a solver.
 
-Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* track. This is the problem we know firsthand.
+Built for the **Meta Global AI Developer Hackathon** — *Build for Your World* track. I have watched this happen every term, inside a university. This is the problem I know firsthand.
 
 **360° around one proven timetable.** The coordinator builds the term for the whole institution; faculty shape it with their availability, preferences, and verified change requests; and every student is advised from it individually — study record and desired degree in, a mandatory/optional plan that fits their life out, re-verified before it is shown. Three sides of campus, one solver-proven schedule underneath (what that 360° does *not* cover is stated in [docs/limitations.md](./docs/limitations.md)).
 
