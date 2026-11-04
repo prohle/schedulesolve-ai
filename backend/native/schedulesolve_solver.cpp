@@ -1,4 +1,4 @@
-// ScheduleSolve native solver — AI-authored C++17 search core.
+// ScheduleSolve native solver — C++17 search core, written during the hackathon.
 //
 // Same algorithm as the Python reference (app/solver/home_solver.py):
 // greedy descent (MRV + least-penalty), single/ejection hill-climbing,

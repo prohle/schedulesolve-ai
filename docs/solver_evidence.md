@@ -1,4 +1,4 @@
-# Solver evidence: an AI-authored rival to CP-SAT, proven
+# Solver evidence: a native C++17 rival to CP-SAT, proven
 
 ## The claim, scoped honestly
 
@@ -6,7 +6,7 @@ ScheduleSolve ships two independent solvers behind one interface
 (`GET /engines`, `POST /solve` with `engine`, one `SolveResult` shape):
 
 - **CP-SAT** (`cpsat`) — Google's industrial C++ constraint solver.
-- **Ours** (`ours`) — an AI-authored solver built for this problem class:
+- **Ours** (`ours`) — a native C++17 solver built for this problem class:
   a native **C++17 search core** (`backend/native/schedulesolve_solver.cpp`)
   fed domains/penalties by the same preparation code CP-SAT's model uses,
   so the engines differ *only in search*. A Python reference implementation
