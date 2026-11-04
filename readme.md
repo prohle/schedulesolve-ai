@@ -9,7 +9,7 @@
 # ScheduleSolve AI — a university timetable you can prove
 
 **The university timetable nobody can defend.** Every term a coordinator rebuilds it by
-hand; when a professor leaves, it collapses. So I wrote my own solver — a 540-line C++17
+hand; when a professor leaves, it collapses. So I built my own solver — a 540-line C++17
 engine that reaches Google CP-SAT's proven optimum faster and is the only engine that finishes
 the 361-section instance. The model proposes; the solver proves; a registrar, a professor and a
 student can each check the answer.
