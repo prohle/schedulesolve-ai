@@ -188,3 +188,40 @@ our word for it. Scoped claims are stronger than broad ones.
   keystrokes or rejected drafts; infeasible instructor requests return
   with the solver-backed explanation and are visible to the coordinator
   in the change-request queue.
+
+## Real public catalog — validated privately, data not shipped
+
+To keep the "real institution" claim honest without redistributing protected
+work, the ingestion path was validated against a real public source in a
+**private, non-shipped** exercise: the *Rutgers University 2026–2027 Camden
+Undergraduate Catalog* (576 pages) and Rutgers' public campus maps (8 PDFs).
+The PDFs live in a gitignored `local_*` directory and are **not** part of this
+repository. Only the following **facts** are recorded here.
+
+What the format layer read cleanly (facts, not expression):
+
+- **~2,135 distinct course codes** (e.g. `50:198:111` Programming
+  Fundamentals, `50:640:121` Calculus I) — course-code and credit facts parse
+  cleanly.
+- **~61 faculty names** across Computer Science, Mathematics, Biology,
+  Chemistry, Physics and Psychology — roster facts parse cleanly.
+- **~111 building names** from the campus maps (Armitage Hall, Campbell
+  Hall, …) — campus-map facts parse cleanly.
+
+What the completeness check correctly **reported as missing** — the three
+inputs a public catalog and map do not contain, and which this system
+therefore refuses to fabricate:
+
+- **student bodies / enrollments** (no per-cohort counts are published),
+- **faculty availability / preferences / load** (not published), and
+- **room capacities / equipment** (the maps name buildings, not rooms).
+
+That is the same "named missing input" behaviour the seed demo shows, confirmed
+against real-world data: a real registrar would supply those three inputs, and
+this system would name them as missing rather than guess them.
+
+**What this is not:** no Rutgers course description, faculty prose, or map is
+copied or shipped. A catalog is overwhelmingly protected expression, and the
+campus maps are likely vendor-produced under redistribution restrictions; both
+are excluded from the repository. The shipped institution (Northgate) remains
+synthetic and is labelled as such above.

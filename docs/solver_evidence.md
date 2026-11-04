@@ -89,14 +89,14 @@ a timing gradient and becomes a feasibility check.
 
 | Scenario | CP-SAT | Ours (native C++) | Ours (Python ref) |
 |---|---|---|---|
-| Story seed (8 sections) | optimal · −6 · 11 ms | optimal · −6 · 21 ms | optimal · −6 · 47 ms |
+| Story seed (8 sections) | optimal · −6 · 11 ms | optimal · −6 · 5 ms | optimal · −6 · 47 ms |
 | Department (25 sections) | optimal · −40 · 75 ms | **optimal · −40 · 20 ms** | feasible · −40 · 30,003 ms |
 | University (41 sections) | optimal · −40 · 137 ms | **optimal · −40 · 35 ms** | feasible · −40 · 30,025 ms |
 | Northgate default (271 sections, 148 instructors, 110 cohorts, 35 PhD students) | optimal · −40 · 8,070 ms | **optimal · −40 · 2,402 ms** | not benchmarked |
 | Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.3 s | **optimal · −40 · 5,832 ms** | unknown (budget) |
 
 Same proven objective at every demo scale; the native core proves it
-faster than CP-SAT on this problem class from department scale up (the 8-section seed is a process-start wash).
+faster than CP-SAT on this problem class from department scale up (the 8-section seed is a process-start wash — the order flips run to run).
 At the full-university stress scale the comparison changes
 kind: CP-SAT (single worker, 60 s budget) finds no feasible timetable
 and reports `unknown` — a timeout is never dressed up as a proven

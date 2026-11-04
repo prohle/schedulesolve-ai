@@ -286,7 +286,7 @@ The demo story above is one department slice (6 instructors, 8 sections) so ever
 - **ScheduleSolve native solver** (`ours`, `backend/native/schedulesolve_solver.cpp` + `backend/app/solver/native_solver.py`): a C++17 search core written for this problem — MRV over live domains, unit propagation, branch-and-bound with a live admissible bound plus a *pairwise-conflict bound* (contending sections whose cheapest options clash force a deviation cost), single/ejection hill-climbing, and deletion-minimization conflict cores with itself as oracle. Domains and penalties come from the identical preparation code CP-SAT uses, so the engines differ only in search. A Python reference implementation of the same algorithm (`backend/app/solver/home_solver.py`) is the readable specification and the fallback when the binary is unbuilt. No OR-Tools anywhere in either path.
 - **Greedy descent** (`greedy`): the first descent only — plug-and-play proof that a new engine is one registry entry (`backend/app/solver/engine.py`); it shows exactly what the optimization phases buy.
 
-**Difficulty sweep (size and demand, `scripts/difficulty_sweep.py`):** both engines under the same 20 s budget. Same proven optimum, and from department scale up the native core is **3–4× faster** (25 sections: 75 ms vs 20 ms; 41 sections: 137 ms vs 35 ms, measured end-to-end by `scripts/benchmark.py`). At the 8-section demo seed both finish in ~10–20 ms and CP-SAT is marginally quicker, because the native engine pays a subprocess start that only amortises once there is real search to do. It is the only engine that finishes the 361-section instance (5.6 s vs `unknown`); and, honestly, slower at detecting gross infeasibility (17–21 ms vs 3–4 ms), which is a propagation check rather than a search. Full table in [docs/solver_evidence.md](./docs/solver_evidence.md).
+**Difficulty sweep (size and demand, `scripts/difficulty_sweep.py`):** both engines under the same 20 s budget. Same proven optimum, and from department scale up the native core is **3–4× faster** (25 sections: 75 ms vs 20 ms; 41 sections: 137 ms vs 35 ms, measured end-to-end by `scripts/benchmark.py`). At the 8-section demo seed the row is a wash — both finish in single-digit-to-tens of milliseconds and the order flips between runs, because the native engine pays a subprocess start that only amortises once there is real search to do. Re-run `scripts/benchmark.py` and you will see it move. It is the only engine that finishes the 361-section instance (5.6 s vs `unknown`); and, honestly, slower at detecting gross infeasibility (17–21 ms vs 3–4 ms), which is a propagation check rather than a search. Full table in [docs/solver_evidence.md](./docs/solver_evidence.md).
 
 **Head-to-head (measured, `scripts/benchmark.py`):** ours *proves the same optimum as CP-SAT at every demo scale, and is 3–4× faster from department scale up* (university: optimal −40 in 35 ms vs 137 ms), and at full-university stress scale (361 sections) it alone proves the optimum (5,832 ms) while CP-SAT exceeds its budget (`unknown`). The pure-Python reference reaches the same penalty but cannot prove optimality inside its 30 s budget at scale — that measured gap is exactly why the search core is native C++, and why the claim is scoped to this problem class (CP-SAT remains the better general solver; full analysis in [docs/solver_evidence.md](./docs/solver_evidence.md)). **Head-to-head** (Build step, or `POST /solve/compare`) diffs status, runtime, penalty delta, placement-agreement %, and both grids with differing sections ringed; the compare ranks engines from outputs only. Tests verify ours independently — hard constraints checked from placements alone, proven objective parity at all scales, the identical conflict core `[0,1,2]` on the Diaz overload, determinism (`backend/tests/test_native_solver.py`, `backend/tests/test_home_solver.py`).
 
@@ -311,6 +311,18 @@ At department scale every cohort still gets its four-course guarantee, every cou
 - **Practitioners, named.** The University of Leicester's Student Registry Services Manager: "It used to take over a fortnight to develop the exam timetable." Providence College's Associate Registrar: "it could take us easily a week to get everything working correctly again." (Both from vendor case studies, attributed as such.)
 
 AACRAO's report is [here](https://www.aais.com/hubfs/2025%20Content/aacrao-report-beyond-next-semester-9-2025.pdf).
+
+**Real-catalog validation (private, data not shipped).** The same ingestion
+path was also validated against the real public *Rutgers University 2026–2027
+Camden Undergraduate Catalog* (576 pages) and Rutgers' public campus maps: the
+format layer read **~2,135 course codes** and **~61 faculty names** cleanly, and
+the completeness check correctly reported the **three inputs a public catalog
+and map cannot provide** — student bodies, faculty availability, and room
+capacities — instead of fabricating them. That is the "named missing input"
+discipline demonstrated on real-world data. The PDFs are gitignored and **not
+redistributed**: a catalog is protected expression and campus maps are
+typically vendor-licensed, so the shipped institution remains synthetic. Full
+note: [docs/limitations.md](./docs/limitations.md#real-public-catalog--validated-privately-data-not-shipped).
 
 
 
@@ -458,12 +470,12 @@ Without a key the model roles degrade to a deterministic parser, so every beat (
 ### For judges — verify any claim in under 5 minutes
 
 Live demo, sample-account Coordinator login:
-1. **Any-format autoclean** — Guided build → Import: the six sample files are preloaded as pasted text; or drop any registrar file and watch the 6/6 completeness check.
+1. **Any-format autoclean** — Guided build → Import: the six sample files are preloaded as pasted text; or drop any registrar file and watch the 6/6 completeness check. Drop a **scanned page or photo** and watch **Muse Spark vision** read it into the typed model — pages rendered locally, no OCR engine, no third-party model.
 2. **One sentence, proven ripple** — Intake: "Prof. Patel can't teach Mondays" → typed ops, agent trace, applied to the term.
 3. **Two engines, ranked from outputs** — Build → Solve → **Head-to-head**: Rank 1 / Rank 2 from status → penalty → speed alone.
 4. **Scale** — Build → **University**: 38 instructors, 41 sections, 20 cohorts solved as one institution; KPI strip shows the proof time.
 5. **Term Change** — Term change → Rank coverage options → Apply elected coverage: ranked zero-ripple reassignment, only CS 301 + CS 310 move in the After grid.
-6. **The advanced workspace** — Insights → Conflict health (spectral health), Plan (20% growth what-if, re-solved first), Audit (every step above, with `muse-spark` provenance).
+6. **The model proposes, the solver proves (the "surprise")** — Insights → **Tighten**: when a cohort's four-course guarantee shortfalls, Muse Spark proposes typed institutional moves (raise a load cap, split a section, cross-train an instructor, open an elective, withdraw a request) and CP-SAT re-solves each — only verified moves are shown, rejected ones come back labelled rejected. Then Conflict health (spectral radar), Plan (20% growth what-if, re-solved first), and Audit (every step above, with `muse-spark` provenance).
 7. **Physical facility utilization** — Deliverables → *Physical facility utilization*: a live spatial matrix of scheduled seats ÷ building capacity for every building, day and period, read from the placed term (solve, then look).
 8. **A student's plan, proven** — sign in as `cs2025@northgate.edu` → Timetable → *Suggest my schedule*: pick your degree, paste a study record (or let it look up your cohort's progress), then "I work Tuesdays and Thursdays. I need CS 201 this term." → a personal plan audited against your record (mandatory done/ready/locked), re-verified before it is shown, with a **projected graduation term** — on track, or the course that pushes it out (add "no 8:00 classes" and it will honestly refuse CS 201's only section instead of slipping the degree).
 Nothing here needs an API key or an account beyond the sample-account evaluation logins.

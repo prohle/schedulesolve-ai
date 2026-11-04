@@ -80,7 +80,7 @@ def main() -> None:
             bench("Department scale", build_department_scenario(seed)),
             bench("University scale", build_university_scenario(seed)),
             bench("Full University (stress)", build_full_university_scenario(seed))]
-    print("| Scenario | Instructors | Sections | Rooms | Cohorts | Programs | CP-SAT | Ours (native C++) | Ours (Python ref) | Native↔CP-SAT agreement | C39 guarantee | Room util. | Term Change (Chen leaves the term) |")
+    print("| Scenario | Instructors | Sections | Rooms | Cohorts | Programs | CP-SAT | Ours (native C++) | Ours (Python ref) | Identical placements % | C39 guarantee | Room util. | Term Change (Chen leaves the term) |")
     print("|---|---:|---:|---:|---:|---:|---|---|---|---:|---|---:|---|")
     for r in rows:
         print(f"| {r['name']} | {r['instructors']} | {r['sections']} | {r['rooms']} | "
@@ -89,6 +89,12 @@ def main() -> None:
               f"{r['py_status']} {r['py_ms']} ms · penalty {r['py_objective'] if r['py_objective'] is not None else '—'} | "
               f"{str(r['agreement']) + '%' if r['agreement'] is not None else '—'} | "
               f"{r['c39']} | {r['room_util']:.0%} | {r['term_change']} |")
+    print()
+    print("> *Identical placements %* counts sections where both engines picked the exact same "
+          "(instructor, days, period, room). It is low because many equally-optimal schedules "
+          "exist (ties): the engines **agree on the proven optimum (same penalty)** and differ "
+          "only in which legal, equally-good layout they return. Proven objective parity is the "
+          "claim; identical placements are not.")
 
 
 if __name__ == "__main__":
