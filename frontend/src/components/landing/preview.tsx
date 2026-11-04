@@ -683,7 +683,7 @@ export function PreviewColumn({
       <div className="grid grid-cols-3 gap-3">
         {[
           { value: "4", tone: "group-hover:text-blue-600", label: "Loadable institution scales" },
-          { value: "2", tone: "text-blue-600", label: "CP-SAT + native engines" },
+          { value: "2", tone: "text-blue-600", label: "Independent engines, one proven optimum" },
           { value: "100%", tone: "text-emerald-600", label: "Cohort 4-course safety guarantee" },
         ].map((stat) => (
           <button
