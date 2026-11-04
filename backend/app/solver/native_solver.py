@@ -1,4 +1,4 @@
-"""Native engine: the AI-authored C++ search core (backend/native/).
+"""Native engine: the C++17 search core (backend/native/).
 
 Domains, penalties, option ordering, and caps come from the exact same
 preparation code the Python reference solver uses (`home_solver._prepare` /

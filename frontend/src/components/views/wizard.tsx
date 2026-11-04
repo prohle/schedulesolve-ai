@@ -310,8 +310,8 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
   const [lastEngine, setLastEngine] = useState<string>("cpsat");
   const [engineList, setEngineList] = useState<{ id: string; label: string; kind?: string; description: string }[]>([
     { id: "cpsat", label: "CP-SAT", kind: "industrial", description: "Google OR-Tools CP-SAT — clause learning, conflict cores, proven optima in milliseconds." },
-    { id: "ours", label: "C-Solve", kind: "ai-crafted", description: "AI-authored native C++17 search core built for this problem; Python reference search when the binary is unbuilt." },
-    { id: "greedy", label: "Greedy", kind: "ai-crafted", description: "The home solver's first descent only — shows what the optimization phases buy." },
+    { id: "ours", label: "C-Solve", kind: "native", description: "Native C++17 search core written during the hackathon; Python reference search when the binary is unbuilt." },
+    { id: "greedy", label: "Greedy", kind: "baseline", description: "The home solver's first descent only — shows what the optimization phases buy." },
   ]);
   useEffect(() => {
     fetch("/api/engines")

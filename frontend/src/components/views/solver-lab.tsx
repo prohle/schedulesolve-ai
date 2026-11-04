@@ -2,7 +2,7 @@
 
 // Solver Lab (route view: "solver").
 //
-// Shows the actual AI-authored C++ search core, the exact input model it
+// Shows the actual native C++17 search core, the exact input model it
 // receives, the head-to-head race against OR-Tools CP-SAT, and an
 // independently-derived constraint proof grouped the way a coordinator
 // thinks: faculty, cohorts, students, facilities, campus. Nothing on this
@@ -217,7 +217,7 @@ Proof Lab
           <h2 className="mt-0.5 flex items-center gap-2 text-lg font-black tracking-tight">
             <Cpu className="h-5 w-5 text-primary" />
             A proven timetable — speed, evidence, audit
-            <InfoTip text="The AI-authored C++17 search core races OR-Tools CP-SAT on identical data. A separate verifier re-derives every hard constraint, so the timetable is proven admissible for faculty, cohorts, students, facilities and campus — not just “solved”." />
+            <InfoTip text="The native C++17 search core races OR-Tools CP-SAT on identical data. A separate verifier re-derives every hard constraint, so the timetable is proven admissible for faculty, cohorts, students, facilities and campus — not just “solved”." />
           </h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -286,7 +286,7 @@ Proof Lab
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {[
-                  { id: "ours", name: "C-Solve", hint: "ScheduleSolve native C++17 search core — AI-authored for this problem.", tone: "border-emerald-400 bg-white" },
+                  { id: "ours", name: "C-Solve", hint: "ScheduleSolve native C++17 search core, written during the hackathon.", tone: "border-emerald-400 bg-white" },
                   { id: "cpsat", name: "CP-SAT", hint: "Google OR-Tools CP-SAT — the industrial constraint solver baseline.", tone: "border-border bg-white" },
                 ].map((engine) => {
                   const row = proof.race[engine.id as "ours" | "cpsat"];

@@ -782,7 +782,7 @@ def solve_proof(req: ProofRequest) -> dict:
 
 @app.get("/solver/source")
 def solver_source(file: str = "native/schedulesolve_solver.cpp") -> dict:
-    """The actual AI-authored C++ search core, served for the Solver Lab.
+    """The actual native C++17 search core, served for the Solver Lab.
 
     Whitelisted to the two files that make up the native engine so the
     endpoint can never be used to read arbitrary paths.
