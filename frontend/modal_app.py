@@ -51,7 +51,8 @@ image = (
     cpu=1,
     memory=1024,
     max_containers=1,     # cap cost; the demo is single-tenant
-    min_containers=0,     # scale to zero; warm only around judging
+    min_containers=1,     # KEEP WARM for judging (Nov 5-8, ~$0.055/h).
+                          # REVERT to 0 on Nov 9.
 )
 @modal.web_server(3000, startup_timeout=180)
 def web():

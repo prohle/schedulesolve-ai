@@ -51,7 +51,9 @@ volume = modal.Volume.from_name("schedulesolve-data", create_if_missing=True)
     cpu=2,                # headroom for concurrent judges + pymupdf page rendering
     memory=4096,          # keep 4 GiB: pymupdf page rendering for scanned PDFs
     max_containers=1,     # cap cost and concurrency; the demo is single-tenant
-    min_containers=0,     # scale to zero; cold start is ~6s
+    min_containers=1,     # KEEP WARM for judging (Nov 5-8, ~$0.079/h).
+                          # REVERT to 0 on Nov 9. A cold start is ~10-20s and
+                          # Demo is 25% of the rubric.
 )
 @modal.asgi_app()
 def api():
