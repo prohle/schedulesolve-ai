@@ -19,7 +19,6 @@ import {
   MapPin,
   Radar,
   ShieldCheck,
-  Star,
   UserCheck,
 } from "lucide-react";
 import { EChart } from "@/components/ui/echart";
@@ -56,10 +55,10 @@ export function AnalyticsSection({
             </div>
             <div>
               <h3 className="text-lg font-black text-navy-900">
-                Live Campus Analytics &amp; Load Telemetry
+                Demo Campus Analytics &amp; Load Telemetry
               </h3>
               <p className="text-xs font-medium text-slate-500">
-                Real-time student load curves, multi-quad comparisons &amp; faculty preference
+                Illustrative student load curves, multi-quad comparisons &amp; faculty preference
                 match radar
               </p>
             </div>
@@ -462,17 +461,12 @@ export function TestimonialSection({ onRequest }: { onRequest: () => void }) {
       <div className="space-y-8 rounded-3xl border border-teal-brand-200/80 bg-teal-brand-50/50 p-8 sm:p-12">
         <div className="flex flex-col items-center justify-between gap-8 border-b border-teal-brand-200 pb-8 md:flex-row">
           <div className="max-w-3xl space-y-3">
-            <div className="flex items-center gap-1 text-teal-brand-600">
-              {Array.from({ length: 5 }, (_, index) => (
-                <Star key={index} className="h-4 w-4 fill-teal-brand-500" />
-              ))}
-            </div>
-            <blockquote className="text-lg font-bold leading-relaxed text-navy-900 sm:text-2xl">
-              &quot;From weeks of registrar spreadsheets to seconds of verifiable proof.
-              Zero schedule collisions. Zero delayed graduations.&quot;
-            </blockquote>
-            <p className="text-sm font-extrabold tracking-wide text-teal-brand-700">
-              — Huong Le, Founder
+            <p className="text-lg font-bold leading-relaxed text-navy-900 sm:text-2xl">
+              From weeks of registrar spreadsheets to seconds of verifiable proof —
+              zero schedule collisions, zero delayed graduations.
+            </p>
+            <p className="text-sm font-semibold text-slate-500">
+              The promise this product is built to keep — and to let you check.
             </p>
           </div>
 

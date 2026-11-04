@@ -312,7 +312,7 @@ export function LandingPage() {
 
               <div className="grid grid-cols-2 gap-4 border-t border-editorial-border pt-6 text-xs sm:grid-cols-4">
                 <div>
-                  <div className="text-xl font-black tracking-tight text-navy-900">29 ms</div>
+                  <div className="text-xl font-black tracking-tight text-navy-900">35 ms</div>
                   <div className="text-[11px] font-semibold text-slate-500">
                     University-Scale Solve
                   </div>
@@ -363,7 +363,7 @@ export function LandingPage() {
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
                       </span>
                       <span className="text-xs font-bold uppercase tracking-wider text-white">
-                        LIVE TELEMETRY
+                        DEMO TELEMETRY
                       </span>
                     </div>
                   </div>

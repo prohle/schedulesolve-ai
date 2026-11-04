@@ -111,8 +111,8 @@ export const PROOFS: Proof[] = [
   {
     key: "utilization",
     title: "Dual Proving Engines",
-    body: "OR-Tools CP-SAT and a native C++ solver race on identical data: 29 ms at university scale, and 3.3 s at the 361-section stress tier where CP-SAT exceeds its budget.",
-    metric: "29 ms University Solve",
+    body: "OR-Tools CP-SAT and a native C++ solver race on identical data: 35 ms at university scale, and 5.6 s at the 361-section stress tier where CP-SAT exceeds its budget.",
+    metric: "35 ms University Solve",
   },
   {
     key: "cohort",
@@ -123,7 +123,7 @@ export const PROOFS: Proof[] = [
   {
     key: "walk",
     title: "Walking Transit Matrix",
-    body: "Enforces minimum 12-minute protected cross-quad walking buffers for both students and instructors.",
+    body: "Enforces minimum 10-minute protected cross-quad walking buffers for both students and instructors.",
     metric: "≥12 Min Protected Buffer",
   },
   {
@@ -143,7 +143,7 @@ export const PROOF_DETAILS: Record<
     formulaLabel: "CP-SAT Objective (both engines prove the same optimum):",
     formula:
       "Minimize penalty s.t. every hard constraint holds — capacity, qualification, loads, cohort conflicts, walk buffers",
-    note: "Both engines are audited from placements alone. The native C++ search core proves the 361-section stress tier in 3.3 s, where CP-SAT reports `unknown` inside its budget. No LLM touches the schedule.",
+    note: "Both engines are audited from placements alone. The native C++ search core proves the 361-section stress tier in 5.6 s, where CP-SAT reports `unknown` inside its budget. No LLM touches the schedule.",
   },
   cohort: {
     title: "4-Year Cohort Safety Proof",
@@ -156,8 +156,8 @@ export const PROOF_DETAILS: Record<
     title: "Walking Transit Distance Matrix",
     formulaLabel: "Cross-Quad Transit Constraint:",
     formula:
-      "Time_Start(Section_k+1) - Time_End(Section_k) ≥ Walk_Time(Quad_k, Quad_k+1) [≥12 mins]",
-    note: "Enforces minimum 12-minute protected travel buffers between all cross-campus academic buildings.",
+      "Time_Start(Section_k+1) - Time_End(Section_k) ≥ Walk_Time(Quad_k, Quad_k+1) [≥10 mins]",
+    note: "Enforces minimum 10-minute protected travel buffers between all cross-campus academic buildings.",
   },
   load: {
     title: "Faculty Workload & Credit Harmony",
@@ -177,7 +177,7 @@ export const FAQS: { question: string; answer: string }[] = [
   {
     question: "Does ScheduleSolve AI integrate with our existing SIS (Banner, Workday, PeopleSoft)?",
     answer:
-      "Yes. We partner directly with your campus IT team to ensure a seamless transition. ScheduleSolve AI delivers proven timetables via standard REST APIs and direct CSV exports designed to map cleanly into Banner, Workday Student, Oracle PeopleSoft, or Canvas through your existing data workflows.",
+      "ScheduleSolve AI delivers proven timetables via standard REST APIs and CSV exports designed to map into Banner, Workday, PeopleSoft, or Canvas through your existing data workflows. Vendor-specific bidirectional connectors are not shipped.",
   },
   {
     question: "How are hard constraints vs. soft faculty preferences prioritized?",

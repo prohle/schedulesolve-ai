@@ -42,6 +42,16 @@ DENY = [
     "License: MIT",
 ]
 
+# Numbers retired from the marketing landing page. Once corrected they must
+# stay corrected in UI copy too, not just the markdown docs — this is the
+# third "one number everywhere" miss (README, solver_evidence.md, landing page).
+FRONTEND_DENY = [
+    "29 ms",      # university solve is 35 ms
+    "3.3 s",      # stress tier is 5.6 s
+    "12-minute",  # walk limit is 10 minutes
+    "≥12 mins",   # same, in the formula strings
+]
+
 LINK_RE = re.compile(r"\]\((\.{0,2}/?[^)#\s]+\.(?:md|png|jpg|jpeg|svg))\)")
 
 
@@ -50,6 +60,17 @@ def tracked_markdown() -> list[Path]:
         ["git", "ls-files", "*.md"], cwd=ROOT, capture_output=True, text=True
     ).stdout
     return [ROOT / line for line in out.split() if line]
+
+
+def tracked_frontend_src() -> list[Path]:
+    out = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True
+    ).stdout
+    return [
+        ROOT / line
+        for line in out.split()
+        if line.startswith("frontend/src/") and line.endswith((".ts", ".tsx"))
+    ]
 
 
 def collected_tests() -> int:
@@ -99,6 +120,13 @@ def main() -> int:
         for phrase in DENY:
             if phrase in text:
                 problems.append(f"{path.relative_to(ROOT)}: stale claim -> {phrase!r}")
+
+    # 4. retired landing-page numbers stay retired in UI copy too
+    for path in tracked_frontend_src():
+        text = path.read_text(errors="ignore")
+        for phrase in FRONTEND_DENY:
+            if phrase in text:
+                problems.append(f"{path.relative_to(ROOT)}: stale frontend claim -> {phrase!r}")
 
     if problems:
         print("docs consistency: FAILED")

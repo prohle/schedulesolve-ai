@@ -82,7 +82,7 @@ const INSPECTOR: Record<
     tone: "slate",
     formulaLabel: "Cross-Zone Transit Buffer:",
     formula:
-      "Time_Start(Section_k+1) - Time_End(Section_k) ≥ Distance_Matrix(Zone_k, Zone_k+1) [≥12 mins]",
+      "Time_Start(Section_k+1) - Time_End(Section_k) ≥ Distance_Matrix(Zone_k, Zone_k+1) [≥10 mins]",
     body: (
       <>
         <strong className="text-slate-900">Enforcement:</strong> Strictly enforces the configured walk limit (10 minutes in the shipped sample)
