@@ -165,7 +165,11 @@ def solve_native(sc: Scenario, request_ops: Optional[list[Operation]] = None,
                timeout_s=limit_ms / 1000 + 15)
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
-    if out.get("assignment"):
+    # `assignment` is `[]` for a valid 0-section timetable and `None` only
+    # when the search found nothing. Treat the empty list as a real (empty)
+    # result, not as "no assignment" — otherwise a 0-section scenario is
+    # misreported as infeasible while CP-SAT correctly says optimal.
+    if out.get("assignment") is not None:
         best = {}
         for s, oi in zip(sc.sections, out["assignment"]):
             best[s.id] = search.ordered[s.id][oi]

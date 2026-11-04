@@ -65,6 +65,18 @@ def test_native_is_deterministic():
     assert _key(a) == _key(b)
 
 
+def test_native_returns_optimal_on_empty_timetable():
+    """A 0-section institution is trivially feasible and optimal; the native
+    core must agree with CP-SAT instead of misreporting it as infeasible
+    (regression: the wrapper treated the empty `assignment` list as falsy)."""
+    sc = load_seed_scenario().model_copy(update={"sections": []})
+    native = solve_native(sc)
+    cpsat = cpsat_solve(sc)
+    assert cpsat.status == "optimal"
+    assert native.status == "optimal"
+    assert native.objective == cpsat.objective
+
+
 def test_native_honors_request_ops():
     sc = load_seed_scenario()
     ops = [Operation(op="add_instructor_unavailability", instructor_id="patel",

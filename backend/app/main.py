@@ -373,6 +373,25 @@ def _ingest_batches(
                     "deterministic fallback cannot read free-form text. Send a catalog, faculty "
                     "list, room sheet or cohort list, or try again once the model is live."))
 
+    # A partial extraction that has neither courses nor instructors cannot
+    # build a timetable, so committing it would wipe the current institution
+    # to an unusable state (the demo's "drop a single room sheet or scanned
+    # page" case). Refuse it the same way, naming exactly which pieces
+    # arrived so the coordinator knows what to add.
+    if not data.courses and not data.instructors:
+        got = [label for label, items in (
+            ("courses", data.courses),
+            ("instructors", data.instructors),
+            ("rooms", data.rooms),
+            ("cohorts", data.cohorts),
+        ) if items]
+        raise HTTPException(
+            status_code=422,
+            detail=(f"The input yielded {', '.join(got) or 'no recognised entity'} but no courses "
+                    "and no instructors, so there is nothing to schedule. The current institution "
+                    "was left unchanged. Add a course catalog and a faculty list, or upload the "
+                    "full set of institution files."))
+
     # Build from the parse we already have — never parse the same dump twice.
     scenario = build_scenario(data)
     changes = diff_data(_last_ingested_data, data)

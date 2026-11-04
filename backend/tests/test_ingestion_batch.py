@@ -9,7 +9,7 @@ from app.ingestion import batch, vision
 from app.ingestion.batch import batch_chunks, merge_institution_data
 from app.ingestion.conflicts import detect_conflicts
 from app.ingestion.normalize import build_scenario
-from app.models.ingestion import ExtractedCourse, InstitutionData
+from app.models.ingestion import ExtractedCourse, ExtractedRoom, InstitutionData
 
 
 class _FakeParser:
@@ -85,6 +85,27 @@ def test_merge_preserves_every_source():
     merged = merge_institution_data([a, b])
     assert len(merged.courses) == 2
     assert {c.source for c in merged.courses} == {"a.pdf", "b.pdf"}
+
+
+def test_ingest_rejects_partial_extraction_without_courses_or_instructors(client, monkeypatch):
+    """A rooms-only extraction cannot build a timetable; committing it would
+    wipe the institution to an unusable state. Regression: the guard only
+    caught a fully empty extraction, so a single room sheet or scanned page
+    used to replace the seed scenario."""
+    class _RoomsOnlyParser:
+        def __init__(self) -> None:
+            self.mode = "muse-spark"
+            self.model = "fake"
+            self.last_latency_ms = 1
+
+        def parse(self, text, images=None):
+            return InstitutionData(
+                rooms=[ExtractedRoom(name="Science Hall 120", building="Science")])
+
+    monkeypatch.setattr(app_main, "IngestionParser", lambda: _RoomsOnlyParser())
+    response = client.post("/ingest", json={"text": "a facilities sheet, nothing else"})
+    assert response.status_code == 422
+    assert "left unchanged" in response.json()["detail"]
 
 
 def test_merge_then_normalize_and_conflict_detection():
