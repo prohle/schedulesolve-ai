@@ -29,9 +29,10 @@ const INSPECTOR: Record<
       "Minimize the busiest simultaneous building occupancy / building capacity",
     body: (
       <>
-        <strong className="text-slate-900">Sample:</strong> the shipped demo institution has 101 sections
-        across 8 buildings. Live peak utilization is computed from the published term after sign-in —
-        the preview does not fabricate a number.
+        <strong className="text-slate-900">Sample:</strong> this preview uses an illustrative institution of
+        101 sections across 8 buildings — design-reference data, not the live model. The app itself opens
+        on a 6-faculty / 8-section story seed and loads up to 198 instructors / 361 sections. Live peak
+        utilization is computed from the published term after sign-in; the preview does not fabricate a number.
       </>
     ),
   },
@@ -40,11 +41,11 @@ const INSPECTOR: Record<
     icon: UserCheck,
     tone: "emerald",
     formulaLabel: "Hard Teaching Load Constraint:",
-    formula: "∀ f ∈ Faculty, Sum(Credits_Assigned(f)) == Required_Load(f) [12.0 Credits]",
+    formula: "∀ f ∈ Faculty, Sum(Credits_Assigned(f)) ≤ Load_Contract(f) × Overtime_Factor [12.0 Credits at teaching track]",
     body: (
       <>
         <strong className="text-slate-900">Proof Status:</strong> hard load and prep caps are enforced for
-        all 68 faculty in the shipped sample. Soft preferences are optimized, not guaranteed.
+        every professor in the loaded institution — 6 in the story seed, 148 at Northgate scale, 198 at the stress tier. Soft preferences are optimized, not guaranteed.
       </>
     ),
   },
@@ -181,7 +182,7 @@ export function InspectorModal({ topic, onClose }: { topic: string; onClose: () 
     icon: BookOpen,
     tone: "emerald",
     formulaLabel: "Degree Catalog Validation:",
-    formula: "All 101 scheduled sections in the sample cross-referenced against the degree roadmaps.",
+    formula: "Every scheduled section in the loaded institution cross-referenced against the degree roadmaps.",
     body: (
       <>
         <strong className="text-slate-900">Status:</strong> 100% Roadmap Fit verified without catalog sequence
