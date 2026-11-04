@@ -66,6 +66,14 @@ def _repurpose(sc: Scenario) -> Scenario:
 def _verdict(change_id: str, before, after, bu, au, bm, am) -> str:
     b_status = before.status
     a_status = after.status
+    if a_status not in ("optimal", "feasible"):
+        # No timetable exists after the change, so utilisation and margins have
+        # nothing to measure. Reporting "39% -> 0%" would read as a collapse in
+        # usage rather than the truth: the term no longer fits at all.
+        return (f"The change does not hold: the term goes {b_status} → {a_status}. "
+                "With no feasible schedule there is no utilisation or four-course "
+                "guarantee to compare — the honest answer is that this campus cannot "
+                "absorb the change as specified.")
     if change_id == "add_lab":
         return ("The new lab gives the campus more lab capacity: "
                 f"utilization {bu.room_utilization:.0%} → {au.room_utilization:.0%}, and the "

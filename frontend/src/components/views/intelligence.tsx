@@ -67,6 +67,17 @@ function placementSlot(p: Placement): string {
 
 const MATRIX_ROWS: [string, keyof ReturnType<typeof Object>][] = [];
 
+/** A what-if side is comparable only if it produced a timetable. */
+const solved = (status: string) => status === "optimal" || status === "feasible";
+
+const fmtUtilization = (status: string, value: number) =>
+  solved(status) ? `${Math.round(value * 100)}%` : "—";
+
+const fmtMaxLoad = (status: string, loads: Record<string, number>) =>
+  solved(status) ? `${Math.max(0, ...Object.values(loads))}` : "—";
+
+const fmtMargins = (status: string, ok: boolean) => (solved(status) ? (ok ? "✓" : "✗") : "—");
+
 export function IntelligenceView({ onToast }: IntelligenceViewProps) {
   const { matrices, spectral, margins, utilization, solveResult, setSolveResult, tighten, loading, busy, error, runSolve, runTighten, reload } = useIntelligence();
   const { history, loading: auditLoading, reload: reloadAudit } = useAudit();
@@ -629,7 +640,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
               <Card title={whatif.label} icon={<Building2 className="w-4 h-4 text-primary" />}>
                 <p className="text-xs text-muted-foreground mb-3">{whatif.description}</p>
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <Stat label="Utilization" value={`${Math.round(whatif.before_utilization * 100)}% → ${Math.round(whatif.after_utilization * 100)}%`} />
+                  <Stat label="Utilization" value={`${fmtUtilization(whatif.before_status, whatif.before_utilization)} → ${fmtUtilization(whatif.after_status, whatif.after_utilization)}`} hint={solved(whatif.after_status) ? undefined : "Not comparable: the change leaves no feasible schedule"} />
                   <Stat label="Feasibility" value={
                     <span className={cn("text-sm", whatif.after_status === "infeasible" ? "text-red-600" : "text-emerald-600")}>
                       {whatif.before_status} → {whatif.after_status}
@@ -637,11 +648,11 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
                   } />
                   <Stat label="Four-course guarantee" value={
                     <span className={cn("text-sm", whatif.after_margins_ok ? "text-emerald-600" : "text-amber-600")}>
-                      {whatif.before_margins_ok ? "✓" : "✗"} → {whatif.after_margins_ok ? "✓" : "✗"}
+                      {fmtMargins(whatif.before_status, whatif.before_margins_ok)} → {fmtMargins(whatif.after_status, whatif.after_margins_ok)}
                     </span>
                   } />
                   <Stat label="Faculty load (max)" value={
-                    `${Math.max(0, ...Object.values(whatif.before_loads))} → ${Math.max(0, ...Object.values(whatif.after_loads))}`
+                    `${fmtMaxLoad(whatif.before_status, whatif.before_loads)} → ${fmtMaxLoad(whatif.after_status, whatif.after_loads)}`
                   } />
                 </div>
                 <div className={cn("border rounded-lg p-3 text-sm", whatif.after_status === "infeasible" ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800")}>
