@@ -151,6 +151,17 @@ def solve(
     engine: str = "cpsat",
 ) -> SolveResult:
     if engine != "cpsat":
+        # The native C++ core enforces ceilings only; a contract FLOOR is
+        # CP-SAT-only. Rather than let the two engines disagree silently, route
+        # floor-enforced solves to CP-SAT and say so in the result.
+        if sc.policy.enforce_contract_load:
+            result = solve(sc, request_ops, pins_exact=pins_exact,
+                           instructor_pins=instructor_pins, slot_hints=slot_hints,
+                           objective=objective, engine="cpsat")
+            result.notes = list(getattr(result, "notes", []) or []) + [
+                "Contract-floor policy is enforced by CP-SAT; the native C++ "
+                "engine models ceilings only, so this solve ran on CP-SAT."]
+            return result
         # Plug-and-play dispatch (app.solver.engine registry): "ours",
         # "greedy", and any future engine behind the same SolveResult
         # contract. Imported lazily — home_solver reuses this module's
