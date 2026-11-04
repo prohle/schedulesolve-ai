@@ -25,7 +25,7 @@ nothing**, and "we beat a toy solver" is not a result.
 
 Choosing the strongest available baseline costs us the easy win and buys the
 real one: on identical inputs, at every demo scale, our engine returns the
-*same proven optimum* faster (university: 39 ms vs 147 ms), and at 361 sections
+*same proven optimum* faster (university: 35 ms vs 137 ms), and at 361 sections
 it is the only engine that finishes at all — CP-SAT honestly reports `unknown`
 inside its 60 s budget. Beating a reference implementation on a problem class
 you specialized for is a measurable claim. Beating a strawman is not.
@@ -77,7 +77,7 @@ students).
 | ×5 | 41 | infeasible · 3 ms | infeasible · 18 ms | — |
 
 **What this says, including the part that is not in our favour.** On
-optimisation, C-Solve returns the same proven optimum 3.5–6× faster at every
+optimisation, C-Solve returns the same proven optimum 3–4× faster from department scale up at every
 size, and it is the only engine that finishes the 361-section instance. On
 *gross infeasibility* — a campus that cannot physically hold twice the students
 — CP-SAT spots it faster (3–4 ms vs 17–21 ms), because that is a propagation
@@ -96,7 +96,7 @@ a timing gradient and becomes a feasibility check.
 | Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.3 s | **optimal · −40 · 5,832 ms** | unknown (budget) |
 
 Same proven objective at every demo scale; the native core proves it
-faster than CP-SAT on this problem class (faster on every row above).
+faster than CP-SAT on this problem class from department scale up (the 8-section seed is a process-start wash).
 At the full-university stress scale the comparison changes
 kind: CP-SAT (single worker, 60 s budget) finds no feasible timetable
 and reports `unknown` — a timeout is never dressed up as a proven
