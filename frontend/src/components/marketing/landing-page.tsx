@@ -272,6 +272,14 @@ export function LandingPage() {
                 balance faculty workloads.
               </p>
 
+              <p className="max-w-2xl text-xs font-semibold leading-relaxed text-slate-500">
+                <span className="font-black text-teal-brand-700">Measured, and reproducible</span>{" "}
+                (<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">scripts/benchmark.py</code>):
+                solve times, section counts, walk limit, test count.{" "}
+                <span className="font-black text-slate-700">Illustrative:</span> campus telemetry,
+                occupancy and ROI figures are a conceptual demo, not the live institution.
+              </p>
+
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <button
                   type="button"
