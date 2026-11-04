@@ -6,7 +6,13 @@
 [![Meta models](https://img.shields.io/badge/Meta%20models-Muse%20Spark%20%C2%B7%20Voice%20%C2%B7%20Spark%20Open-0668E1)](#meta-ai-tooling-at-runtime)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](./docker-compose.yml)
 
-# ScheduleSolve AI — Agentic Constraint Solver & Timetable Infrastructure
+# ScheduleSolve AI — a university timetable you can prove
+
+**The university timetable nobody can defend.** Every term a coordinator rebuilds it by
+hand; when a professor leaves, it collapses. So we wrote our own solver — a 540-line C++17
+engine that reaches Google CP-SAT's proven optimum faster and is the only engine that finishes
+the 361-section instance. The model proposes; the solver proves; a registrar, a professor and a
+student can each check the answer.
 
 > **Provenance:** all code in this repository was written during the hackathon — Oct 27 to Nov 4, 2026. No pre-existing product. The first commit (`0582d92`, 2026-10-27) is the project skeleton; all 164 commits fall inside the build window. Per-component first-commit dates, and the command to reproduce them: [What was built during the hackathon](#what-was-built-during-the-hackathon).
 
