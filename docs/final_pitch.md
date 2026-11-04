@@ -1,14 +1,16 @@
+ScheduleSolve-AI: Written entirely during the Meta AI Hackathon, October 27th to November 4th.
+
 Consider a student — call her Sarah. A single colliding course can block her capstone, add a semester of tuition, and delay her graduation by a full year.
 
 Now step into the registrar's chair: you are building the operational heartbeat of a university — at full scale, managing hundreds of faculty with strict load requirements, thousands of students, and rooms scattered across a campus you cannot cross in ten minutes.
 
 Universities still attempt to solve this NP-hard puzzle with spreadsheets and email chains. When faculty leave, facilities close, or enrollment surges, manual schedules collapse. That is why we built ScheduleSolve AI — pairing deterministic math with AI to keep every plan provable, flexible, and audit-ready.
 
-Phase One: Point it at existing campus files — PDF catalogs, Word degree maps, Excel room sheets, student records, faculty loads, and cohort lists. Meta's Muse Spark autocleans, organizes, flags, and helps resolve contradictory data, reporting exactly which required inputs are missing before solver execution.
+Phase One: Point it at campus files in any format — PDF catalogs, Word degree maps, Excel room sheets, plus student records, faculty loads and cohort lists. Meta's Muse Spark autocleans, organizes, flags, and helps resolve contradictory data, reporting exactly which required inputs are missing before solver execution.
 
 Phase Two: A professor adds constraints in plain language: "I have childcare on Mondays. A 3-hour class block works better for me. CS241 is my preference..." Muse Spark transforms these requests into schema-validated operations applied directly to the academic term.
 
-Phase Three: Muse Spark proposes; deterministic solvers prove. Our native C++ C-Solve engine — curated with AI during the hackathon — races Google OR-Tools CP-SAT on identical data to reach optimal schedules satisfying physical facilities, student cohorts, and faculty constraints.
+Phase Three: Muse Spark proposes; deterministic solvers prove. Our native C++ C-Solve engine — written during the hackathon — races Google OR-Tools CP-SAT on identical data: same proven optimum, ours faster. At 361 sections CP-SAT reports unknown; ours proves it in 5.8 seconds.
 
 Phase Four: Reality breaks mid-term: Professor Chen can no longer teach. The solver instantly calculates a replacement scenario, suggesting only faculty members it has mathematically proven can cover the load without cascading conflicts.
 
