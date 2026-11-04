@@ -425,7 +425,7 @@ docker compose up --build   # live Muse Spark
 - **Intelligence:** `scipy.sparse` CSR matrices, `numpy`/`scipy` spectral graph (Laplacian, Fiedler, Hoffman bound, exact max clique)
 - **Inference:** Meta Model API (OpenAI-compatible, `beta.chat.completions.parse` structured output) — deterministic parser included so dev/tests burn zero credits
 - **Persistence:** SQLAlchemy over **Postgres 18** in Docker (the supported path for the repo and the Docker stack). The hosted single-tenant demo instead runs SQLite on a Modal volume (`ALLOW_SQLITE=1`), so the live URL needs no database service. Durable institution model, pre-term intake, constraint provenance and the self-healing audit trail (`/history`). Compose uses the project-scoped volume `schedulesolve_pgdata`; on native Linux you can switch it to the in-repo `.data/postgres` bind mount (WSL/Windows drvfs cannot satisfy Postgres's 0700 data-directory check).
-- **Deploy:** `docker compose up` (db + backend + frontend) or `./start.sh` (boots the Compose database, then the servers); public demo live on Modal (UI + backend, both scale-to-zero) with a managed Postgres 18 URL.
+- **Deploy:** `docker compose up` (db + backend + frontend) or `./start.sh` (boots the Compose database, then the servers); public demo live on Modal (UI + backend, both scale-to-zero) running **SQLite on a Modal volume** (`ALLOW_SQLITE=1`), so the zero-setup URL needs no database service. Postgres 18 is the supported path for the repo and the Docker stack.
 
 ## Run it
 

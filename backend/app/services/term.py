@@ -1063,6 +1063,8 @@ def update_entity(scenario: Scenario, kind: str, entity_id: str, patch: dict) ->
             target.max_sections = max(0, int(patch["max_sections"]))
         if "max_preps" in patch:
             target.max_preps = max(0, int(patch["max_preps"]))
+        if "track" in patch:
+            target.track = "teaching" if str(patch["track"]) == "teaching" else "research"
         if "qualified_courses" in patch:
             target.qualified_courses = [str(item) for item in patch["qualified_courses"]]
     elif kind == "cohort":

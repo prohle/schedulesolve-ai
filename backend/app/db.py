@@ -38,10 +38,25 @@ if DATABASE_URL.startswith("postgres://"):  # SQLAlchemy wants postgresql://
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args=({"check_same_thread": False, "timeout": 30}
+                  if DATABASE_URL.startswith("sqlite") else {}),
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
+
+if DATABASE_URL.startswith("sqlite"):
+    # The hosted demo is one SQLite file shared by every judge. WAL plus a
+    # busy timeout turns a concurrent write into a short wait instead of an
+    # immediate "database is locked".
+    from sqlalchemy import event as _event
+
+    @_event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record):  # pragma: no cover - driver hook
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA synchronous=NORMAL")
+        cur.execute("PRAGMA busy_timeout=30000")
+        cur.close()
 
 
 _initialized = False

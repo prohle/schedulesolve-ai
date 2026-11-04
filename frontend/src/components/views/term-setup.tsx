@@ -38,6 +38,19 @@ import type { UniversitySection } from "./university-tabs";
 
 type Toast = (message: string, type?: "info" | "success" | "warning" | "error") => void;
 
+type LoadPolicy = {
+  full_time_faculty_load: number;
+  load_exponent: number;
+  load_multiplier: number;
+  teaching_track_factor: number;
+  research_track_factor: number;
+  max_overtime_factor: number;
+  enforce_contract_load: boolean;
+  allow_overtime: boolean;
+  min_credits_full_time: number;
+  max_credits_per_term: number;
+};
+
 interface Slot {
   day: number;
   period?: number | null;
@@ -112,6 +125,7 @@ interface RoomRow {
 interface FacultyRow {
   id: string;
   name: string;
+  track?: "research" | "teaching";
   max_sections: number;
   max_preps: number;
   qualified_courses: string[];
@@ -251,7 +265,7 @@ type DegreeRoadmap = Record<string, DegreeRequirement[]>;
 type EditState =
   | { kind: "building"; id: string; name: string }
   | { kind: "room"; id: string; name: string; capacity: number; room_type: string; building_id: string; equipment: string }
-  | { kind: "instructor"; id: string; name: string; max_sections: number; max_preps: number; qualified: string }
+  | { kind: "instructor"; id: string; name: string; track: "research" | "teaching"; max_sections: number; max_preps: number; qualified: string }
   | { kind: "cohort"; id: string; name: string; size: number; current_term: number; program_id: string }
   | { kind: "program"; id: string; name: string; roadmap: DegreeRoadmap }
   | {
@@ -416,6 +430,7 @@ export function TermSetupView({
   const [uploadText, setUploadText] = useState("");
   const [uploadBusy, setUploadBusy] = useState(false);
   const [showEvalTools, setShowEvalTools] = useState(false);
+  const [policy, setPolicy] = useState<LoadPolicy | null>(null);
 
   const isCoordinator = user.role === "coordinator";
 
@@ -423,14 +438,16 @@ export function TermSetupView({
     setLoading(true);
     setError(null);
     try {
-      const [wRes, oRes, cRes] = await Promise.all([
+      const [wRes, oRes, cRes, pRes] = await Promise.all([
         authFetch("/api/term/window"),
         authFetch("/api/institution/overview"),
         authFetch("/api/term/calendar"),
+        authFetch("/api/institution/policy"),
       ]);
       const w: TermWindow = await wRes.json();
       const o: Overview = await oRes.json();
       const c: TermCalendar = await cRes.json();
+      if (pRes.ok) setPolicy((await pRes.json()) as LoadPolicy);
       if (!wRes.ok) throw new Error((w as unknown as { detail?: string }).detail || "Could not load the intake window.");
       if (!oRes.ok) throw new Error((o as unknown as { detail?: string }).detail || "Could not load the institution model.");
       setWindow(w);
@@ -523,6 +540,28 @@ export function TermSetupView({
     }
   };
 
+  const savePolicy = async () => {
+    if (!policy) return;
+    await act("Save load policy", "/api/institution/policy", { policy });
+  };
+
+  const suggestPolicy = async () => {
+    try {
+      const res = await authFetch("/api/institution/load/suggest");
+      const d = (await res.json()) as {
+        load_exponent: number; load_multiplier: number;
+        examples_relative_to_40: Record<string, number>;
+      };
+      setPolicy((p) => (p ? { ...p, load_exponent: d.load_exponent, load_multiplier: d.load_multiplier } : p));
+      onToast(
+        `Suggested exponent ${d.load_exponent}: an 80-student class counts ` +
+        `${d.examples_relative_to_40["80"]}× a 40-student one.`,
+        "info");
+    } catch {
+      onToast("Could not fetch a suggestion.", "error");
+    }
+  };
+
   const saveWindow = async () => {
     const data = await act("Save window", "/api/term/window", {
       term,
@@ -586,6 +625,7 @@ export function TermSetupView({
         name: edit.name,
         max_sections: edit.max_sections,
         max_preps: edit.max_preps,
+        track: edit.track,
         qualified_courses: edit.qualified.split(",").map((item) => item.trim()).filter(Boolean),
       };
     }
@@ -1657,6 +1697,7 @@ export function TermSetupView({
                           kind: "instructor",
                           id: member.id,
                           name: member.name,
+                          track: member.track ?? "research",
                           max_sections: member.max_sections,
                           max_preps: member.max_preps,
                           qualified: member.qualified_courses.join(", "),
@@ -1747,6 +1788,7 @@ export function TermSetupView({
                               kind: "instructor",
                               id: member.id,
                               name: member.name,
+                              track: member.track ?? "research",
                               max_sections: member.max_sections,
                               max_preps: member.max_preps,
                               qualified: member.qualified_courses.join(", "),
@@ -2795,6 +2837,66 @@ export function TermSetupView({
             </div>
           </Section>
           <Section
+            title="Faculty load policy"
+            hint="Registrar-owned. Load is credits × (class size ÷ 40)^exponent — four 3-credit, 40-student sections is one full-time contract."
+            icon={<Users className="h-4 w-4 text-slate-600" />}
+          >
+            {policy ? (
+              <>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {([
+                    ["full_time_faculty_load", "Full-time contract (units)"],
+                    ["load_exponent", "Size exponent"],
+                    ["load_multiplier", "Multiplier"],
+                    ["max_overtime_factor", "Overtime ceiling (×)"],
+                    ["teaching_track_factor", "Teaching track (×)"],
+                    ["research_track_factor", "Research track (×)"],
+                    ["min_credits_full_time", "Full-time credits (min)"],
+                    ["max_credits_per_term", "Term credits (max)"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      {label}
+                      <input
+                        type="number"
+                        step="0.05"
+                        value={policy[key]}
+                        onChange={(e) => setPolicy({ ...policy, [key]: Number(e.target.value) })}
+                        className={cn(FIELD, "mt-1")}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="mt-2 flex items-start gap-2 text-xs font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={policy.enforce_contract_load}
+                    onChange={(e) => setPolicy({ ...policy, enforce_contract_load: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  Contract load is a floor — every professor must meet it, and overtime is allowed
+                  up to the ceiling. Off means the contract is a ceiling only.
+                </label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => void savePolicy()}
+                    disabled={busy !== null}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-blue-600 px-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <Save className="h-3.5 w-3.5" /> Save load policy
+                  </button>
+                  <button
+                    onClick={() => void suggestPolicy()}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-slate-300 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Suggest from catalog
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-slate-500">Loading policy…</div>
+            )}
+          </Section>
+          <Section
             title="Update institution data"
             hint="Paste an updated catalog / faculty / room / degree-map dump. It becomes the current model and is saved."
             icon={<RefreshCw className="h-4 w-4 text-blue-600" />}
@@ -2981,6 +3083,17 @@ export function TermSetupView({
                       />
                     </label>
                   </div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Track
+                    <select
+                      value={edit.track}
+                      onChange={(e) => setEdit({ ...edit, track: e.target.value as "research" | "teaching" })}
+                      className={cn(FIELD, "mt-1")}
+                    >
+                      <option value="teaching">Teaching — full contract load</option>
+                      <option value="research">Research — reduced teaching load</option>
+                    </select>
+                  </label>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Qualified course IDs (comma separated)
                     <input

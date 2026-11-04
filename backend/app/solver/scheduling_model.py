@@ -232,10 +232,10 @@ def solve(
     for i in sc.instructors:
         covering = [v for _, v in vars_by_instructor.get(i.id, [])]
         if covering:
-            if not (enforce_floor and overtime):
-                # structural cap: a contract is a ceiling on section count.
-                # With a contract floor + overtime this stops binding, because
-                # the floor itself bounds how many sections one person can take.
+            if enforce_floor:
+                # the contracted SECTION count is a floor that must be met
+                m.Add(cp_model.LinearExpr.Sum(covering) >= i.max_sections)
+            else:
                 m.Add(cp_model.LinearExpr.Sum(covering) <= i.max_sections)
         elif enforce_floor and i.max_sections > 0:
             # qualified for nothing: the contract cannot be met — fail loudly
@@ -246,11 +246,8 @@ def solve(
                 int(round(section_weight[k[0]] * 1000)) * v
                 for k, v in vars_by_instructor.get(i.id, [])
             ]
-            # Load is credit × class size, not a section count: a 40-student
-            # 3-credit class is 3 units, so four of them is full time.
-            if enforce_floor:
-                m.Add(cp_model.LinearExpr.Sum(weighted)
-                      >= int(round(load_cap * 1000)))
+            # Load units are always a CEILING: credits × class size, capped at
+            # contract × overtime factor. The contract floor is on section count.
             ceiling = sc.instructor_load_ceiling(i)
             m.Add(cp_model.LinearExpr.Sum(weighted)
                   <= int(round(ceiling * 1000)))
@@ -612,6 +609,7 @@ def propose_candidates(sc: Scenario, base: SolveResult, removed_instructor_id: s
     if base.timetable is None:
         return []
     placements = {p.section_id: p for p in base.timetable.placements}
+    section_by_id = {s.id: s for s in sc.sections}
     affected = [p for p in base.timetable.placements if p.instructor_id == removed_instructor_id]
     if not affected:
         return []
@@ -626,7 +624,17 @@ def propose_candidates(sc: Scenario, base: SolveResult, removed_instructor_id: s
             if cand.id == removed_instructor_id or lost.course_id not in cand.qualified_courses:
                 continue
             current = base.timetable.sections_per_instructor.get(cand.id, 0)
-            if current + 1 > cand.max_sections:
+            # Coverage respects the registrar's load policy: the section-count
+            # cap binds unless the contract is a floor with overtime allowed,
+            # and no candidate may exceed the overtime ceiling.
+            if not (sc.policy.enforce_contract_load and sc.policy.allow_overtime):
+                if current + 1 > cand.max_sections:
+                    continue
+            current_units = sum(
+                sc.section_load_units(section_by_id[sid])
+                for sid, p in placements.items() if p.instructor_id == cand.id)
+            if (current_units + sc.section_load_units(section_by_id[lost.section_id])
+                    > sc.instructor_load_ceiling(cand) + 1e-9):
                 continue
             probe = solve(
                 sc,
