@@ -359,6 +359,20 @@ def _ingest_batches(
     images_read = sum(len(batch) for batch in image_batches)
     total_batches = len(text_batches) + len(image_batches)
     mode = "muse-spark" if modes and all(m == "muse-spark" for m in modes) else "deterministic"
+    # An extraction that yields nothing must not silently replace the
+    # institution with an empty one. This happens when the model is
+    # unavailable (budget exhausted / key missing) and the deterministic
+    # fallback cannot read free-form text: the coordinator would watch their
+    # university disappear with a 200. Fail loudly and leave state untouched.
+    if not (data.courses or data.instructors or data.rooms or data.cohorts
+            or getattr(data, "programs", None)):
+        raise HTTPException(
+            status_code=422,
+            detail=("Nothing could be extracted from this input, so the current institution was "
+                    "left unchanged. Check /runtime/config: when the model is unavailable the "
+                    "deterministic fallback cannot read free-form text. Send a catalog, faculty "
+                    "list, room sheet or cohort list, or try again once the model is live."))
+
     # Build from the parse we already have — never parse the same dump twice.
     scenario = build_scenario(data)
     changes = diff_data(_last_ingested_data, data)

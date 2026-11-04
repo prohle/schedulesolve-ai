@@ -21,7 +21,9 @@ class _FakeParser:
 
     def parse(self, text: str, images=None):
         self.calls.append((len(text), len(images or [])))
-        return InstitutionData()
+        # Return one entity: a real extraction never yields nothing, and an
+        # empty result is now rejected rather than replacing the institution.
+        return InstitutionData(courses=[ExtractedCourse(code="CS 101", title="Intro")])
 
 
 def _png() -> bytes:

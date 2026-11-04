@@ -367,6 +367,8 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
       const fd = new FormData();
       files.forEach((f) => fd.append("files", f, f.name));
       const r: IngestResponse = await (await authFetch("/api/ingest/files", { method: "POST", body: fd })).json();
+      const err = (r as unknown as { detail?: string }).detail;
+      if (err) { onToast(err, "error"); return; }
       setIngest(r);
       setEdited(JSON.parse(JSON.stringify(r.parsed)));
       setResolvedConflicts({});
@@ -385,6 +387,8 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
     setIngestBusy(true);
     try {
       const r: IngestResponse = await post("/api/ingest", { text: importText });
+      const err = (r as unknown as { detail?: string }).detail;
+      if (err) { onToast(err, "error"); return; }
       setIngest(r);
       setEdited(JSON.parse(JSON.stringify(r.parsed)));
       setResolvedConflicts({});
