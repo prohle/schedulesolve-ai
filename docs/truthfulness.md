@@ -78,7 +78,7 @@ Everything in the demo video and the README images, with its source:
 | Asset | Source | Rights |
 |---|---|---|
 | B-roll and end-card footage (opening corridor, graduation) | HeyGen stock/avatar library | royalty-free under a paid HeyGen subscription; used unmodified as B-roll only |
-| Voice-over (narration) | **HeyGen text-to-speech** | under the same paid HeyGen subscription; generated for this video only; TTS is the hackathon's permitted exception to the Meta-only model rule — voice output only, and no non-Meta model runs anywhere in the product |
+| Voice-over (narration) | **ElevenLabs text-to-speech**, delivered through HeyGen | under the paid HeyGen subscription; generated for this video only; TTS is the hackathon's permitted exception to the Meta-only model rule — voice output only, and no non-Meta model runs anywhere in the product |
 | All app footage in the video | captured from the running product | ours |
 | README screenshots (`docs/screenshot-*.png`) | captured from the running product at 1440×900 | ours |
 | Logo and wordmark | original artwork (`frontend/public/logo.png`) | ours |
