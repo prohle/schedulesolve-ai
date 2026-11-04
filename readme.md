@@ -96,6 +96,13 @@ ScheduleSolve AI answers Sarah *before* she registers, with a number, not a warn
 
 Much of higher education still runs this NP-hard puzzle on spreadsheets and email chains — and the institutions that do have scheduling software still resolve the exceptions by hand. That is why a single unexpected faculty leave collapses a master schedule, why a classroom relocation is a week of rework, and why a facility what-if ("what if enrollment grows 20%? what if we repurpose the big hall?") is usually answered with a guess. ScheduleSolve AI replaces the guess with a proof, and replaces the week with an auditable review of solver-proven options — for Sarah, for every professor, and for the coordinator who signs the term.
 
+**Why one more scheduler?** Commercial suites (Ad Astra, Infosilem, CourseLeaf) already sell
+optimisation, and that is not the gap. The gap this project targets is **defensibility**: a
+coordinator who has to explain to a dean why a section moved needs a proof, not a plan. So the
+output here is a minimal conflict core when the term is infeasible, every proposed repair
+re-solved before it is shown, and a second independent engine that has to agree before anything
+is published. Optimisation is the commodity; the audit trail is the product.
+
 **Constraints are institution-specific, so the model is too.** Two universities can run the same degree programme with different room inventories, load rules, calendar quirks and approval habits. That is why the system ingests each institution's own rules into a typed model rather than shipping a fixed rule set: the model is per-institution, the solver is general. It also bounds the claim honestly — nothing here assumes NJIT's, or any single campus's, peculiarities are universal.
 
 ## The grand-prize case, scored on the hackathon's own rubric
