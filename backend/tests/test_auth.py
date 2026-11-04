@@ -13,14 +13,14 @@ def _login(client, email, password="demo1234"):
     return {"Authorization": f"Bearer {response.json()['token']}"}
 
 
-def test_demo_accounts_and_me(client):
+def test_demo_accounts_and_me(client, anon_client):
     headers = _login(client, "coordinator@northgate.edu")
     me = client.get("/auth/me", headers=headers).json()["user"]
     assert me["role"] == "coordinator"
     bad = client.post("/auth/login", json={
         "email": "coordinator@northgate.edu", "password": "wrong"})
     assert bad.status_code == 401
-    assert client.get("/schedule/mine").status_code == 401
+    assert anon_client.get("/schedule/mine").status_code == 401
 
 
 def test_publish_then_role_scoped_mine(client):

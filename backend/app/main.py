@@ -416,19 +416,23 @@ def get_scenario() -> Scenario:
 
 
 @app.post("/ingest", response_model=IngestResponse)
-def ingest_data(req: IngestRequest) -> IngestResponse:
+def ingest_data(req: IngestRequest,
+                authorization: Optional[str] = Header(None)) -> IngestResponse:
     """Point the tool at free-form institutional data (catalog, degree maps,
     cohorts, faculty, campus, facilities). Muse Spark autocleans it into the
     structured scenario, which becomes current for every later call."""
+    _require_role(_current_user(authorization), "coordinator")
     return _ingest_text(req.text)
 
 
 @app.post("/ingest/files", response_model=IngestResponse)
-async def ingest_files(files: list[UploadFile] = File(...)) -> IngestResponse:
+async def ingest_files(files: list[UploadFile] = File(...),
+                       authorization: Optional[str] = Header(None)) -> IngestResponse:
     """Drop messy institutional files in any format — PDF, Word, Excel, CSV,
     JSON, text, or a zip of all of them. Each file is extracted to text
     (app.ingestion.extract), concatenated, and autocleaned; the response
     reports which of the six required inputs were found and which are missing."""
+    _require_role(_current_user(authorization), "coordinator")
     from app.ingestion import vision
     from app.ingestion.extract import extract_text
     if len(files) > config.MAX_INGEST_FILES:
@@ -479,10 +483,12 @@ async def ingest_files(files: list[UploadFile] = File(...)) -> IngestResponse:
 
 
 @app.post("/ingest/apply", response_model=IngestResponse)
-def ingest_apply(req: ApplyRequest) -> IngestResponse:
+def ingest_apply(req: ApplyRequest,
+                 authorization: Optional[str] = Header(None)) -> IngestResponse:
     """Finalize an edited extraction: rebuild the scenario from the reviewed
     (keep/changed) entities and make it current. The frontend sends back the
     user-edited InstitutionData after the review panel."""
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario, _last_ingested_data
     try:
         data = resolve_conflicts(req.data, req.resolutions)
@@ -504,8 +510,9 @@ def ingest_apply(req: ApplyRequest) -> IngestResponse:
 
 
 @app.post("/scenario/reset", response_model=Scenario)
-def reset_scenario() -> Scenario:
+def reset_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
     """Discard the ingested scenario and return to the seed."""
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     _current_scenario = None
     try:
@@ -521,13 +528,14 @@ def reset_scenario() -> Scenario:
 
 
 @app.post("/scenario/department", response_model=Scenario)
-def department_scenario() -> Scenario:
+def department_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
     """Load the department-scale scenario (26 instructors, 25 sections,
     3 programs, 12 cohorts) built deterministically from the seed.
 
     Same engine, real-department scale — the one-click scale proof judges
     can run live. `POST /scenario/reset` returns to the story seed.
     """
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     from app.data.department import build_department_scenario
     _set_current_scenario(build_department_scenario(load_seed_scenario()))
@@ -540,9 +548,10 @@ def department_scenario() -> Scenario:
 
 
 @app.post("/scenario/university", response_model=Scenario)
-def university_scenario() -> Scenario:
+def university_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
     """Load the university-scale scenario (38 instructors, 41 sections,
     5 programs, 20 cohorts) — the entire institution on one solve."""
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     from app.data.department import build_university_scenario
     _set_current_scenario(build_university_scenario(load_seed_scenario()))
@@ -555,11 +564,12 @@ def university_scenario() -> Scenario:
 
 
 @app.post("/scenario/full-university", response_model=Scenario)
-def full_university_scenario() -> Scenario:
+def full_university_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
     """Load the full-university stress scenario (198 instructors, 361
     sections, 25 programs, 100 cohorts, ~12,000 students). The native
     solver is the engine that completes this scale; see
     scripts/benchmark.py for the measured comparison."""
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     from app.data.department import build_full_university_scenario
     _set_current_scenario(build_full_university_scenario(load_seed_scenario()))
@@ -572,7 +582,7 @@ def full_university_scenario() -> Scenario:
 
 
 @app.post("/scenario/northgate", response_model=Scenario)
-def northgate_scenario() -> Scenario:
+def northgate_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
     """Load the Northgate institution — the comprehensive campus.
 
     148 instructors · 271 sections · 110 cohorts · 2,983 students across
@@ -580,6 +590,7 @@ def northgate_scenario() -> Scenario:
     (native ~3 s, CP-SAT ~8 s), which makes it the honest "whole university"
     view between the demo slice and the stress benchmark.
     """
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     from app.data.department import build_comprehensive_scenario
     _set_current_scenario(build_comprehensive_scenario(load_seed_scenario()))

@@ -11,6 +11,7 @@ import {
   UploadCloud, X, ListChecks, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authFetch } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { InfoTip, Tip } from "@/components/ui/tip";
 import { TimetableGrid, changedSections } from "@/components/timetable-grid";
@@ -350,9 +351,8 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
   const currentIndex = stepOrder.indexOf(step);
 
   const post = async (path: string, body: unknown) =>
-    (await fetch(path, {
+    (await authFetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })).json();
 
@@ -366,7 +366,7 @@ export function WizardView({ onToast, initialStep }: WizardViewProps) {
     try {
       const fd = new FormData();
       files.forEach((f) => fd.append("files", f, f.name));
-      const r: IngestResponse = await (await fetch("/api/ingest/files", { method: "POST", body: fd })).json();
+      const r: IngestResponse = await (await authFetch("/api/ingest/files", { method: "POST", body: fd })).json();
       setIngest(r);
       setEdited(JSON.parse(JSON.stringify(r.parsed)));
       setResolvedConflicts({});

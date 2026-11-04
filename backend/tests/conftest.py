@@ -28,9 +28,24 @@ def offline_muse(monkeypatch):
     monkeypatch.setattr(config, "HOME_SOLVER_TIME_LIMIT_S", 15.0)
 
 
+def _coordinator_headers(c: TestClient) -> dict:
+    r = c.post("/auth/login", json={"email": "coordinator@northgate.edu",
+                                    "password": "demo1234"})
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['token']}"}
+
+
+@pytest.fixture()
+def anon_client():
+    """Unauthenticated client — for the endpoints that must reject anonymous callers."""
+    return TestClient(app)
+
+
 @pytest.fixture()
 def client():
+    """Coordinator-authenticated client: scenario mutation now requires the role."""
     c = TestClient(app)
+    c.headers.update(_coordinator_headers(c))
     c.post("/scenario/reset")
     yield c
     c.post("/scenario/reset")
