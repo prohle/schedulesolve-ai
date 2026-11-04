@@ -620,7 +620,9 @@ export interface UtilizationReport {
   room_utilization: number;
   rooms: RoomUtilization[];
   faculty: FacultyLoad[];
-  all_loads_met: boolean;
+  none_over_cap: boolean;
+  cap_slots: number;
+  cap_filled: number;
 }
 
 export interface WhatIfReport {
@@ -667,7 +669,9 @@ export interface UtilizationReport {
   room_utilization: number;
   rooms: RoomUtilization[];
   faculty: FacultyLoad[];
-  all_loads_met: boolean;
+  none_over_cap: boolean;
+  cap_slots: number;
+  cap_filled: number;
 }
 
 export interface CohortMargin {

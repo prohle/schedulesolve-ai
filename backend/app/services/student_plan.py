@@ -732,6 +732,11 @@ def suggest_student_plan(
 
     credits_selected = sum(scenario.course(pl.course_id).credits for pl in chosen)
     full_time = scenario.policy.is_full_time(len(courses), credits_selected)
+    if credits_selected > scenario.policy.max_credits_per_term:
+        notes.append(
+            f"This plan totals {credits_selected} credits, above the "
+            f"coordinator's {scenario.policy.max_credits_per_term}-credit term "
+            f"maximum. Drop an optional course before registering.")
     target_met = len(courses) >= target and (
         not target_credits or credits_selected >= target_credits)
     if not target_met and not any("no section outside" in n for n in notes):

@@ -66,13 +66,25 @@ class AcademicPolicy(BaseModel):
 
     min_courses_full_time: int = 4
     min_credits_full_time: int = 12
+    # Full-time band: a full-time student's term load sits in [min, max] credits.
+    max_credits_per_term: int = Field(default=20, ge=1, le=40)
+    # Registrar-owned load policy. When True, every instructor's contracted
+    # section load is a FLOOR that must be met, and overtime is permitted
+    # (bounded by total sections − Σ contracts). When False the contract is a
+    # ceiling only, which is the classic cap model.
+    enforce_contract_load: bool = False
+    allow_overtime: bool = True
     load_exponent: float = Field(default=0.7, ge=0.0, le=1.0)
     load_multiplier: float = Field(default=1.0, gt=0)
-    # 30 units = roughly three 180-student lectures or four 40-student
-    # classes; research track is 75% of that. Coordinators override both.
-    full_time_faculty_load: float = Field(default=30.0, gt=0)
+    # 12 units = four 3-credit, 40-student sections — the standard full-time
+    # teaching load. Research track is 75% of that. Coordinators override both.
+    full_time_faculty_load: float = Field(default=12.0, gt=0)
     research_track_factor: float = Field(default=0.75, gt=0)
     teaching_track_factor: float = Field(default=1.0, gt=0)
+    # Overload ceiling: the model may not exceed contract × this factor. At the
+    # default 12-unit contract, 2.5 reproduces the historical 30-unit ceiling,
+    # so existing scenarios stay feasible while the contract floor is 12.
+    max_overtime_factor: float = Field(default=2.5, ge=1.0, le=4.0)
     phd_max_students_per_fall: int = Field(default=5, ge=1, le=20)
     phd_min_credits: int = Field(default=1, ge=1, le=6)
     phd_max_credits: int = Field(default=3, ge=1, le=12)
@@ -428,6 +440,15 @@ class Scenario(BaseModel):
         return self.time_grid.pattern_keys(name)
 
     # --- load / full-time --------------------------------------------------
+    def instructor_load_ceiling(self, instructor) -> float:
+        """Hard ceiling on student-credit load: contract × overtime factor.
+
+        The contract itself (`faculty_load_cap`) is a floor when the registrar
+        enforces it and a ceiling otherwise; either way the model may not
+        exceed the overtime ceiling.
+        """
+        return self.policy.faculty_load_cap(instructor.track) * self.policy.max_overtime_factor
+
     def section_load_units(self, section: Section) -> float:
         course = self.course(section.course_id)
         return self.policy.section_load_units(

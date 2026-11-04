@@ -149,18 +149,19 @@ def verify_timetable(sc: Scenario, result: SolveResult) -> list[str]:
         if sc.room_pins.get(p.section_id, room.id) != room.id:
             problems.append(f"{p.section_id}: room pin not honoured")
 
+    overtime_contract = sc.policy.enforce_contract_load and sc.policy.allow_overtime
     for iid, load in inst_load.items():
         instructor = sc.instructor(iid)
-        if load > instructor.max_sections:
+        if not overtime_contract and load > instructor.max_sections:
             problems.append(f"{iid}: load {load} > cap {instructor.max_sections}")
         if len(inst_preps[iid]) > instructor.max_preps:
             problems.append(
                 f"{iid}: preps {len(inst_preps[iid])} > cap {instructor.max_preps}")
-        load_cap = sc.instructor_load_cap(instructor)
-        if inst_weight[iid] > load_cap + 1e-6:
+        load_ceiling = sc.instructor_load_ceiling(instructor)
+        if inst_weight[iid] > load_ceiling + 1e-6:
             problems.append(
                 f"{iid}: student-credit load {inst_weight[iid]:.2f} > "
-                f"cap {load_cap:.2f}")
+                f"ceiling {load_ceiling:.2f}")
 
     # -- C7 cohort conflicts + C8 daily load --------------------------------
     slots_by_section = {sid: placement_slots(p) for sid, p in by_section.items()}

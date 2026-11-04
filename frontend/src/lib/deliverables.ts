@@ -404,6 +404,8 @@ export interface ProofMetrics {
   facultyWithinCap: number;
   facultyTotal: number;
   allLoadsMet: boolean;
+  capSlots: number;
+  capFilled: number;
   prefMatch: number;
   marginsOk: boolean;
   marginShortfalls: number;
@@ -428,7 +430,9 @@ export function proofMetrics(
     facility,
     facultyWithinCap: faculty.filter((f) => f.satisfied).length,
     facultyTotal: faculty.length || scenario.instructors.length,
-    allLoadsMet: utilization?.all_loads_met ?? false,
+    allLoadsMet: utilization?.none_over_cap ?? false,
+    capSlots: utilization?.cap_slots ?? 0,
+    capFilled: utilization?.cap_filled ?? 0,
     prefMatch: prefs.soft,
     marginsOk: margins?.all_ok ?? false,
     marginShortfalls: margins ? margins.cohorts.filter((c) => !c.ok).length : 0,

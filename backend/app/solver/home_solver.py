@@ -162,7 +162,7 @@ def _prepare(sc: Scenario, request_ops: list[Operation],
         # sub-linear student curve. A section cap alone underprices a
         # 180-student lecture.
         "load_units": {s.id: sc.section_load_units(s) for s in sc.sections},
-        "load_caps_units": {i.id: sc.instructor_load_cap(i) for i in sc.instructors},
+        "load_caps_units": {i.id: sc.instructor_load_ceiling(i) for i in sc.instructors},
     }
 
 

@@ -588,6 +588,7 @@ export function DeliverablesView({
       label: "Faculty load",
       value: `${proof.facultyWithinCap}/${proof.facultyTotal} within cap`,
       tone: proof.allLoadsMet ? "text-emerald-600" : "text-rose-600",
+      hint: `${proof.capFilled} of ${proof.capSlots} contract slots filled · ${proof.capSlots - proof.capFilled} free for mid-term coverage`,
     },
     {
       key: "prefs",

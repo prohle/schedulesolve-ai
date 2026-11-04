@@ -349,7 +349,7 @@ def audit_scenario(sc: Scenario) -> AuditReport:
                 f"{len(sc.sections)} sections exceed total faculty capacity "
                 f"{total_capacity}")
     total_load = sum(sc.section_load_units(s) for s in sc.sections)
-    total_load_capacity = sum(sc.instructor_load_cap(i) for i in sc.instructors)
+    total_load_capacity = sum(sc.instructor_load_ceiling(i) for i in sc.instructors)
     if total_load_capacity < total_load:
         rep.add("error", "student-load-capacity", "instructors",
                 f"section load {total_load:.1f} exceeds total student-load "

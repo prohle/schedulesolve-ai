@@ -342,7 +342,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <Stat label="Campus utilization (peak)" value={`${Math.round(utilization.room_utilization * 100)}%`} hint="peak seats ÷ total capacity across rooms" />
-              <Stat label="Faculty within load caps" value={utilization.all_loads_met ? <span className="text-emerald-600">✓ all</span> : <span className="text-amber-600">⚠ some over</span>} hint="no instructor over max_sections" />
+              <Stat label="Faculty within load caps" value={utilization.none_over_cap ? <span className="text-emerald-600">✓ none over</span> : <span className="text-amber-600">⚠ some over</span>} hint={`${utilization.cap_filled} of ${utilization.cap_slots} contract slots filled — cap is a ceiling; free slots are mid-term coverage headroom`} />
             </div>
 
             <Card title="Room utilization" hint="Peak seats used ÷ capacity, per room." icon={<Gauge className="w-4 h-4 text-primary" />}>
@@ -359,7 +359,7 @@ export function IntelligenceView({ onToast }: IntelligenceViewProps) {
               </div>
             </Card>
 
-            <Card title="Faculty load" hint="Assigned sections vs contract cap per instructor." icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}>
+            <Card title="Faculty load" hint={`Assigned sections vs contract cap per instructor — ${utilization.cap_filled} of ${utilization.cap_slots} slots filled. Cap is a ceiling (C15), not a quota: unused slots are the headroom the term-change solver needs to prove mid-term coverage.`} icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}>
               <div className="space-y-2">
                 {utilization.faculty.map((f) => (
                   <div key={f.instructor_id} className="flex items-center gap-3">

@@ -221,23 +221,39 @@ def solve(
     def vars_of(section_id: str):
         return vars_by_section.get(section_id, [])
 
-    # C15 instructor load: section cap (contract) + student-credit load cap.
-    # Load is linear in the assignment vars because enrollment and credits are
-    # constants per section; the sub-linear student curve is baked into the
-    # weight, not into the constraint.
+    # C15 instructor load: contract load is a FLOOR (every instructor must meet
+    # their contracted sections), and overtime is permitted — the total overtime
+    # in a term is bounded by (sections − Σ max_sections), because every section
+    # is assigned exactly once. Under-filling a contract is the violation.
+    # Student-credit load (C40) remains a separate hard ceiling.
     section_weight = {s.id: sc.section_load_units(s) for s in sc.sections}
+    enforce_floor = sc.policy.enforce_contract_load
+    overtime = sc.policy.allow_overtime
     for i in sc.instructors:
         covering = [v for _, v in vars_by_instructor.get(i.id, [])]
         if covering:
-            m.Add(cp_model.LinearExpr.Sum(covering) <= i.max_sections)
+            if not (enforce_floor and overtime):
+                # structural cap: a contract is a ceiling on section count.
+                # With a contract floor + overtime this stops binding, because
+                # the floor itself bounds how many sections one person can take.
+                m.Add(cp_model.LinearExpr.Sum(covering) <= i.max_sections)
+        elif enforce_floor and i.max_sections > 0:
+            # qualified for nothing: the contract cannot be met — fail loudly
+            m.Add(0 >= i.max_sections)
         load_cap = sc.instructor_load_cap(i)
         if covering and load_cap > 0:
             weighted = [
                 int(round(section_weight[k[0]] * 1000)) * v
                 for k, v in vars_by_instructor.get(i.id, [])
             ]
+            # Load is credit × class size, not a section count: a 40-student
+            # 3-credit class is 3 units, so four of them is full time.
+            if enforce_floor:
+                m.Add(cp_model.LinearExpr.Sum(weighted)
+                      >= int(round(load_cap * 1000)))
+            ceiling = sc.instructor_load_ceiling(i)
             m.Add(cp_model.LinearExpr.Sum(weighted)
-                  <= int(round(load_cap * 1000)))
+                  <= int(round(ceiling * 1000)))
 
     # C16 prep caps
     t: dict[tuple[str, str], cp_model.BoolVar] = {}

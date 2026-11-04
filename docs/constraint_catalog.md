@@ -73,7 +73,7 @@ along each cohort is.
 |---|---|---|---|
 | C13 | Instructor may only teach courses in their qualification set | Hard | ✓ |
 | C14 | Instructor **hard unavailability** (committee, research, service days) | Hard | ✓ |
-| C15 | Teaching load cap (courses / contact hours per term) | Hard | ✓ |
+| C15 | Teaching load — student-credit units = credits × (enrollment/40)^exponent. Registrar policy: the contract is a **floor** when `enforce_contract_load`, otherwise a ceiling; overtime is allowed up to `max_overtime_factor` × contract | Hard | ✓ |
 | C16 | Preparation cap (distinct courses per term) | Hard | ✓ |
 | C17 | No overlapping assignments for one instructor | Hard | ✓ |
 | C18 | Fatigue cap: ≤ max consecutive teaching periods | Hard | ✓ |

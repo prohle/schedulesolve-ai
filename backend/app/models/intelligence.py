@@ -126,7 +126,9 @@ class UtilizationReport(BaseModel):
     room_utilization: float          # scheduled seats / total capacity
     rooms: list[RoomUtilization]
     faculty: list[FacultyLoad]
-    all_loads_met: bool
+    none_over_cap: bool              # no instructor exceeds max_sections (a ceiling, not a quota)
+    cap_slots: int                   # sum of max_sections across faculty
+    cap_filled: int                  # sum of assigned sections
 
 
 class WhatIfReport(BaseModel):

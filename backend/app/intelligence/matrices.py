@@ -383,4 +383,7 @@ def compute_utilization(scenario: Scenario, timetable: Timetable | None) -> Util
 
     return UtilizationReport(
         room_utilization=round(total_peak / total_cap, 3) if total_cap else 0.0,
-        rooms=rooms, faculty=faculty, all_loads_met=all(f.satisfied for f in faculty))
+        rooms=rooms, faculty=faculty,
+        none_over_cap=all(f.satisfied for f in faculty),
+        cap_slots=sum(i.max_sections for i in scenario.instructors),
+        cap_filled=sum(loads.get(i.id, 0) for i in scenario.instructors))

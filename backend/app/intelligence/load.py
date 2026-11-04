@@ -32,10 +32,11 @@ class InstructorLoad:
     students: int
     credits: int
     load_units: float
-    load_cap: float
+    load_cap: float          # contract (a floor when the registrar enforces it)
+    load_ceiling: float      # contract × overtime factor — the hard maximum
     utilization: float
-    full_time: bool
-    over_cap: bool
+    full_time: bool          # contract met
+    over_cap: bool           # over the overtime ceiling (a real violation)
     courses: list[str] = field(default_factory=list)
 
 
@@ -84,6 +85,7 @@ def instructor_loads(sc: Scenario, timetable: Timetable | None) -> LoadReport:
             load += sc.policy.section_load_units(enrollment, course.credits)
             courses.add(course.id)
         cap = sc.instructor_load_cap(inst)
+        ceiling = sc.instructor_load_ceiling(inst)
         rows.append(InstructorLoad(
             instructor_id=inst.id,
             name=inst.name,
@@ -93,9 +95,10 @@ def instructor_loads(sc: Scenario, timetable: Timetable | None) -> LoadReport:
             credits=credits,
             load_units=round(load, 3),
             load_cap=round(cap, 3),
+            load_ceiling=round(ceiling, 3),
             utilization=round(load / cap, 3) if cap else 0.0,
             full_time=load >= cap * 0.999,
-            over_cap=load > cap + 1e-9,
+            over_cap=load > ceiling + 1e-9,
             courses=sorted(courses),
         ))
 

@@ -127,7 +127,8 @@
         "cs310"
       ],
       "max_sections": 2,
-      "max_preps": 2
+      "max_preps": 2,
+      "track": "teaching"
     },
     {
       "id": "patel",
@@ -144,7 +145,8 @@
           "period": 2,
           "weight": 6
         }
-      ]
+      ],
+      "track": "teaching"
     },
     {
       "id": "diaz",
@@ -155,7 +157,8 @@
         "cs201"
       ],
       "max_sections": 2,
-      "max_preps": 2
+      "max_preps": 2,
+      "track": "research"
     },
     {
       "id": "okafor",
@@ -173,7 +176,8 @@
           "day": 4,
           "period": 3
         }
-      ]
+      ],
+      "track": "research"
     },
     {
       "id": "lee",
@@ -183,7 +187,8 @@
         "cs401"
       ],
       "max_sections": 2,
-      "max_preps": 2
+      "max_preps": 2,
+      "track": "teaching"
     },
     {
       "id": "nguyen",
@@ -202,7 +207,8 @@
           "day": 4,
           "weight": 8
         }
-      ]
+      ],
+      "track": "research"
     }
   ],
   "courses": [

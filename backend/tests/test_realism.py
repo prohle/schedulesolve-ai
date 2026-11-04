@@ -65,7 +65,7 @@ def test_solvers_return_independently_valid_timetables_and_loads():
         assert verify_timetable(scenario, result) == []
         loads = instructor_loads(scenario, result.timetable)
         assert not loads.overloaded, loads.overloaded
-        assert all(row.load_units <= row.load_cap + 1e-6 for row in loads.instructors)
+        assert all(row.load_units <= row.load_ceiling + 1e-6 for row in loads.instructors)
 
 
 def test_native_and_cpsat_agree_on_the_default_institution():
