@@ -68,7 +68,7 @@ The preview no longer presents `361 / 48 / 88.6%` as live results; it is
 labelled illustrative sample data. The public marketing page (`/`) follows the
 same rule: its procedural campus is labelled **Demo telemetry / Illustrative
 campus**, its ROI is labelled an illustrative projection, and the engine copy
-names CP-SAT plus the native C++ solver (39 ms university solve; 5.8 s at the
+names CP-SAT plus the native C++ solver (35 ms university solve; 5.6 s at the
 361-section stress tier, re-measured 2026-11-01).
 
 ## Assets and licences

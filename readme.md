@@ -271,9 +271,9 @@ The demo story above is one department slice (6 instructors, 8 sections) so ever
 
 | Scenario | Instructors | Sections | Rooms | Cohorts | Programs | CP-SAT | Ours (native C++) | Ours (Python ref) | C39 guarantee | Room util. | Term Change (Chen leaves the term) |
 |---|---:|---:|---:|---:|---:|---|---|---|---|---:|---|
-| Story seed (demo) | 6 | 8 | 7 | 4 | 1 | optimal 72 ms · penalty −6 | **optimal 12 ms · penalty −6** | optimal 46 ms · penalty −6 | 2/4 (tightener demo world) | 39% | 2 affected, 3/3 probes feasible |
-| Department scale | 26 | 25 | 16 | 12 | 3 | optimal 154 ms · penalty −40 | **optimal 19 ms · penalty −40** | feasible 30 s · penalty −40 (unproven) | 12/12 cohorts ≥ 4 courses | 52% | 2 affected, 3/3 probes feasible, re-solve optimal |
-| University scale | 38 | 41 | 16 | 20 | 5 | optimal 147 ms · penalty −40 | **optimal 39 ms · penalty −40** | feasible 30 s · penalty −40 (unproven) | **20/20 cohorts ≥ 4 courses** | 65% | 2 affected, 3/3 probes feasible, re-solve optimal |
+| Story seed (demo) | 6 | 8 | 7 | 4 | 1 | optimal 11 ms · penalty −6 | optimal 21 ms · penalty −6 | optimal 47 ms · penalty −6 | 2/4 (tightener demo world) | 39% | 2 affected, 3/3 probes feasible |
+| Department scale | 26 | 25 | 16 | 12 | 3 | optimal 75 ms · penalty −40 | **optimal 20 ms · penalty −40** | feasible 30 s · penalty −40 (unproven) | 12/12 cohorts ≥ 4 courses | 52% | 2 affected, 3/3 probes feasible, re-solve optimal |
+| University scale | 38 | 41 | 16 | 20 | 5 | optimal 137 ms · penalty −40 | **optimal 35 ms · penalty −40** | feasible 30 s · penalty −40 (unproven) | **20/20 cohorts ≥ 4 courses** | 65% | 2 affected, 3/3 probes feasible, re-solve optimal |
 | Full University (stress) | 198 | 361 | 82 | 100 | 25 | unknown (60 s budget) | **optimal 5,832 ms · penalty −40** | unknown (budget) | **100/100 cohorts ≥ 4 courses** | 70% | not probed (CP-SAT base solve exceeds budget here) |
 
 ## Two engines, one contract: industrial CP-SAT vs our own C++ solver
@@ -320,7 +320,7 @@ The final pitch was audited line by line against the implementation — 13 claim
 
 | Pitch figure | Re-measured in this repo | Verdict |
 |---|---|---|
-| Department: ours 20 ms vs CP-SAT 144 ms | **19 ms vs 154 ms**, same proven penalty −40 | True within run/machine variance |
+| Department: ours 20 ms vs CP-SAT 75 ms | **20 ms vs 75 ms**, same proven penalty −40 | True within run/machine variance |
 | University: ours 35 ms vs CP-SAT 137 ms | **35 ms vs 137 ms**, same proven penalty −40 | True within run/machine variance |
 | 361 sections: ours alone proves optimal in 6.1 s; CP-SAT unknown | **Optimal 5,832 ms; CP-SAT `unknown` after its 60 s budget (63.3 s wall)** | True |
 | 198 faculty · 361 sections · 100 cohorts · ~12,000 students | 198 · 361 · 82 rooms · 100 cohorts · 25 programs · **12,530 students** | True |
@@ -443,7 +443,7 @@ docker compose up --build
 
 Without a key the model roles degrade to a deterministic parser, so every beat (parse → solve → self-heal → term-change reassignment → department scale) is clickable offline at zero cost. Add `MODEL_API_KEY` (see below) and the same clicks run live Muse Spark with on-screen model + latency badges. Submission details, track and bonus-prize flags are prepared for the submission form.
 
-**University setup (coordinator, before the term):** the **University** tab is the institution's durable model — **Facility · Map · People · Degree Map · Course Catalog · Student bodies · Holidays · Number of weeks · Campus-wide constraints · University Calendar · Settings · Save schedule options**. Faculty enter hard constraints and soft preferences against a real deadline; the coordinator watches submissions, accepts the set, then reviews or edits every campus/building/room/hall, load cap, holiday, degree map and course. The shipped sample institution is full: 9 campus quads, 14 buildings, 83 rooms, 148 instructors, 271 sections, 35 majors + 8 minors, 110 cohorts, 2,983 students, 4 periods/day. It lives in **Postgres 18** (`institution_state`), so the university does not re-upload the same data each term; **Settings → Update institution data** replaces/extend it.
+**University setup (coordinator, before the term):** the **University** tab is the institution's durable model — **Facility · Map · People · Degree Map · Course Catalog · Student bodies · Holidays · Number of weeks · Campus-wide constraints · University Calendar · Settings · Save schedule options**. Faculty enter hard constraints and soft preferences against a real deadline; the coordinator watches submissions, accepts the set, then reviews or edits every campus/building/room/hall, load cap, holiday, degree map and course. The app **opens on a 6-faculty / 8-section story seed** so the whole flow can be walked in two minutes, and four scales load from the same model with one click: Department (26 / 25), University (38 / 41), **Northgate — the whole campus** (148 instructors, 271 sections, 83 rooms, 14 buildings, 35 majors + 8 minors, 110 cohorts, 2,983 students, 4 periods/day) and Full University (198 / 361, the stress tier). Nothing is re-uploaded between them. It lives in **Postgres 18** (`institution_state`), so the university does not re-upload the same data each term; **Settings → Update institution data** replaces/extend it.
 
 **Multi-user, role-based:** the app opens on a marketing landing page (`/`); **Sign In** takes you to `/login-register`, and the signed-in workspace lives at `/dashboard`. One-click demo accounts (password `demo1234`, seeded from the scenario itself — no signup needed): `coordinator@northgate.edu` runs the term (Express, publish, approves changes); `chen@northgate.edu` (any `<instructor-id>@…`) sees **only their own sections** in **Schedule**; `cs2025@northgate.edu` (any `<cohort-id>@…`) sees **only their cohort's courses**. The coordinator publishes the solved timetable (**Publish**); instructors' grids update only when an approved change is re-proven by the solver and re-published — an infeasible request comes back rejected with the solver-backed explanation. You can also register your own account and link it to any instructor/cohort.
 

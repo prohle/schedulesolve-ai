@@ -85,13 +85,13 @@ check rather than a search. Both report the same verdict. Demand pressure
 saturates at ×2: past that the instance is infeasible, so the axis stops being
 a timing gradient and becomes a feasibility check.
 
-## Measured head-to-head (`backend/scripts/benchmark.py`, dev laptop, re-measured 2026-11-01 — timings vary by machine; the Northgate row is from `backend/scripts/solver_audit.py`)
+## Measured head-to-head (`backend/scripts/benchmark.py`, dev laptop, re-measured 2026-11-04 — timings vary by machine; the Northgate row is from `backend/scripts/solver_audit.py`)
 
 | Scenario | CP-SAT | Ours (native C++) | Ours (Python ref) |
 |---|---|---|---|
-| Story seed (8 sections) | optimal · −6 · 72 ms | **optimal · −6 · 12 ms** | optimal · −6 · 46 ms |
-| Department (25 sections) | optimal · −40 · 154 ms | **optimal · −40 · 19 ms** | feasible · −40 · 30,002 ms |
-| University (41 sections) | optimal · −40 · 147 ms | **optimal · −40 · 39 ms** | feasible · −40 · 30,018 ms |
+| Story seed (8 sections) | optimal · −6 · 11 ms | optimal · −6 · 21 ms | optimal · −6 · 47 ms |
+| Department (25 sections) | optimal · −40 · 75 ms | **optimal · −40 · 20 ms** | feasible · −40 · 30,003 ms |
+| University (41 sections) | optimal · −40 · 137 ms | **optimal · −40 · 35 ms** | feasible · −40 · 30,025 ms |
 | Northgate default (271 sections, 148 instructors, 110 cohorts, 35 PhD students) | optimal · −40 · 8,070 ms | **optimal · −40 · 2,402 ms** | not benchmarked |
 | Full University — stress (361 sections, 198 instructors, 100 cohorts, ~12,000 students) | unknown (60 s budget) · 63.3 s | **optimal · −40 · 5,832 ms** | unknown (budget) |
 

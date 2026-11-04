@@ -10,7 +10,7 @@ Phase One: Point it at campus files in any format — PDF catalogs, Word degree 
 
 Phase Two: A professor adds constraints in plain language: "I have childcare on Mondays. A 3-hour class block works better for me. CS241 is my preference..." Muse Spark transforms these requests into schema-validated operations applied directly to the academic term.
 
-Phase Three: Muse Spark proposes; deterministic solvers prove. Our native C++ C-Solve engine — written during the hackathon — races Google OR-Tools CP-SAT on identical data: same proven optimum, ours faster. At 361 sections CP-SAT reports unknown; ours proves it in 5.8 seconds.
+Phase Three: Muse Spark proposes; deterministic solvers prove. Our native C++ C-Solve engine — written during the hackathon — races Google OR-Tools CP-SAT on identical data: same proven optimum, ours faster. At 361 sections CP-SAT reports unknown; ours proves it in 5.6 seconds.
 
 Phase Four: Reality breaks mid-term: Professor Chen can no longer teach. The solver instantly calculates a replacement scenario, suggesting only faculty members it has mathematically proven can cover the load without cascading conflicts.
 
