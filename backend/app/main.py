@@ -603,12 +603,14 @@ def northgate_scenario(authorization: Optional[str] = Header(None)) -> Scenario:
 
 
 @app.post("/apply", response_model=Scenario)
-def apply_request(req: ApplyOpsRequest) -> Scenario:
+def apply_request(req: ApplyOpsRequest,
+                  authorization: Optional[str] = Header(None)) -> Scenario:
     """Commit a verified co-pilot/term-change proposal to the current term.
 
     This is the explicit "accept" step: after it, every later solve builds on
     the new world state instead of silently reverting to the seed.
     """
+    _require_role(_current_user(authorization), "coordinator")
     global _current_scenario
     base = req.scenario or get_current_scenario()
     ops = list(req.operations)

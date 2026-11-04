@@ -1,10 +1,6 @@
-import { forward } from "@/lib/backend";
+import { forwardAuth } from "@/lib/backend";
 
-// Commit a verified proposal to the backend's current term state.
+// Committing a proposal mutates the term, so the coordinator token is forwarded.
 export async function POST(request: Request) {
-  return forward("/apply", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: await request.text(),
-  });
+  return forwardAuth(request, "/apply", "POST", await request.text());
 }
